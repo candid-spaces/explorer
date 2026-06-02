@@ -1,4 +1,5 @@
 import type { SpatialDocument } from '../model/SpatialDocument';
+import type { SpatialNode } from '../model/SpatialNode';
 
 interface ObjectListProps {
   document: SpatialDocument;
@@ -13,16 +14,35 @@ export function ObjectList({ document }: ObjectListProps) {
       ) : (
         <ul>
           {document.nodes.map((node) => (
-            <li key={node.id}>
-              <strong>{node.id}</strong>
-              <span>
-                {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y}, {node.box.z})
-              </span>
-              {node.unionGroupId ? <em>{node.unionGroupId}</em> : null}
-            </li>
+            <ObjectListNode key={node.id} node={node} />
           ))}
         </ul>
       )}
     </section>
   );
+}
+
+function ObjectListNode({ node }: { node: SpatialNode }) {
+  return (
+    <li>
+      <strong>{node.namespacePath ?? node.id}</strong>
+      <span>
+        local {formatBox(node.localBox)} → world {formatBox(node.worldBox)}
+      </span>
+      {node.directives.import ? <em>import {node.directives.import}</em> : null}
+      {node.refTargetPath ? <em>ref {node.refTargetPath}</em> : null}
+      {node.unionGroupId ? <em>{node.unionGroupId}</em> : null}
+      {(node.children?.length ?? 0) > 0 ? (
+        <ul>
+          {node.children?.map((child) => (
+            <ObjectListNode key={child.id} node={child} />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+function formatBox(box: SpatialNode['worldBox']): string {
+  return `${box.width} × ${box.height} × ${box.depth} at (${box.x}, ${box.y}, ${box.z})`;
 }

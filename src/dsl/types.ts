@@ -23,11 +23,28 @@ export interface DslMaterialSpec {
   diagnostics: string[];
 }
 
+export interface DslDirectiveSpec {
+  import?: string;
+  ref?: string;
+}
+
+export interface DslDeclarationBody {
+  material: DslMaterialSpec;
+  directives: DslDirectiveSpec;
+  diagnostics: string[];
+}
+
 export interface SpatialObject {
   id: string;
   source: string;
+  line: number;
+  selector: string;
+  depth: number;
+  pathSegments: string[];
+  namespacePath?: string;
   box: DslBoxSpec;
   material: DslMaterialSpec;
+  directives: DslDirectiveSpec;
   unionGroupId?: string;
 }
 

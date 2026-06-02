@@ -1,9 +1,10 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
-import { parseMaterialDeclaration } from './materialParser';
+import { parseDeclarationBody } from './bodyParser';
 
 const AXES: AxisName[] = ['x', 'y', 'z'];
-const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<material>[^"]*)"\s*$/;
+const DECLARATION_PATTERN = /^\s*(?<nesting>-*)\s*"(?<selector>[^"]+)"\s*:\s*"(?<body>[^"]*)"\s*$/;
 const AXIS_PATTERN = /^\+(?<offset>\d+)\+(?<size>\d+)$/;
+const PATH_SEGMENT_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
 export function parseCompactNumber(raw: string): number {
   if (!/^\d+$/.test(raw)) {
@@ -54,6 +55,35 @@ export function parseBoxSpec(source: string): DslBoxSpec {
   };
 }
 
+export interface ParsedSelector {
+  pathSegments: string[];
+  namespacePath?: string;
+  box: DslBoxSpec;
+}
+
+export function parseSelector(source: string): ParsedSelector {
+  const segments = source.split('/').map((segment) => segment.trim());
+
+  if (segments.length < 3) {
+    throw new Error('Selector must end with X/Y/Z axis segments separated by / characters.');
+  }
+
+  const axisSegments = segments.slice(-3);
+  const pathSegments = segments.slice(0, -3);
+
+  pathSegments.forEach((segment) => {
+    if (!PATH_SEGMENT_PATTERN.test(segment)) {
+      throw new Error(`Namespace segment "${segment}" must start with a letter and contain only letters, numbers, underscores, or hyphens.`);
+    }
+  });
+
+  return {
+    pathSegments,
+    namespacePath: pathSegments.length > 0 ? pathSegments.join('/') : undefined,
+    box: parseBoxSpec(axisSegments.join('/')),
+  };
+}
+
 export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<SpatialObject> {
   const match = line.match(DECLARATION_PATTERN);
   const diagnostics: ParseDiagnostic[] = [];
@@ -65,25 +95,32 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
         {
           line: lineNumber,
           source: line,
-          message: 'Declaration must look like "+2+4/+0+6/+1+3" : "color: blue; metalness: 0.1".',
+          message: 'Declaration must look like -"Name/+2+4/+0+6/+1+3" : "color: blue; metalness: 0.1".',
         },
       ],
     };
   }
 
   try {
-    const box = parseBoxSpec(match.groups.box);
-    const material = parseMaterialDeclaration(match.groups.material);
+    const selector = parseSelector(match.groups.selector);
+    const body = parseDeclarationBody(match.groups.body);
+    const depth = Math.max(0, match.groups.nesting.length - 1);
 
     return {
       ok: true,
       value: {
         id: `node-${lineNumber}`,
         source: line,
-        box,
-        material,
+        line: lineNumber,
+        selector: match.groups.selector,
+        depth,
+        pathSegments: selector.pathSegments,
+        namespacePath: selector.namespacePath,
+        box: selector.box,
+        material: body.material,
+        directives: body.directives,
       },
-      diagnostics: material.diagnostics.map((message) => ({ line: lineNumber, source: line, message })),
+      diagnostics: body.diagnostics.map((message) => ({ line: lineNumber, source: line, message })),
     };
   } catch (error) {
     diagnostics.push({

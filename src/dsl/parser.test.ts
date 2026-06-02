@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBoxSpec, parseCompactNumber, parseDslDocument } from './parser';
+import { parseBoxSpec, parseCompactNumber, parseDslDocument, parseSelector } from './parser';
 
 const EXAMPLE = `"+2+4/+0+6/+1+3" : "color: 0x333333; metalness: 0.8; roughness: 0.2"
 "+2+4/+7+6/+0+01" : "color: yellow; metalness: 0.2; roughness: 0.5"
@@ -29,6 +29,16 @@ describe('parseBoxSpec', () => {
   });
 });
 
+describe('parseSelector', () => {
+  it('splits namespace path segments from trailing axis specs', () => {
+    expect(parseSelector('Table/Top/+1+6/+0+5/+0+6')).toMatchObject({
+      pathSegments: ['Table', 'Top'],
+      namespacePath: 'Table/Top',
+      box: { x: 1, y: 0, z: 0, width: 6, height: 5, depth: 6 },
+    });
+  });
+});
+
 describe('parseDslDocument', () => {
   it('parses composed object declarations', () => {
     const result = parseDslDocument(EXAMPLE);
@@ -38,5 +48,16 @@ describe('parseDslDocument', () => {
     expect(result.value?.[1].box.depth).toBe(0.1);
     expect(result.value?.[2].box.depth).toBe(0.5);
     expect(result.value?.[0].material.color).toBe(0x333333);
+  });
+
+  it('parses top-level names, directives, and nested declaration depth', () => {
+    const result = parseDslDocument(`-"Sofa/+7+4/+0+3/+0+2": "import: Sofa.gltf;"
+-"Referential/+3+5/+0+3/+0+15": "ref: Sofa/;"
+--"Referential/Handle/+0+1/+0+1/+0+1": "color: yellow;"`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0]).toMatchObject({ namespacePath: 'Sofa', directives: { import: 'Sofa.gltf' }, depth: 0 });
+    expect(result.value?.[1]).toMatchObject({ namespacePath: 'Referential', directives: { ref: 'Sofa' }, depth: 0 });
+    expect(result.value?.[2]).toMatchObject({ namespacePath: 'Referential/Handle', depth: 1 });
   });
 });

@@ -21,13 +21,13 @@ The long-term model is intentionally DOM-like: the DSL compiles into a neutral s
 
 ## DSL grammar
 
-A cuboid declaration has a quoted coordinate expression followed by a quoted material declaration:
+A declaration has optional leading nesting markers, a quoted selector, and a quoted declaration body:
 
 ```txt
-"+xOffset+width/+yOffset+height/+zOffset+depth" : "color: blue; metalness: 0.1; roughness: 0.2"
+-"Namespace/Child/+xOffset+width/+yOffset+height/+zOffset+depth" : "color: blue; import: Sofa.gltf; ref: Sofa/;"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z.
+The final three selector segments are always X, Y, and Z axis specs. Any earlier selector segments form the namespace path. A single leading `-` or no marker declares a world-space root. Additional markers declare nested children; for example `--` is a child in parent-local space. Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Declaration bodies split material keys (`color`, `metalness`, `roughness`) from semantic directives (`import`, `ref`).
 
 ## Coordinate system
 
@@ -76,6 +76,7 @@ This renders a right-side rectangular object that is 15 units high and 0.5 units
 ```txt
 src/
   dsl/
+    bodyParser.ts
     materialParser.ts
     parser.ts
     types.ts
@@ -84,11 +85,16 @@ src/
     SpatialNode.ts
     collision.ts
     createSpatialDocument.ts
+    resolveMaterials.ts
+    resolveTransforms.ts
+    traversal.ts
   scene/
     CornerRoom.tsx
+    ImportedSpatialModel.tsx
     Lighting.tsx
     SceneRoot.tsx
     SpatialBox.tsx
+    SpatialNodeRenderer.tsx
     coordinateMapping.ts
     materials.ts
   ui/
@@ -99,7 +105,7 @@ src/
 
 ## Parser architecture
 
-The parser is independent from React and ThreeJS. It converts text declarations into typed spatial objects, captures diagnostics, and preserves source strings for future editing and object provenance.
+The parser is independent from React and ThreeJS. It converts text declarations into typed spatial objects, captures diagnostics, and preserves source strings for future editing and object provenance. The selector parser separates namespace segments from the trailing axis specs, while the body parser separates style keys from semantic directives before model compilation.
 
 The material parser currently supports:
 
@@ -114,14 +120,17 @@ Unsupported material properties are ignored with diagnostics so future material 
 The spatial document contains neutral `SpatialNode` values with:
 
 - stable node IDs
-- original source text
-- parsed cuboid dimensions
-- computed bounds
-- parsed material settings
+- original source text and line number
+- namespace paths for named declarations
+- local and resolved world cuboid dimensions
+- computed world-space bounds
+- parsed and inherited material settings
+- parsed semantic directives such as `import` and `ref`
+- resolved reference target IDs
 - optional union group IDs
-- future-ready metadata and children fields
+- recursively nested children
 
-This document model is the extension point for named objects, hierarchy, reusable components, anchors, relative positioning, snapping, and export formats.
+The compiler builds a namespace index and node index alongside the root tree. This document model is the extension point for named objects, hierarchy, reusable components, anchors, relative positioning, snapping, and export formats.
 
 ## Collision and union strategy
 
@@ -140,8 +149,8 @@ The UI is a full-screen 3D canvas with a popup drawer. The drawer allows users t
 ## Roadmap
 
 1. Add richer validation and structured parse errors.
-2. Add object naming and references.
-3. Add group nodes and nested transforms.
+2. Expand reference rendering from first-pass materialized boxes to full transformed instancing of nested composites.
+3. Add robust GLTF error boundaries, asset manifests, and authoring-time model previews.
 4. Add fixture/furniture presets that compile to cuboid primitives.
 5. Add wall-mounted anchors and relative positioning.
 6. Add texture presets, bevels, rounded edges, and material libraries.

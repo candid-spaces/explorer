@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { CornerRoom } from './CornerRoom';
 import { Lighting } from './Lighting';
-import { SpatialBox } from './SpatialBox';
+import { SpatialNodeRenderer } from './SpatialNodeRenderer';
 
 interface SceneRootProps {
   document: SpatialDocument;
@@ -17,7 +17,7 @@ export function SceneRoot({ document }: SceneRootProps) {
       <Lighting />
       <CornerRoom />
       {document.nodes.map((node) => (
-        <SpatialBox key={node.id} node={node} />
+        <SpatialNodeRenderer key={node.id} node={node} document={document} />
       ))}
       <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI / 2.02} />
     </Canvas>

@@ -1,19 +1,22 @@
 import type { MeshStandardMaterialParameters } from 'three';
+import type { DslBoxSpec, DslMaterialSpec } from '../dsl/types';
 import type { SpatialNode } from '../model/SpatialNode';
 import { boxToMeshTransform } from './coordinateMapping';
 import { defaultBoxMaterial, unionHighlightMaterial } from './materials';
 
 interface SpatialBoxProps {
   node: SpatialNode;
+  box?: DslBoxSpec;
+  materialSpec?: DslMaterialSpec;
 }
 
-export function SpatialBox({ node }: SpatialBoxProps) {
-  const { position, dimensions } = boxToMeshTransform(node.box);
+export function SpatialBox({ node, box = node.worldBox, materialSpec = node.resolvedMaterial }: SpatialBoxProps) {
+  const { position, dimensions } = boxToMeshTransform(box);
   const material: MeshStandardMaterialParameters = {
     ...defaultBoxMaterial,
-    color: node.material.color ?? defaultBoxMaterial.color,
-    metalness: node.material.metalness ?? defaultBoxMaterial.metalness,
-    roughness: node.material.roughness ?? defaultBoxMaterial.roughness,
+    color: materialSpec.color ?? defaultBoxMaterial.color,
+    metalness: materialSpec.metalness ?? defaultBoxMaterial.metalness,
+    roughness: materialSpec.roughness ?? defaultBoxMaterial.roughness,
     ...(node.unionGroupId ? unionHighlightMaterial : {}),
   };
 
