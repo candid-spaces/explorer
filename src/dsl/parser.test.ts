@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { parseBoxSpec, parseCompactNumber, parseDslDocument } from './parser';
 
-const EXAMPLE = `"+2+4/+0+6/+1+3" : "color: 0x333333; metalness: 0.8; roughness: 0.2"
-"+2+4/+7+6/+0+01" : "color: yellow; metalness: 0.2; roughness: 0.5"
-"+7+6/+0+15/+0+05" : "color: blue; metalness: 0.1; roughness: 0.2"`;
+const EXAMPLE = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
+"+2+4/+7+6/+0+01" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
+"+7+6/+0+15/+0+05" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"`;
 
 describe('parseCompactNumber', () => {
   it('parses integers and compact leading-zero decimals', () => {
@@ -30,13 +30,39 @@ describe('parseBoxSpec', () => {
 });
 
 describe('parseDslDocument', () => {
-  it('parses composed object declarations', () => {
+  it('parses composed object declarations with geometry and material properties', () => {
     const result = parseDslDocument(EXAMPLE);
 
     expect(result.ok).toBe(true);
     expect(result.value).toHaveLength(3);
+    expect(result.value?.[0].geometry.kind).toBe('cylinder');
+    expect(result.value?.[1].geometry.kind).toBe('cone');
+    expect(result.value?.[2].geometry.kind).toBe('sphere');
     expect(result.value?.[1].box.depth).toBe(0.1);
     expect(result.value?.[2].box.depth).toBe(0.5);
     expect(result.value?.[0].material.color).toBe(0x333333);
+  });
+
+  it('defaults to box geometry when geometry is omitted', () => {
+    const result = parseDslDocument('"+0+1/+0+2/+0+3" : "color: red"');
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].geometry.kind).toBe('box');
+  });
+
+  it('falls back to box geometry and reports unsupported geometry values', () => {
+    const result = parseDslDocument('"+0+1/+0+2/+0+3" : "geometry: torus; color: red"');
+
+    expect(result.ok).toBe(false);
+    expect(result.value?.[0].geometry.kind).toBe('box');
+    expect(result.diagnostics[0].message).toContain('Unsupported geometry "torus"');
+  });
+
+  it('reports unsupported non-material and non-geometry properties once', () => {
+    const result = parseDslDocument('"+0+1/+0+2/+0+3" : "foo: bar; geometry: box"');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0].message).toBe('Ignoring unsupported object property "foo".');
   });
 });

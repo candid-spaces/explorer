@@ -16,7 +16,8 @@ export function ObjectList({ document }: ObjectListProps) {
             <li key={node.id}>
               <strong>{node.id}</strong>
               <span>
-                {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y}, {node.box.z})
+                {node.geometry.kind} bounding box: {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x},{' '}
+                {node.box.y}, {node.box.z})
               </span>
               {node.unionGroupId ? <em>{node.unionGroupId}</em> : null}
             </li>
