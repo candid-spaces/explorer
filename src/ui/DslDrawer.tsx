@@ -1,0 +1,48 @@
+import type { SpatialDocument } from '../model/SpatialDocument';
+import { DslEditor } from './DslEditor';
+import { ObjectList } from './ObjectList';
+
+interface DslDrawerProps {
+  document: SpatialDocument;
+  isOpen: boolean;
+  source: string;
+  onChange: (source: string) => void;
+  onToggle: () => void;
+}
+
+export function DslDrawer({ document, isOpen, source, onChange, onToggle }: DslDrawerProps) {
+  return (
+    <aside className={`dsl-drawer ${isOpen ? 'is-open' : ''}`}>
+      <button className="drawer-toggle" type="button" onClick={onToggle}>
+        {isOpen ? 'Close DSL' : 'Edit DSL'}
+      </button>
+
+      {isOpen ? (
+        <div className="drawer-panel">
+          <header>
+            <p className="eyebrow">Spatial document</p>
+            <h1>3D Object DSL</h1>
+            <p>Compose cuboids in a shared XYZ corner-room coordinate space.</p>
+          </header>
+
+          <DslEditor value={source} onChange={onChange} />
+
+          {document.diagnostics.length > 0 ? (
+            <section className="diagnostics" aria-label="DSL parse diagnostics">
+              <h2>Diagnostics</h2>
+              <ul>
+                {document.diagnostics.map((diagnostic, index) => (
+                  <li key={`${diagnostic.line}-${index}`}>
+                    <strong>Line {diagnostic.line}:</strong> {diagnostic.message}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <ObjectList document={document} />
+        </div>
+      ) : null}
+    </aside>
+  );
+}

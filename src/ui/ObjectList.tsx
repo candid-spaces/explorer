@@ -1,0 +1,28 @@
+import type { SpatialDocument } from '../model/SpatialDocument';
+
+interface ObjectListProps {
+  document: SpatialDocument;
+}
+
+export function ObjectList({ document }: ObjectListProps) {
+  return (
+    <section className="object-list" aria-label="Parsed spatial objects">
+      <h2>Objects</h2>
+      {document.nodes.length === 0 ? (
+        <p>No valid objects yet.</p>
+      ) : (
+        <ul>
+          {document.nodes.map((node) => (
+            <li key={node.id}>
+              <strong>{node.id}</strong>
+              <span>
+                {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y}, {node.box.z})
+              </span>
+              {node.unionGroupId ? <em>{node.unionGroupId}</em> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
