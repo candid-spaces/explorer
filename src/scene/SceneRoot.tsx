@@ -1,6 +1,7 @@
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import type { SpatialDocument } from '../model/SpatialDocument';
+import { dimensionsFromNodes } from '../model/room';
 import { CornerRoom } from './CornerRoom';
 import { Lighting } from './Lighting';
 import { SpatialPrimitive } from './SpatialPrimitive';
@@ -10,12 +11,14 @@ interface SceneRootProps {
 }
 
 export function SceneRoot({ document }: SceneRootProps) {
+  const roomDimensions = dimensionsFromNodes(document.nodes);
+
   return (
     <Canvas className="scene-canvas" shadows gl={{ antialias: true }}>
       <color attach="background" args={['#151820']} />
       <PerspectiveCamera makeDefault position={[14, 11, 18]} fov={45} />
       <Lighting />
-      <CornerRoom />
+      <CornerRoom {...roomDimensions} />
       {document.nodes.map((node) => (
         <SpatialPrimitive key={node.id} node={node} />
       ))}
