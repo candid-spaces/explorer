@@ -183,3 +183,129 @@ button {
   color: #bfdbfe;
   font-style: normal;
 }
+
+.dsl-tree-view {
+  margin-top: 1rem;
+  border: 1px solid rgb(96 165 250 / 24%);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: rgb(15 23 42 / 68%);
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.section-heading-row h2 {
+  margin-bottom: 0;
+}
+
+.tree-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.tree-actions button {
+  border: 1px solid rgb(147 197 253 / 22%);
+  border-radius: 999px;
+  padding: 0.25rem 0.5rem;
+  background: rgb(30 41 59 / 72%);
+  color: #bfdbfe;
+  font-size: 0.72rem;
+}
+
+.dsl-tree-root,
+.dsl-tree-children {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dsl-tree-children {
+  position: relative;
+  margin-left: 0.8rem;
+  padding-left: 0.9rem;
+}
+
+.dsl-tree-children::before {
+  position: absolute;
+  top: 0;
+  bottom: 0.2rem;
+  left: 0.18rem;
+  width: 1px;
+  background: rgb(147 197 253 / 20%);
+  content: "";
+}
+
+.dsl-tree-item {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dsl-tree-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: start;
+  border-radius: 0.75rem;
+  padding: 0.45rem;
+  background: rgb(2 6 23 / 36%);
+}
+
+.dsl-tree-toggle,
+.dsl-tree-spacer {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.dsl-tree-toggle {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(147 197 253 / 22%);
+  border-radius: 0.4rem;
+  padding: 0;
+  background: rgb(15 23 42 / 84%);
+  color: #dbeafe;
+  line-height: 1;
+}
+
+.dsl-tree-node-summary {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.dsl-tree-node-summary strong {
+  overflow: hidden;
+  color: #f8fafc;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dsl-tree-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+.dsl-tree-badges em {
+  width: max-content;
+  border-radius: 999px;
+  padding: 0.12rem 0.4rem;
+  background: rgb(14 165 233 / 18%);
+  color: #bae6fd;
+  font-size: 0.68rem;
+  font-style: normal;
+  white-space: nowrap;
+}
