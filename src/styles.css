@@ -122,9 +122,13 @@ button {
   padding: 0.85rem;
   background: rgb(2 6 23 / 72%);
   color: #e2e8f0;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.83rem;
-  line-height: 1.55;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  font-variant-ligatures: none;
+  line-height: 1.45;
+  overflow-x: auto;
+  tab-size: 2;
+  white-space: pre;
 }
 
 .diagnostics,

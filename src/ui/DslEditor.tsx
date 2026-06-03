@@ -13,7 +13,7 @@ export function DslEditor({ value, onChange }: DslEditorProps) {
   return (
     <label className="dsl-editor">
       <span>DSL declarations</span>
-      <textarea spellCheck={false} value={value} onChange={handleChange} />
+      <textarea spellCheck={false} value={value} wrap="off" onChange={handleChange} />
     </label>
   );
 }
