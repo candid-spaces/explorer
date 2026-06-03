@@ -13,8 +13,8 @@ export function parseGeometryDeclaration(declarations: DslPropertyDeclaration[])
 
   if (!SUPPORTED_GEOMETRY_KINDS.has(declaration.value as DslGeometryKind)) {
     geometry.diagnostics.push(`Unsupported geometry "${declaration.value}". Falling back to box geometry.`);
-    return geometry;
+    return { ...geometry, declared: true };
   }
 
-  return { ...geometry, kind: declaration.value as DslGeometryKind };
+  return { ...geometry, kind: declaration.value as DslGeometryKind, declared: true };
 }

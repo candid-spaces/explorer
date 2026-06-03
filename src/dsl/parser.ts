@@ -1,5 +1,6 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
+import { parseDslPath } from './pathParser';
 
 const AXES: AxisName[] = ['x', 'y', 'z'];
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
@@ -72,18 +73,23 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
   }
 
   try {
-    const box = parseBoxSpec(match.groups.box);
+    const path = parseDslPath(match.groups.box);
     const properties = parseObjectProperties(match.groups.properties);
 
     return {
       ok: true,
       value: {
-        id: `node-${lineNumber}`,
+        id: path.namespace.length > 0 ? path.canonicalPath : `node-${lineNumber}`,
         source: line,
-        box,
+        path,
+        namespace: path.namespace,
+        box: path.box,
         material: properties.material,
         geometry: properties.geometry,
         transform: properties.transform,
+        reference: properties.reference,
+        declarationOnly: path.isDeclarationOnly,
+        lineNumber,
       },
       diagnostics: properties.diagnostics.map((message) => ({ line: lineNumber, source: line, message })),
     };
@@ -112,7 +118,7 @@ export function parseDslDocument(source: string): ParseResult<SpatialObject[]> {
       diagnostics.push(...result.diagnostics);
 
       if (result.ok && result.value) {
-        objects.push({ ...result.value, id: `node-${objects.length + 1}` });
+        objects.push({ ...result.value, id: result.value.namespace.length > 0 ? result.value.id : `node-${objects.length + 1}` });
       }
     });
 

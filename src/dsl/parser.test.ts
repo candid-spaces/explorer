@@ -38,10 +38,40 @@ describe('parseDslDocument', () => {
     expect(result.value?.[0].geometry.kind).toBe('cylinder');
     expect(result.value?.[1].geometry.kind).toBe('cone');
     expect(result.value?.[2].geometry.kind).toBe('sphere');
-    expect(result.value?.[1].box.depth).toBe(0.1);
-    expect(result.value?.[2].box.depth).toBe(0.5);
+    expect(result.value?.[1].box?.depth).toBe(0.1);
+    expect(result.value?.[2].box?.depth).toBe(0.5);
     expect(result.value?.[0].material.color).toBe(0x333333);
     expect(result.value?.[0].transform.rotation).toEqual([0, 0, 0]);
+  });
+
+  it('parses namespaced world-space instances and declaration-only namespaces', () => {
+    const result = parseDslDocument(`"Sofa/+7+4/+0+3/+0+2" : "color: brown"
+"Table/Leg/" : "geometry: cylinder"
+"Table/Leg/+1+2/+0+7/+0+1" : ""`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].namespace).toEqual(['Sofa']);
+    expect(result.value?.[0].declarationOnly).toBe(false);
+    expect(result.value?.[0].box?.width).toBe(4);
+    expect(result.value?.[1].namespace).toEqual(['Table', 'Leg']);
+    expect(result.value?.[1].declarationOnly).toBe(true);
+    expect(result.value?.[1].geometry.kind).toBe('cylinder');
+    expect(result.value?.[2].namespace).toEqual(['Table', 'Leg']);
+    expect(result.value?.[2].box?.height).toBe(7);
+  });
+
+  it('parses ref declarations and reports missing reference targets', () => {
+    const result = parseDslDocument('"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"');
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].reference.targetPath).toBe('Sofa/');
+  });
+
+  it('rejects partial namespaced axis groups', () => {
+    const result = parseDslDocument('"Table/+1+2/+0+3" : ""');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0].message).toBe('Namespaced instance paths must end with exactly X/Y/Z axis segments.');
   });
 
   it('parses rotation declarations as XYZ degree triples converted to radians', () => {

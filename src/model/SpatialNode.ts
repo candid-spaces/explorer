@@ -19,6 +19,11 @@ export interface SpatialNode {
   material: DslMaterialSpec;
   geometry: SpatialGeometry;
   transform: SpatialTransform;
+  localTransform?: SpatialTransform;
+  worldTransform?: SpatialTransform;
+  namespacePath?: string;
+  parentNamespacePath?: string;
+  renderable?: boolean;
   unionGroupId?: string;
   children?: SpatialNode[];
   metadata?: Record<string, unknown>;

@@ -8,11 +8,11 @@ export function ObjectList({ document }: ObjectListProps) {
   return (
     <section className="object-list" aria-label="Parsed spatial objects">
       <h2>Objects</h2>
-      {document.nodes.length === 0 ? (
+      {document.renderNodes.length === 0 ? (
         <p>No valid objects yet.</p>
       ) : (
         <ul>
-          {document.nodes.map((node) => (
+          {document.renderNodes.map((node) => (
             <li key={node.id}>
               <strong>{node.id}</strong>
               <span>

@@ -29,6 +29,17 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 
 Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
+Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
+
+```txt
+"Sofa/+7+4/+0+3/+0+2" : "color: brown"
+"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"
+"Table/Leg/" : "geometry: cylinder"
+"Table/Leg/+1+2/+0+7/+0+1" : ""
+```
+
+A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. References must point to a namespace that has already been declared or instantiated. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults.
+
 ## Coordinate system
 
 The DSL uses edge-based bounding-box placement:
@@ -161,6 +172,10 @@ The renderer uses React Three Fiber and Drei. `SceneRoot` owns the canvas, camer
 ## UI drawer workflow
 
 The UI is a full-screen 3D canvas with a popup drawer. The drawer allows users to edit declarations, see parse diagnostics, and inspect parsed objects. The scene updates immediately as the DSL source changes.
+
+## Deferred design notes
+
+- [Prototype `ref` instancing for namespaced groups](prototype-ref-instancing.md) captures the future design for making `ref: Table/` clone a full composed `Table/...` subtree scaled into the referencing box.
 
 ## Roadmap
 
