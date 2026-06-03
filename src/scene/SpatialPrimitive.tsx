@@ -22,7 +22,7 @@ function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
 }
 
 export function SpatialPrimitive({ node }: SpatialPrimitiveProps) {
-  const { position, dimensions } = node.geometry;
+  const { position, rotation, scale } = node.transform;
   const material: MeshStandardMaterialParameters = {
     ...defaultBoxMaterial,
     color: node.material.color ?? defaultBoxMaterial.color,
@@ -36,8 +36,14 @@ export function SpatialPrimitive({ node }: SpatialPrimitiveProps) {
       castShadow
       receiveShadow
       position={position}
-      scale={dimensions}
-      userData={{ spatialNodeId: node.id, unionGroupId: node.unionGroupId, geometry: node.geometry.kind }}
+      rotation={rotation}
+      scale={scale}
+      userData={{
+        spatialNodeId: node.id,
+        unionGroupId: node.unionGroupId,
+        geometry: node.geometry.kind,
+        rotation,
+      }}
     >
       <PrimitiveGeometry geometry={node.geometry} />
       <meshStandardMaterial {...material} />

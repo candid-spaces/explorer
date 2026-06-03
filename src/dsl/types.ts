@@ -30,12 +30,18 @@ export interface DslMaterialSpec {
   diagnostics: string[];
 }
 
+export interface DslTransformSpec {
+  rotation: [number, number, number];
+  diagnostics: string[];
+}
+
 export interface SpatialObject {
   id: string;
   source: string;
   box: DslBoxSpec;
   material: DslMaterialSpec;
   geometry: DslGeometrySpec;
+  transform: DslTransformSpec;
   unionGroupId?: string;
 }
 

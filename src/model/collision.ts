@@ -1,15 +1,77 @@
 import type { DslBoxSpec } from '../dsl/types';
 import type { SpatialBounds, SpatialNode } from './SpatialNode';
+import type { SpatialTransform } from './transform';
+import { transformFromBox } from './transform';
 
 export function boundsFromBox(box: DslBoxSpec): SpatialBounds {
+  return boundsFromTransformedBox(box, transformFromBox(box, { rotation: [0, 0, 0], diagnostics: [] }));
+}
+
+export function boundsFromTransformedBox(box: DslBoxSpec, transform: SpatialTransform): SpatialBounds {
+  const [width, height, depth] = transform.scale;
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+  const halfDepth = depth / 2;
+  const corners: [number, number, number][] = [
+    [-halfWidth, -halfHeight, -halfDepth],
+    [-halfWidth, -halfHeight, halfDepth],
+    [-halfWidth, halfHeight, -halfDepth],
+    [-halfWidth, halfHeight, halfDepth],
+    [halfWidth, -halfHeight, -halfDepth],
+    [halfWidth, -halfHeight, halfDepth],
+    [halfWidth, halfHeight, -halfDepth],
+    [halfWidth, halfHeight, halfDepth],
+  ];
+
+  const worldCorners = corners.map((corner) => applyTransform(corner, transform));
+  const xs = worldCorners.map(([x]) => x);
+  const ys = worldCorners.map(([, y]) => y);
+  const zs = worldCorners.map(([, , z]) => z);
+
   return {
-    minX: box.x,
-    maxX: box.x + box.width,
-    minY: box.y,
-    maxY: box.y + box.height,
-    minZ: box.z,
-    maxZ: box.z + box.depth,
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+    minZ: Math.min(...zs),
+    maxZ: Math.max(...zs),
   };
+}
+
+function applyTransform([x, y, z]: [number, number, number], transform: SpatialTransform): [number, number, number] {
+  const [rotationX, rotationY, rotationZ] = transform.rotation;
+  const [pivotX, pivotY, pivotZ] = transform.pivot;
+  const [positionX, positionY, positionZ] = transform.position;
+
+  let transformedX = x - pivotX;
+  let transformedY = y - pivotY;
+  let transformedZ = z - pivotZ;
+
+  const cosX = Math.cos(rotationX);
+  const sinX = Math.sin(rotationX);
+  const afterX: [number, number, number] = [
+    transformedX,
+    transformedY * cosX - transformedZ * sinX,
+    transformedY * sinX + transformedZ * cosX,
+  ];
+
+  const cosY = Math.cos(rotationY);
+  const sinY = Math.sin(rotationY);
+  const afterY: [number, number, number] = [
+    afterX[0] * cosY + afterX[2] * sinY,
+    afterX[1],
+    -afterX[0] * sinY + afterX[2] * cosY,
+  ];
+
+  const cosZ = Math.cos(rotationZ);
+  const sinZ = Math.sin(rotationZ);
+  [transformedX, transformedY, transformedZ] = [
+    afterY[0] * cosZ - afterY[1] * sinZ,
+    afterY[0] * sinZ + afterY[1] * cosZ,
+    afterY[2],
+  ];
+
+  return [transformedX + pivotX + positionX, transformedY + pivotY + positionY, transformedZ + pivotZ + positionZ];
 }
 
 export function boundsOverlap(a: SpatialBounds, b: SpatialBounds): boolean {

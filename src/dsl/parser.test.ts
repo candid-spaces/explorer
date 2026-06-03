@@ -41,6 +41,24 @@ describe('parseDslDocument', () => {
     expect(result.value?.[1].box.depth).toBe(0.1);
     expect(result.value?.[2].box.depth).toBe(0.5);
     expect(result.value?.[0].material.color).toBe(0x333333);
+    expect(result.value?.[0].transform.rotation).toEqual([0, 0, 0]);
+  });
+
+  it('parses rotation declarations as XYZ degree triples converted to radians', () => {
+    const result = parseDslDocument('\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, 90, 180\"');
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].transform.rotation[0]).toBe(0);
+    expect(result.value?.[0].transform.rotation[1]).toBeCloseTo(Math.PI / 2);
+    expect(result.value?.[0].transform.rotation[2]).toBeCloseTo(Math.PI);
+  });
+
+  it('reports malformed rotation triples', () => {
+    const result = parseDslDocument('\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, nope, 0\"');
+
+    expect(result.ok).toBe(false);
+    expect(result.value?.[0].transform.rotation).toEqual([0, 0, 0]);
+    expect(result.diagnostics[0].message).toBe('Rotation component \"nope\" must be numeric.');
   });
 
   it('defaults to box geometry when geometry is omitted', () => {

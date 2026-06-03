@@ -27,7 +27,7 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 "+xOffset+width/+yOffset+height/+zOffset+depth" : "geometry: cone; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`.
+Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
 ## Coordinate system
 
@@ -50,6 +50,27 @@ The derived primitive dimensions are:
 ```txt
 [width, height, depth]
 ```
+
+## Rotation and transforms
+
+Spatial objects compile to a neutral transform contract before rendering:
+
+```txt
+transform.position = [x + width / 2, y + height / 2, z + depth / 2]
+transform.rotation = [xRadians, yRadians, zRadians]
+transform.scale = [width, height, depth]
+transform.pivot = [0, 0, 0]
+```
+
+The DSL expresses rotation in degrees for readability and the model converts those values to radians for ThreeJS. Axis order is always X, Y, then Z, matching the coordinate segment order. Rotation defaults to `[0, 0, 0]`, uses the object center as the pivot, and is applied to the unit primitive after it has been positioned inside its declared bounding-box contract. The renderer consumes this neutral transform directly, so future exporters or renderers can use the same document model.
+
+Example rotated box:
+
+```txt
+"+2+4/+0+2/+2+1" : "geometry: box; color: orange; rotation: 0,45,0"
+```
+
+Collision and union grouping use transformed world-space AABBs: the model rotates the eight corners of each object box around the center pivot, then derives an axis-aligned broad-phase bound from those transformed corners. Future group nodes should compose parent and child transforms rather than rewriting child geometry.
 
 Boxes map these values directly to box dimensions. Cylinders and cones use X/Z as their footprint and Y as their height. Spheres use the full bounding box as a scalable ellipsoid contract, so non-cubic dimensions intentionally render a stretched sphere that still fills the declared box.
 
@@ -120,6 +141,7 @@ The spatial document contains neutral `SpatialNode` values with:
 - parsed bounding-box dimensions
 - computed bounds
 - derived primitive geometry
+- parsed transform settings
 - parsed material settings
 - optional union group IDs
 - future-ready metadata and children fields
@@ -128,7 +150,7 @@ This document model is the extension point for named objects, hierarchy, reusabl
 
 ## Collision and union strategy
 
-The first implementation uses axis-aligned bounding box collision detection. Colliding components are grouped and assigned a `union-*` identifier. Rendering applies a subtle union highlight to grouped objects.
+The first implementation uses transformed world-space axis-aligned bounding box collision detection. Colliding components are grouped and assigned a `union-*` identifier. Rendering applies a subtle union highlight to grouped objects.
 
 Full boolean geometry merging is intentionally deferred. The next stage can introduce a ThreeJS-compatible CSG library and replace visual grouping with real union mesh generation while preserving the document model API.
 
