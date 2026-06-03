@@ -17,10 +17,9 @@ function spec(kind: DslGeometrySpec['kind']): DslGeometrySpec {
 }
 
 describe('geometryFromBox', () => {
-  it('derives center position and dimensions from the layout bounding box', () => {
+  it('derives primitive dimensions from the layout bounding box', () => {
     expect(geometryFromBox(box, spec('cone'))).toEqual({
       kind: 'cone',
-      position: [4, 10, 0.05],
       dimensions: [4, 6, 0.1],
     });
   });

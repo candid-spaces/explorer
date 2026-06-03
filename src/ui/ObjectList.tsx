@@ -17,7 +17,7 @@ export function ObjectList({ document }: ObjectListProps) {
               <strong>{node.id}</strong>
               <span>
                 {node.geometry.kind} bounding box: {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x},{' '}
-                {node.box.y}, {node.box.z})
+                {node.box.y}, {node.box.z}); rotation: {node.transform.rotation.map((radian) => Math.round((radian * 180) / Math.PI)).join(', ')}°
               </span>
               {node.unionGroupId ? <em>{node.unionGroupId}</em> : null}
             </li>

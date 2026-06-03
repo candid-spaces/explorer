@@ -83,6 +83,7 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
         box,
         material: properties.material,
         geometry: properties.geometry,
+        transform: properties.transform,
       },
       diagnostics: properties.diagnostics.map((message) => ({ line: lineNumber, source: line, message })),
     };
