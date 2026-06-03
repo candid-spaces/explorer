@@ -38,7 +38,7 @@ Namespaced declarations extend the quoted coordinate expression with slash-separ
 "Table/Leg/+1+2/+0+7/+0+1" : ""
 ```
 
-A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. References must point to a namespace that has already been declared or instantiated. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space.
+A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. References must point to a namespace that has already been declared or instantiated. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults.
 
 ## Coordinate system
 

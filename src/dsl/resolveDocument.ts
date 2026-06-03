@@ -30,10 +30,15 @@ const DEFAULT_PROPERTIES: ResolvedProperties = {
   transform: { rotation: [0, 0, 0], diagnostics: [] },
 };
 
-function mergeProperties(base: ResolvedProperties, override: SpatialObject | ResolvedProperties): ResolvedProperties {
+function mergeProperties(
+  base: ResolvedProperties,
+  override: SpatialObject | ResolvedProperties,
+  options: { includeTransform?: boolean } = {},
+): ResolvedProperties {
   const overrideMaterial = override.material;
   const overrideGeometry = override.geometry;
   const overrideTransform = override.transform;
+  const includeTransform = options.includeTransform ?? true;
 
   return {
     material: {
@@ -43,7 +48,10 @@ function mergeProperties(base: ResolvedProperties, override: SpatialObject | Res
       roughness: overrideMaterial.roughness ?? base.material.roughness,
     },
     geometry: overrideGeometry.declared ? { ...overrideGeometry, diagnostics: [] } : { ...base.geometry, diagnostics: [] },
-    transform: overrideTransform.declared ? { ...overrideTransform, diagnostics: [] } : { ...base.transform, diagnostics: [] },
+    transform:
+      includeTransform && overrideTransform.declared
+        ? { ...overrideTransform, diagnostics: [] }
+        : { ...base.transform, diagnostics: [] },
   };
 }
 
@@ -85,7 +93,7 @@ function resolvePropertiesFor(
 
     const instance = namespaceInstances.get(prefix);
     if (prefix !== fullNamespacePath && instance && instance !== object) {
-      properties = mergeProperties(properties, instance);
+      properties = mergeProperties(properties, instance, { includeTransform: false });
     }
   });
 
