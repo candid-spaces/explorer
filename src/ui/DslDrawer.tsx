@@ -1,5 +1,6 @@
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { DslEditor } from './DslEditor';
+import { DslTreeView } from './DslTreeView';
 import { ObjectList } from './ObjectList';
 
 interface DslDrawerProps {
@@ -39,6 +40,8 @@ export function DslDrawer({ document, isOpen, source, onChange, onToggle }: DslD
               </ul>
             </section>
           ) : null}
+
+          <DslTreeView document={document} />
 
           <ObjectList document={document} />
         </div>
