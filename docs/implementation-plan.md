@@ -173,6 +173,10 @@ The renderer uses React Three Fiber and Drei. `SceneRoot` owns the canvas, camer
 
 The UI is a full-screen 3D canvas with a popup drawer. The drawer allows users to edit declarations, see parse diagnostics, and inspect parsed objects. The scene updates immediately as the DSL source changes.
 
+## Deferred design notes
+
+- [Prototype `ref` instancing for namespaced groups](prototype-ref-instancing.md) captures the future design for making `ref: Table/` clone a full composed `Table/...` subtree scaled into the referencing box.
+
 ## Roadmap
 
 1. Add richer validation and structured parse errors.
