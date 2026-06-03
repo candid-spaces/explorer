@@ -39,5 +39,6 @@ export function parseTransformDeclaration(declarations: DslPropertyDeclaration[]
   return {
     rotation: [degreesToRadians(degrees[0]), degreesToRadians(degrees[1]), degreesToRadians(degrees[2])],
     diagnostics: [],
+    declared: true,
   };
 }

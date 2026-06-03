@@ -29,6 +29,17 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 
 Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
+Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
+
+```txt
+"Sofa/+7+4/+0+3/+0+2" : "color: brown"
+"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"
+"Table/Leg/" : "geometry: cylinder"
+"Table/Leg/+1+2/+0+7/+0+1" : ""
+```
+
+A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. References must point to a namespace that has already been declared or instantiated. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space.
+
 ## Coordinate system
 
 The DSL uses edge-based bounding-box placement:

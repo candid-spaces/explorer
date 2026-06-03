@@ -1,3 +1,4 @@
+import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
 import type { DslBoxSpec, DslTransformSpec } from '../dsl/types';
 
 export interface SpatialTransform {
@@ -23,6 +24,15 @@ export function transformFromBox(box: DslBoxSpec, spec: DslTransformSpec): Spati
   };
 }
 
+export function anchorTransformFromBox(box: DslBoxSpec, spec: DslTransformSpec): SpatialTransform {
+  return {
+    position: [box.x, box.y, box.z],
+    rotation: spec.rotation,
+    scale: [1, 1, 1],
+    pivot: CENTER_PIVOT,
+  };
+}
+
 export function identityTransform(): SpatialTransform {
   return {
     position: [0, 0, 0],
@@ -32,19 +42,30 @@ export function identityTransform(): SpatialTransform {
   };
 }
 
-export function composeTransforms(parent: SpatialTransform, child: SpatialTransform): SpatialTransform {
+function matrixFromTransform(transform: SpatialTransform): Matrix4 {
+  const position = new Vector3(...transform.position);
+  const rotation = new Quaternion().setFromEuler(new Euler(...transform.rotation, 'XYZ'));
+  const scale = new Vector3(...transform.scale);
+
+  return new Matrix4().compose(position, rotation, scale);
+}
+
+function transformFromMatrix(matrix: Matrix4, pivot: [number, number, number]): SpatialTransform {
+  const position = new Vector3();
+  const rotation = new Quaternion();
+  const scale = new Vector3();
+  matrix.decompose(position, rotation, scale);
+  const euler = new Euler().setFromQuaternion(rotation, 'XYZ');
+
   return {
-    position: [
-      parent.position[0] + child.position[0],
-      parent.position[1] + child.position[1],
-      parent.position[2] + child.position[2],
-    ],
-    rotation: [
-      parent.rotation[0] + child.rotation[0],
-      parent.rotation[1] + child.rotation[1],
-      parent.rotation[2] + child.rotation[2],
-    ],
-    scale: [parent.scale[0] * child.scale[0], parent.scale[1] * child.scale[1], parent.scale[2] * child.scale[2]],
-    pivot: child.pivot,
+    position: [position.x, position.y, position.z],
+    rotation: [euler.x, euler.y, euler.z],
+    scale: [scale.x, scale.y, scale.z],
+    pivot,
   };
+}
+
+export function composeTransforms(parent: SpatialTransform, child: SpatialTransform): SpatialTransform {
+  const matrix = matrixFromTransform(parent).multiply(matrixFromTransform(child));
+  return transformFromMatrix(matrix, child.pivot);
 }

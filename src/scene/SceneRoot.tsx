@@ -11,7 +11,7 @@ interface SceneRootProps {
 }
 
 export function SceneRoot({ document }: SceneRootProps) {
-  const roomDimensions = dimensionsFromNodes(document.nodes);
+  const roomDimensions = dimensionsFromNodes(document.renderNodes);
 
   return (
     <Canvas className="scene-canvas" shadows gl={{ antialias: true }}>
@@ -19,7 +19,7 @@ export function SceneRoot({ document }: SceneRootProps) {
       <PerspectiveCamera makeDefault position={[14, 11, 18]} fov={45} />
       <Lighting />
       <CornerRoom {...roomDimensions} />
-      {document.nodes.map((node) => (
+      {document.renderNodes.map((node) => (
         <SpatialPrimitive key={node.id} node={node} />
       ))}
       <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI / 2.02} />
