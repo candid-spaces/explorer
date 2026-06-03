@@ -20,11 +20,13 @@ Declaration keys can be anonymous world-space boxes, named world-space instances
 "Sofa/+7+4/+0+3/+0+2" : "color: brown; metalness: 0.2; roughness: 0.8"
 "Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"
 
-"Table/+3+8/+0+5/+0+8" : "color: 0x333333; metalness: 0.8; roughness: 0.2"
-"Table/Top/+1+6/+0+5/+0+6" : ""
+"Table/+18+8/+0+5/+4+8" : "color: white; metalness: 0.8; roughness: 0.2"
+"Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+1+2/+0+7/+0+1" : ""
-"Table/Leg/+7+2/+0+7/+0+1" : ""
+"Table/Leg/+0+1/+0+5/+0+1" : ""
+"Table/Leg/+7+1/+0+5/+0+1" : ""
+"Table/Leg/+0+1/+0+5/+7+1" : ""
+"Table/Leg/+7+1/+0+5/+7+1" : ""
 ```
 
 Primitive dimensions are derived from the bounding box. For example, a cone or cylinder uses X/Z as its footprint and Y as its height. Non-square footprints are rendered as scaled elliptical primitives so every primitive fills the declared bounding box.
