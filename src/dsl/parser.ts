@@ -1,8 +1,8 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
-import { parseMaterialDeclaration } from './materialParser';
+import { parseObjectProperties } from './objectDeclarationParser';
 
 const AXES: AxisName[] = ['x', 'y', 'z'];
-const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<material>[^"]*)"\s*$/;
+const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
 const AXIS_PATTERN = /^\+(?<offset>\d+)\+(?<size>\d+)$/;
 
 export function parseCompactNumber(raw: string): number {
@@ -65,7 +65,7 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
         {
           line: lineNumber,
           source: line,
-          message: 'Declaration must look like "+2+4/+0+6/+1+3" : "color: blue; metalness: 0.1".',
+          message: 'Declaration must look like "+2+4/+0+6/+1+3" : "geometry: box; color: blue; metalness: 0.1".',
         },
       ],
     };
@@ -73,7 +73,7 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
 
   try {
     const box = parseBoxSpec(match.groups.box);
-    const material = parseMaterialDeclaration(match.groups.material);
+    const properties = parseObjectProperties(match.groups.properties);
 
     return {
       ok: true,
@@ -81,9 +81,10 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
         id: `node-${lineNumber}`,
         source: line,
         box,
-        material,
+        material: properties.material,
+        geometry: properties.geometry,
       },
-      diagnostics: material.diagnostics.map((message) => ({ line: lineNumber, source: line, message })),
+      diagnostics: properties.diagnostics.map((message) => ({ line: lineNumber, source: line, message })),
     };
   } catch (error) {
     diagnostics.push({

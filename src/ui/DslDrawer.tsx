@@ -22,7 +22,7 @@ export function DslDrawer({ document, isOpen, source, onChange, onToggle }: DslD
           <header>
             <p className="eyebrow">Spatial document</p>
             <h1>3D Object DSL</h1>
-            <p>Compose cuboids in a shared XYZ corner-room coordinate space.</p>
+            <p>Compose primitive geometry in a shared XYZ corner-room coordinate space.</p>
           </header>
 
           <DslEditor value={source} onChange={onChange} />

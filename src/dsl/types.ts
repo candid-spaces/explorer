@@ -16,6 +16,13 @@ export interface DslBoxSpec {
   depth: number;
 }
 
+export type DslGeometryKind = 'box' | 'cylinder' | 'cone' | 'sphere';
+
+export interface DslGeometrySpec {
+  kind: DslGeometryKind;
+  diagnostics: string[];
+}
+
 export interface DslMaterialSpec {
   color?: string | number;
   metalness?: number;
@@ -28,6 +35,7 @@ export interface SpatialObject {
   source: string;
   box: DslBoxSpec;
   material: DslMaterialSpec;
+  geometry: DslGeometrySpec;
   unionGroupId?: string;
 }
 

@@ -1,4 +1,5 @@
 import type { DslBoxSpec, DslMaterialSpec } from '../dsl/types';
+import type { SpatialGeometry } from './geometry';
 
 export interface SpatialBounds {
   minX: number;
@@ -15,6 +16,7 @@ export interface SpatialNode {
   box: DslBoxSpec;
   bounds: SpatialBounds;
   material: DslMaterialSpec;
+  geometry: SpatialGeometry;
   unionGroupId?: string;
   children?: SpatialNode[];
   metadata?: Record<string, unknown>;

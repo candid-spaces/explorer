@@ -1,29 +1,14 @@
 import type { DslMaterialSpec } from './types';
+import type { DslPropertyDeclaration } from './propertyParser';
 
 const SUPPORTED_MATERIAL_KEYS = new Set(['color', 'metalness', 'roughness']);
 
-export function parseMaterialDeclaration(source: string): DslMaterialSpec {
+export function parseMaterialDeclaration(declarations: DslPropertyDeclaration[]): DslMaterialSpec {
   const material: DslMaterialSpec = { diagnostics: [] };
 
-  source
-    .split(';')
-    .map((declaration) => declaration.trim())
-    .filter(Boolean)
-    .forEach((declaration) => {
-      const [rawProperty, ...rawValueParts] = declaration.split(':');
-      const property = rawProperty?.trim();
-      const value = rawValueParts.join(':').trim();
-
-      if (!property || !value) {
-        material.diagnostics.push(`Ignoring malformed material declaration "${declaration}".`);
-        return;
-      }
-
-      if (!SUPPORTED_MATERIAL_KEYS.has(property)) {
-        material.diagnostics.push(`Ignoring unsupported material property "${property}".`);
-        return;
-      }
-
+  declarations
+    .filter(({ property }) => SUPPORTED_MATERIAL_KEYS.has(property))
+    .forEach(({ property, value }) => {
       if (property === 'color') {
         material.color = value.startsWith('0x') ? Number(value) : value;
         return;
