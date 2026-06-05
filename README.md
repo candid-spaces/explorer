@@ -1,6 +1,6 @@
-# 3D Spatial Object Model
+# Coordinate Object Model
 
-A client-side React, TypeScript, Vite, and ThreeJS prototype for composing primitive geometry in a realistic XYZ corner-room scene with a declarative DSL.
+A prototype for composing primitive geometry in a XYZ coordinate-space scene with a declarative DSL.
 
 ## Run locally
 
