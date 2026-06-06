@@ -41,6 +41,10 @@ describe('parseBoxSpec', () => {
       depth: 3,
     });
   });
+
+  it('uses the shared axis parser for direct box specs', () => {
+    expect(() => parseBoxSpec('+2+4/not-an-axis/+1+3')).toThrow('Axis Y must use +offset+size syntax.');
+  });
 });
 
 describe('parseDslDocument', () => {
