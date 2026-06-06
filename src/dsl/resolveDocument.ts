@@ -30,6 +30,27 @@ const DEFAULT_PROPERTIES: ResolvedProperties = {
   transform: { rotation: [0, 0, 0], diagnostics: [] },
 };
 
+function mergeGeometry(base: DslGeometrySpec, override: DslGeometrySpec): DslGeometrySpec {
+  if (!override.declared) {
+    return { ...base, diagnostics: [] };
+  }
+
+  const kind = override.kindDeclared ? override.kind : base.kind;
+
+  return {
+    diagnostics: [],
+    declared: true,
+    ...(override.kindDeclared ? { kindDeclared: true } : { kindDeclared: base.kindDeclared }),
+    kind,
+    ...(kind === 'box'
+      ? {
+          'box-radius': override['box-radius'] ?? base['box-radius'],
+          puff: override.puff ?? base.puff,
+        }
+      : {}),
+  };
+}
+
 function mergeProperties(
   base: ResolvedProperties,
   override: SpatialObject | ResolvedProperties,
@@ -46,8 +67,12 @@ function mergeProperties(
       color: overrideMaterial.color ?? base.material.color,
       metalness: overrideMaterial.metalness ?? base.material.metalness,
       roughness: overrideMaterial.roughness ?? base.material.roughness,
+      fabric: overrideMaterial.fabric ?? base.material.fabric,
+      sheen: overrideMaterial.sheen ?? base.material.sheen,
+      clearcoat: overrideMaterial.clearcoat ?? base.material.clearcoat,
+      bump: overrideMaterial.bump ?? base.material.bump,
     },
-    geometry: overrideGeometry.declared ? { ...overrideGeometry, diagnostics: [] } : { ...base.geometry, diagnostics: [] },
+    geometry: mergeGeometry(base.geometry, overrideGeometry),
     transform:
       includeTransform && overrideTransform.declared
         ? { ...overrideTransform, diagnostics: [] }

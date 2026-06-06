@@ -30,13 +30,19 @@ export interface DslGeometrySpec {
   kind: DslGeometryKind;
   diagnostics: string[];
   declared?: boolean;
+  kindDeclared?: boolean;
   'box-radius'?: number;
+  puff?: number;
 }
 
 export interface DslMaterialSpec {
   color?: string | number;
   metalness?: number;
   roughness?: number;
+  fabric?: number;
+  sheen?: number;
+  clearcoat?: number;
+  bump?: number;
   diagnostics: string[];
 }
 

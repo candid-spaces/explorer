@@ -144,6 +144,29 @@ describe('parseDslDocument', () => {
     expect(result.diagnostics[0].message).toBe('box-radius only applies to box geometry.');
   });
 
+  it('parses compact material and puff declarations', () => {
+    const result = parseDslDocument('"Sofa/Cushion/+0+4/+0+1/+0+3" : "color: 0xf5f3ef; roughness: 0.88; fabric: 3; sheen: 4; clearcoat: 1; bump: 2; puff: 5"');
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].material.color).toBe(0xf5f3ef);
+    expect(result.value?.[0].material.roughness).toBe(0.88);
+    expect(result.value?.[0].material.fabric).toBe(3);
+    expect(result.value?.[0].material.sheen).toBe(4);
+    expect(result.value?.[0].material.clearcoat).toBe(1);
+    expect(result.value?.[0].material.bump).toBe(2);
+    expect(result.value?.[0].geometry.puff).toBe(5);
+  });
+
+  it('reports compact material and puff values outside the supported 0..5 range', () => {
+    const result = parseDslDocument('"+0+4/+0+1/+0+3" : "fabric: 6; puff: -1"');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics.map(({ message }) => message)).toEqual([
+      'Material property "fabric" must be between 0 and 5.',
+      'puff must be between 0 and 5.',
+    ]);
+  });
+
   it('defaults to box geometry when geometry is omitted', () => {
     const result = parseDslDocument('"+0+1/+0+2/+0+3" : "color: red"');
 

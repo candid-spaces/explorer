@@ -2,6 +2,7 @@ import type { DslGeometryKind, DslGeometrySpec } from './types';
 import type { DslPropertyDeclaration } from './propertyParser';
 
 const SUPPORTED_GEOMETRY_KINDS = new Set<DslGeometryKind>(['box', 'cylinder', 'cone', 'sphere']);
+const COMPACT_GEOMETRY_STRENGTH_MAX = 5;
 
 function parseRoundedBoxRadius(declaration: DslPropertyDeclaration): { value?: number; diagnostics: string[] } {
   const numericValue = Number(declaration.value);
@@ -17,36 +18,68 @@ function parseRoundedBoxRadius(declaration: DslPropertyDeclaration): { value?: n
   return { value: numericValue, diagnostics: [] };
 }
 
+function parseCompactGeometryStrength(
+  declaration: DslPropertyDeclaration,
+  propertyName: string,
+): { value?: number; diagnostics: string[] } {
+  const numericValue = Number(declaration.value);
+
+  if (Number.isNaN(numericValue)) {
+    return { diagnostics: [`${propertyName} must be numeric.`] };
+  }
+
+  if (numericValue < 0 || numericValue > COMPACT_GEOMETRY_STRENGTH_MAX) {
+    return { diagnostics: [`${propertyName} must be between 0 and ${COMPACT_GEOMETRY_STRENGTH_MAX}.`] };
+  }
+
+  return { value: numericValue, diagnostics: [] };
+}
+
 export function parseGeometryDeclaration(declarations: DslPropertyDeclaration[]): DslGeometrySpec {
   const geometry: DslGeometrySpec = { kind: 'box', diagnostics: [] };
   const declaration = declarations.find(({ property }) => property === 'geometry');
   const radiusDeclaration = declarations.find(({ property }) => property === 'box-radius');
+  const puffDeclaration = declarations.find(({ property }) => property === 'puff');
 
   if (declaration) {
     if (!SUPPORTED_GEOMETRY_KINDS.has(declaration.value as DslGeometryKind)) {
       geometry.diagnostics.push(`Unsupported geometry "${declaration.value}". Falling back to box geometry.`);
       geometry.declared = true;
+      geometry.kindDeclared = true;
     } else {
       geometry.kind = declaration.value as DslGeometryKind;
       geometry.declared = true;
+      geometry.kindDeclared = true;
     }
   }
 
-  if (!radiusDeclaration) {
-    return geometry;
+  if (radiusDeclaration) {
+    const { value: radius, diagnostics } = parseRoundedBoxRadius(radiusDeclaration);
+    geometry.diagnostics.push(...diagnostics);
+
+    if (radius !== undefined) {
+      if (geometry.kind !== 'box') {
+        geometry.diagnostics.push('box-radius only applies to box geometry.');
+      } else {
+        geometry.declared = true;
+        geometry['box-radius'] = radius;
+      }
+    }
   }
 
-  const { value: radius, diagnostics } = parseRoundedBoxRadius(radiusDeclaration);
-  geometry.diagnostics.push(...diagnostics);
+  if (puffDeclaration) {
+    const { value: puff, diagnostics } = parseCompactGeometryStrength(puffDeclaration, 'puff');
+    geometry.diagnostics.push(...diagnostics);
 
-  if (radius === undefined) {
-    return geometry;
+    if (puff !== undefined) {
+      if (geometry.kind !== 'box') {
+        geometry.diagnostics.push('puff currently applies to box geometry.');
+      } else {
+        geometry.declared = true;
+        geometry.puff = puff;
+      }
+    }
   }
 
-  if (geometry.kind !== 'box') {
-    geometry.diagnostics.push('box-radius only applies to box geometry.');
-    return geometry;
-  }
-
-  return { ...geometry, declared: true, 'box-radius': radius };
+  return geometry;
 }
