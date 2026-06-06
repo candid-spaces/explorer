@@ -30,6 +30,7 @@ export interface DslGeometrySpec {
   kind: DslGeometryKind;
   diagnostics: string[];
   declared?: boolean;
+  'box-radius'?: number;
 }
 
 export interface DslMaterialSpec {

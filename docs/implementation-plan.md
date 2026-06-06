@@ -27,7 +27,7 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 "+xOffset+width/+yOffset+height/+zOffset+depth" : "geometry: cone; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
+Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
 Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
 
@@ -88,15 +88,15 @@ Example rotated box:
 
 Collision and union grouping use transformed world-space AABBs: the model rotates the eight corners of each object box around the center pivot, then derives an axis-aligned broad-phase bound from those transformed corners. Future group nodes should compose parent and child transforms rather than rewriting child geometry.
 
-Boxes map these values directly to box dimensions. Cylinders and cones use X/Z as their footprint and Y as their height. Spheres use the full bounding box as a scalable ellipsoid contract, so non-cubic dimensions intentionally render a stretched sphere that still fills the declared box.
+Boxes map these values directly to box dimensions. Boxes with `box-radius` set to a positive value render rounded edges inside the same bounding-box contract; omitted or zero radius renders a normal sharp-edged box, and the renderer clamps the radius to half of the smallest box dimension. Cylinders and cones use X/Z as their footprint and Y as their height. Spheres use the full bounding box as a scalable ellipsoid contract, so non-cubic dimensions intentionally render a stretched sphere that still fills the declared box.
 
 ## Examples
 
 ```txt
-"+2+4/+0+6/+1+3" : "geometry: box; color: 0x333333; metalness: 0.8; roughness: 0.2"
+"+2+4/+0+6/+1+3" : "geometry: box; box-radius: 0.15; color: 0x333333; metalness: 0.8; roughness: 0.2"
 ```
 
-This renders a box that is 4 units wide, offset 2 units from the X origin, rests on the floor at Y = 0, is 6 units high, is 1 unit away from the back wall, and is 3 units deep.
+This renders a rounded box that is 4 units wide, offset 2 units from the X origin, rests on the floor at Y = 0, is 6 units high, is 1 unit away from the back wall, and is 3 units deep. Its edge radius is 0.15 world units.
 
 ```txt
 "+2+4/+7+6/+0+01" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
@@ -142,6 +142,7 @@ The parser is independent from React and ThreeJS. It converts text declarations 
 The object-property parser currently supports geometry plus material properties:
 
 - `geometry` (`box`, `cylinder`, `cone`, `sphere`)
+- `box-radius` (box-only rounded edge radius in world units)
 - `color`
 - `metalness`
 - `roughness`

@@ -1,3 +1,4 @@
+import { RoundedBoxGeometry } from '@react-three/drei';
 import type { MeshStandardMaterialParameters } from 'three';
 import type { SpatialGeometry } from '../model/geometry';
 import type { SpatialNode } from '../model/SpatialNode';
@@ -5,6 +6,24 @@ import { defaultBoxMaterial, unionHighlightMaterial } from './materials';
 
 interface SpatialPrimitiveProps {
   node: SpatialNode;
+}
+
+function normalizedRoundedBoxRadius(geometry: SpatialGeometry): number {
+  const radius = geometry['box-radius'] ?? 0;
+
+  if (radius <= 0) {
+    return 0;
+  }
+
+  const smallestDimension = Math.min(...geometry.dimensions);
+
+  if (smallestDimension <= 0) {
+    return 0;
+  }
+
+  const clampedRadius = Math.min(radius, smallestDimension / 2);
+
+  return clampedRadius / smallestDimension;
 }
 
 function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
@@ -15,7 +34,15 @@ function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
       return <coneGeometry args={[0.5, 1, 48]} />;
     case 'sphere':
       return <sphereGeometry args={[0.5, 48, 24]} />;
-    case 'box':
+    case 'box': {
+      const radius = normalizedRoundedBoxRadius(geometry);
+
+      if (radius > 0) {
+        return <RoundedBoxGeometry args={[1, 1, 1]} radius={radius} smoothness={8} bevelSegments={4} />;
+      }
+
+      return <boxGeometry args={[1, 1, 1]} />;
+    }
     default:
       return <boxGeometry args={[1, 1, 1]} />;
   }

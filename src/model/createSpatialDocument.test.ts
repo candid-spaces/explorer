@@ -59,6 +59,28 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.renderNodes[1].transform.position).toEqual([5.5, 1.5, 7.5]);
   });
 
+  it('inherits box-radius through namespaces and refs', () => {
+    const document = createSpatialDocument(`"Cabinet/" : "box-radius: 0.2; color: orange"
+"Cabinet/+0+4/+0+2/+0+3" : ""
+"Copy/+6+4/+0+2/+0+3" : "ref: Cabinet/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(2);
+    expect(document.renderNodes[0].geometry.kind).toBe('box');
+    expect(document.renderNodes[0].geometry['box-radius']).toBe(0.2);
+    expect(document.renderNodes[1].geometry.kind).toBe('box');
+    expect(document.renderNodes[1].geometry['box-radius']).toBe(0.2);
+  });
+
+  it('allows child boxes to override inherited box-radius with zero', () => {
+    const document = createSpatialDocument(`"Cabinet/" : "box-radius: 0.2; color: orange"
+"Cabinet/+0+4/+0+2/+0+3" : "box-radius: 0"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].geometry['box-radius']).toBe(0);
+  });
+
   it('reports unresolved references', () => {
     const document = createSpatialDocument('"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"');
 
