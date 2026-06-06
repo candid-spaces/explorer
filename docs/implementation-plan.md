@@ -10,14 +10,17 @@ The long-term model is intentionally DOM-like: the DSL compiles into a neutral s
 
 - 1 adult step/pace = 3 DSL units.
 - 1 DSL unit = 1/3 adult step/pace.
-- Numeric values use digits only.
-- Leading-zero digit strings represent fractions between 0 and 1:
-  - `01` = `0.1`
-  - `001` = `0.01`
-  - `05` = `0.5`
-- Non-leading-zero values parse as integers:
+- Numeric values use Base64-safe digits with an optional lowercase `p` decimal marker.
+- `p` represents the unavailable `.` decimal point and is reserved inside axis numeric values:
+  - `0p1` = `0.1`
+  - `0p01` = `0.01`
+  - `0p5` = `0.5`
+  - `10p0` = `10.0`
+- Integer values parse as plain integers and should not include extra leading zeroes:
+  - `0` = `0`
   - `2` = `2`
   - `15` = `15`
+- Legacy leading-zero decimals such as `01`, `001`, and `05` are rejected so older documents fail loudly instead of changing geometry silently. Use `0p1`, `0p01`, and `0p5` instead.
 
 ## DSL grammar
 
@@ -27,7 +30,7 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 "+xOffset+width/+yOffset+height/+zOffset+depth" : "geometry: cone; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
+Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `p` + `digits`; the `p` marker may appear at most once and must have digits on both sides. Namespace identifiers are parsed separately, so they may still contain the letter `p` as a normal identifier character. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
 Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
 
@@ -99,13 +102,13 @@ Boxes map these values directly to box dimensions. Boxes with `box-radius` set t
 This renders a rounded box that is 4 units wide, offset 2 units from the X origin, rests on the floor at Y = 0, is 6 units high, is 1 unit away from the back wall, and is 3 units deep. Its edge radius is 0.15 world units.
 
 ```txt
-"+2+4/+7+6/+0+01" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
+"+2+4/+7+6/+0+0p1" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
 ```
 
 This renders a cone above the first box with a 4 × 0.1 footprint and a height of 6 units.
 
 ```txt
-"+7+6/+0+15/+0+05" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"
+"+7+6/+0+15/+0+0p5" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
 This renders a right-side scaled sphere inside a 6 × 15 × 0.5 bounding box.

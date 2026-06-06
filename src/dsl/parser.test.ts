@@ -1,23 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { parseBoxSpec, parseCompactNumber, parseDslDocument } from './parser';
+import { parseDslDocument } from './parser';
+import { parsePathBoxSpec, parsePathNumber } from './pathParser';
 
 const EXAMPLE = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
-"+2+4/+7+6/+0+01" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
-"+7+6/+0+15/+0+05" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"`;
+"+2+4/+7+6/+0+0p1" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
+"+7+6/+0+15/+0+0p5" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"`;
 
-describe('parseCompactNumber', () => {
-  it('parses integers and compact leading-zero decimals', () => {
-    expect(parseCompactNumber('2')).toBe(2);
-    expect(parseCompactNumber('15')).toBe(15);
-    expect(parseCompactNumber('01')).toBe(0.1);
-    expect(parseCompactNumber('001')).toBe(0.01);
-    expect(parseCompactNumber('05')).toBe(0.5);
+describe('parsePathNumber', () => {
+  it('parses integers and p-decimal values', () => {
+    expect(parsePathNumber('0')).toBe(0);
+    expect(parsePathNumber('2')).toBe(2);
+    expect(parsePathNumber('15')).toBe(15);
+    expect(parsePathNumber('0p1')).toBe(0.1);
+    expect(parsePathNumber('0p01')).toBe(0.01);
+    expect(parsePathNumber('0p5')).toBe(0.5);
+    expect(parsePathNumber('10p0')).toBe(10);
+  });
+
+  it('rejects legacy leading-zero decimals and malformed p-decimal values', () => {
+    expect(() => parsePathNumber('004')).toThrow(
+      'Legacy leading-zero decimals are no longer supported; use "0p04" instead of "004".',
+    );
+    expect(() => parsePathNumber('p5')).toThrow(
+      'Expected a number using digits with optional p-decimal syntax, received "p5".',
+    );
+    expect(() => parsePathNumber('5p')).toThrow(
+      'Expected a number using digits with optional p-decimal syntax, received "5p".',
+    );
   });
 });
 
-describe('parseBoxSpec', () => {
+describe('parsePathBoxSpec', () => {
   it('maps X/Y/Z axis segments to cuboid offsets and sizes', () => {
-    expect(parseBoxSpec('+2+4/+0+6/+1+3')).toEqual({
+    expect(parsePathBoxSpec('+2+4/+0+6/+1+3')).toEqual({
       source: '+2+4/+0+6/+1+3',
       x: 2,
       y: 0,
@@ -65,6 +80,15 @@ describe('parseDslDocument', () => {
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].reference.targetPath).toBe('Sofa/');
+  });
+
+  it('reports legacy leading-zero decimals in axis values', () => {
+    const result = parseDslDocument('"+0+004/+0+2/+0+3" : ""');
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0].message).toBe(
+      'Legacy leading-zero decimals are no longer supported; use "0p04" instead of "004".',
+    );
   });
 
   it('rejects partial namespaced axis groups', () => {
