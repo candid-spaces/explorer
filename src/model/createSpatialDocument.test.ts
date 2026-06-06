@@ -81,6 +81,40 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.renderNodes[0].geometry['box-radius']).toBe(0);
   });
 
+  it('inherits compact material properties and puff through namespaces and refs', () => {
+    const document = createSpatialDocument(`"Sofa/Cushion/" : "color: 0xf5f3ef; fabric: 3; sheen: 4; clearcoat: 1; bump: 2; puff: 5"
+"Sofa/Cushion/+0+4/+0+1/+0+3" : "sheen: 2"
+"Copy/+6+4/+0+1/+0+3" : "ref: Sofa/Cushion/; bump: 1"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(2);
+
+    const cushion = document.renderNodes.find((node) => node.namespacePath === 'Sofa/Cushion/');
+    const copy = document.renderNodes.find((node) => node.namespacePath === 'Copy/');
+
+    expect(cushion?.material.color).toBe(0xf5f3ef);
+    expect(cushion?.material.fabric).toBe(3);
+    expect(cushion?.material.sheen).toBe(2);
+    expect(cushion?.material.clearcoat).toBe(1);
+    expect(cushion?.material.bump).toBe(2);
+    expect(cushion?.geometry.puff).toBe(5);
+    expect(copy?.material.fabric).toBe(3);
+    expect(copy?.material.sheen).toBe(4);
+    expect(copy?.material.clearcoat).toBe(1);
+    expect(copy?.material.bump).toBe(1);
+    expect(copy?.geometry.puff).toBe(5);
+  });
+
+  it('allows puff-only child geometry declarations without dropping inherited box-radius', () => {
+    const document = createSpatialDocument(`"Cushion/" : "box-radius: 0.1; puff: 2"
+"Cushion/+0+4/+0+1/+0+3" : "puff: 5"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].geometry['box-radius']).toBe(0.1);
+    expect(document.renderNodes[0].geometry.puff).toBe(5);
+  });
+
   it('reports unresolved references', () => {
     const document = createSpatialDocument('"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"');
 

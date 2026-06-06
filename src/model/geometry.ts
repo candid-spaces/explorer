@@ -4,6 +4,7 @@ export interface SpatialGeometry {
   kind: DslGeometrySpec['kind'];
   dimensions: [number, number, number];
   'box-radius'?: number;
+  puff?: number;
 }
 
 export function geometryFromBox(box: DslBoxSpec, spec: DslGeometrySpec): SpatialGeometry {
@@ -11,5 +12,6 @@ export function geometryFromBox(box: DslBoxSpec, spec: DslGeometrySpec): Spatial
     kind: spec.kind,
     dimensions: [box.width, box.height, box.depth],
     ...(spec['box-radius'] === undefined ? {} : { 'box-radius': spec['box-radius'] }),
+    ...(spec.puff === undefined ? {} : { puff: spec.puff }),
   };
 }
