@@ -5,7 +5,7 @@ import { parseReferenceDeclaration } from './referenceParser';
 import { parseTransformDeclaration } from './transformParser';
 import type { DslGeometrySpec, DslMaterialSpec, DslReferenceSpec, DslTransformSpec } from './types';
 
-const SUPPORTED_OBJECT_PROPERTIES = new Set(['color', 'metalness', 'roughness', 'geometry', 'rotation', 'rotate', 'ref']);
+const SUPPORTED_OBJECT_PROPERTIES = new Set(['color', 'metalness', 'roughness', 'geometry', 'box-radius', 'rotation', 'rotate', 'ref']);
 
 export interface DslObjectPropertiesSpec {
   material: DslMaterialSpec;

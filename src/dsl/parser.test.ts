@@ -91,6 +91,32 @@ describe('parseDslDocument', () => {
     expect(result.diagnostics[0].message).toBe('Rotation component \"nope\" must be numeric.');
   });
 
+  it('parses box-radius as a box geometry modifier', () => {
+    const result = parseDslDocument('"+0+4/+0+2/+0+3" : "box-radius: 0.15; color: orange"');
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].geometry.kind).toBe('box');
+    expect(result.value?.[0].geometry['box-radius']).toBe(0.15);
+    expect(result.value?.[0].geometry.declared).toBe(true);
+  });
+
+  it('reports invalid box-radius values', () => {
+    const result = parseDslDocument('"+0+4/+0+2/+0+3" : "box-radius: nope"');
+
+    expect(result.ok).toBe(false);
+    expect(result.value?.[0].geometry['box-radius']).toBeUndefined();
+    expect(result.diagnostics[0].message).toBe('box-radius must be numeric.');
+  });
+
+  it('reports box-radius on non-box geometry', () => {
+    const result = parseDslDocument('"+0+4/+0+2/+0+3" : "geometry: sphere; box-radius: 0.15"');
+
+    expect(result.ok).toBe(false);
+    expect(result.value?.[0].geometry.kind).toBe('sphere');
+    expect(result.value?.[0].geometry['box-radius']).toBeUndefined();
+    expect(result.diagnostics[0].message).toBe('box-radius only applies to box geometry.');
+  });
+
   it('defaults to box geometry when geometry is omitted', () => {
     const result = parseDslDocument('"+0+1/+0+2/+0+3" : "color: red"');
 

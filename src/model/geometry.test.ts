@@ -24,6 +24,14 @@ describe('geometryFromBox', () => {
     });
   });
 
+  it('preserves box-radius as a box geometry modifier', () => {
+    expect(geometryFromBox(box, { ...spec('box'), 'box-radius': 0.15 })).toEqual({
+      kind: 'box',
+      dimensions: [4, 6, 0.1],
+      'box-radius': 0.15,
+    });
+  });
+
   it('preserves primitive kinds while using the same bounding-box layout contract', () => {
     expect(geometryFromBox(box, spec('box')).kind).toBe('box');
     expect(geometryFromBox(box, spec('cylinder')).kind).toBe('cylinder');
