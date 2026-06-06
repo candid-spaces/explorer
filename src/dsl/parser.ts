@@ -1,50 +1,19 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
-import { parseDslPath, parsePathNumber } from './pathParser';
+import { parseDslPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
 
-const AXES: AxisName[] = ['x', 'y', 'z'];
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
-const AXIS_PATTERN = /^\+(?<offset>[^+]+)\+(?<size>[^+]+)$/;
 
 export function parseCompactNumber(raw: string): number {
   return parsePathNumber(raw);
 }
 
 export function parseAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
-  const match = raw.match(AXIS_PATTERN);
-
-  if (!match?.groups) {
-    throw new Error(`Axis ${axis.toUpperCase()} must use +offset+size syntax.`);
-  }
-
-  const offset = parseCompactNumber(match.groups.offset);
-  const size = parseCompactNumber(match.groups.size);
-
-  if (size <= 0) {
-    throw new Error(`Axis ${axis.toUpperCase()} size must be greater than zero.`);
-  }
-
-  return { axis, offset, size };
+  return parsePathAxisSpec(raw, axis);
 }
 
 export function parseBoxSpec(source: string): DslBoxSpec {
-  const segments = source.split('/');
-
-  if (segments.length !== 3) {
-    throw new Error('Box spec must contain X/Y/Z axis segments separated by / characters.');
-  }
-
-  const [xAxis, yAxis, zAxis] = segments.map((segment, index) => parseAxisSpec(segment, AXES[index]));
-
-  return {
-    source,
-    x: xAxis.offset,
-    y: yAxis.offset,
-    z: zAxis.offset,
-    width: xAxis.size,
-    height: yAxis.size,
-    depth: zAxis.size,
-  };
+  return parsePathBoxSpec(source);
 }
 
 export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<SpatialObject> {

@@ -22,7 +22,7 @@ export function parsePathNumber(raw: string): number {
   return Number(raw.replace('p', '.'));
 }
 
-function parsePathAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
+export function parsePathAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
   const match = raw.match(AXIS_PATTERN);
 
   if (!match?.groups) {
@@ -39,7 +39,7 @@ function parsePathAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
   return { axis, offset, size };
 }
 
-function parseBoxSegments(segments: string[], source: string): DslBoxSpec {
+function parseBoxSegments(segments: readonly string[], source: string): DslBoxSpec {
   const [xAxis, yAxis, zAxis] = segments.map((segment, index) => parsePathAxisSpec(segment, AXES[index]));
 
   return {
@@ -51,6 +51,16 @@ function parseBoxSegments(segments: string[], source: string): DslBoxSpec {
     height: yAxis.size,
     depth: zAxis.size,
   };
+}
+
+export function parsePathBoxSpec(source: string): DslBoxSpec {
+  const segments = source.split('/');
+
+  if (segments.length !== 3) {
+    throw new Error('Box spec must contain X/Y/Z axis segments separated by / characters.');
+  }
+
+  return parseBoxSegments(segments, source);
 }
 
 export function normalizeNamespacePath(path: string): string {
@@ -127,7 +137,7 @@ export function parseDslPath(source: string): DslPathSpec {
   return {
     source,
     namespace,
-    box: parseBoxSegments(axisSegments, boxSource),
+    box: parsePathBoxSpec(boxSource),
     canonicalPath: namespace.length > 0 ? `${namespace.join('/')}/${boxSource}` : boxSource,
     isDeclarationOnly: false,
   };
