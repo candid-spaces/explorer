@@ -1,21 +1,13 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
-import { parseDslPath } from './pathParser';
+import { parseDslPath, parsePathNumber } from './pathParser';
 
 const AXES: AxisName[] = ['x', 'y', 'z'];
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
-const AXIS_PATTERN = /^\+(?<offset>\d+)\+(?<size>\d+)$/;
+const AXIS_PATTERN = /^\+(?<offset>[^+]+)\+(?<size>[^+]+)$/;
 
 export function parseCompactNumber(raw: string): number {
-  if (!/^\d+$/.test(raw)) {
-    throw new Error(`Expected digits only, received "${raw}".`);
-  }
-
-  if (raw.length > 1 && raw.startsWith('0')) {
-    return Number(`0.${raw.slice(1)}`);
-  }
-
-  return Number(raw);
+  return parsePathNumber(raw);
 }
 
 export function parseAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
