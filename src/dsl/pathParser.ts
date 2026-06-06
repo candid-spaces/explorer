@@ -1,19 +1,25 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, DslPathSpec } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
-const AXIS_PATTERN = /^\+(?<offset>\d+)\+(?<size>\d+)$/;
+const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:p\d+)?$/;
+const LEGACY_LEADING_ZERO_PATTERN = /^0\d+$/;
+const AXIS_PATTERN = /^\+(?<offset>[^+]+)\+(?<size>[^+]+)$/;
 const NAMESPACE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
 function isAxisSegment(segment: string): boolean {
-  return AXIS_PATTERN.test(segment);
+  return /^\+[^+]*\+[^+]*$/.test(segment);
 }
 
-function parseCompactPathNumber(raw: string): number {
-  if (raw.length > 1 && raw.startsWith('0')) {
-    return Number(`0.${raw.slice(1)}`);
+export function parsePathNumber(raw: string): number {
+  if (LEGACY_LEADING_ZERO_PATTERN.test(raw)) {
+    throw new Error(`Legacy leading-zero decimals are no longer supported; use "0p${raw.slice(1)}" instead of "${raw}".`);
   }
 
-  return Number(raw);
+  if (!PATH_NUMBER_PATTERN.test(raw)) {
+    throw new Error(`Expected a number using digits with optional p-decimal syntax, received "${raw}".`);
+  }
+
+  return Number(raw.replace('p', '.'));
 }
 
 function parsePathAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
@@ -23,8 +29,8 @@ function parsePathAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
     throw new Error(`Axis ${axis.toUpperCase()} must use +offset+size syntax.`);
   }
 
-  const offset = parseCompactPathNumber(match.groups.offset);
-  const size = parseCompactPathNumber(match.groups.size);
+  const offset = parsePathNumber(match.groups.offset);
+  const size = parsePathNumber(match.groups.size);
 
   if (size <= 0) {
     throw new Error(`Axis ${axis.toUpperCase()} size must be greater than zero.`);
