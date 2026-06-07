@@ -3,7 +3,12 @@ import { parseMaterialDeclaration } from './materialParser';
 import { parsePropertyDeclarations } from './propertyParser';
 import { parseReferenceDeclaration } from './referenceParser';
 import { parseTransformDeclaration } from './transformParser';
-import type { DslGeometrySpec, DslMaterialSpec, DslReferenceSpec, DslTransformSpec } from './types';
+import type {
+  DslGeometrySpec,
+  DslMaterialSpec,
+  DslReferenceSpec,
+  DslTransformSpec,
+} from './types';
 
 const SUPPORTED_OBJECT_PROPERTIES = new Set([
   'color',
@@ -19,6 +24,7 @@ const SUPPORTED_OBJECT_PROPERTIES = new Set([
   'rotation',
   'rotate',
   'ref',
+  'ref-scale',
 ]);
 
 export interface DslObjectPropertiesSpec {
@@ -37,7 +43,9 @@ export function parseObjectProperties(source: string): DslObjectPropertiesSpec {
   const reference = parseReferenceDeclaration(declarations);
   const unsupportedDiagnostics = declarations
     .filter(({ property }) => !SUPPORTED_OBJECT_PROPERTIES.has(property))
-    .map(({ property }) => `Ignoring unsupported object property "${property}".`);
+    .map(
+      ({ property }) => `Ignoring unsupported object property "${property}".`,
+    );
 
   return {
     material,

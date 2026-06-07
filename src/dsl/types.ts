@@ -54,6 +54,7 @@ export interface DslTransformSpec {
 
 export interface DslReferenceSpec {
   targetPath?: string;
+  scale?: boolean;
   diagnostics: string[];
 }
 

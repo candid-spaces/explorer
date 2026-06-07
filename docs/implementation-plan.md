@@ -47,7 +47,9 @@ Namespaced declarations extend the quoted coordinate expression with slash-separ
 "Table/Leg/+7+1/+0+5/+7+1" : ""
 ```
 
-A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. References must point to a namespace that has already been declared or instantiated. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults.
+A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. Nested coordinates are definitions in the local space of their parent namespace until that parent namespace is materialized. In other words, `Sofa/Base/+0+6/+0+0p4/+0+3` defines `Base` inside `Sofa`; it does not render in world space unless `Sofa` has an explicit concrete instance such as `Sofa/+10+6/+0+2/+0+3` or another concrete instance references `Sofa/`.
+
+References must point to a namespace that has already been declared or instantiated. A reference to a namespace with local descendants materializes those descendants below the referring instance. By default, the referring instance is an unscaled anchor transform, so referenced templates preserve their authored local dimensions and the referring box establishes only the world-space origin and rotation for the cloned local subtree. Authors can opt into fit-to-box scaling with `ref-scale: true`; in that mode, the referring box scales the referenced local subtree on X/Y/Z so the prototype root dimensions fit the referring box. References to namespaces without local descendants keep the previous primitive-copy behavior: the referring instance renders its own box with the target namespace properties. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults.
 
 ## Coordinate system
 
@@ -155,6 +157,9 @@ The object-property parser currently supports geometry plus material properties:
 - `sheen` (`0..5` fabric-like glancing-light strength)
 - `clearcoat` (`0..5` subtle glossy top-layer strength)
 - `bump` (`0..5` fake micro-relief strength)
+- `rotation` / `rotate` (X/Y/Z degree triple)
+- `ref` (namespace reference target)
+- `ref-scale` (`true`/`false`, defaults to `false`; scales referenced local descendants to fit the referring box when enabled)
 
 Unsupported object properties are ignored with diagnostics so future geometry and material features can be added without changing the scene renderer contract. Compact material and deformation values intentionally use a DSL-level `0..5` perceptual range; renderers should normalize that range to their native values instead of exposing renderer-specific units in the DSL.
 
