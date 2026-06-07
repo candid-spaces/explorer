@@ -43,7 +43,9 @@ describe('parseBoxSpec', () => {
   });
 
   it('uses the shared axis parser for direct box specs', () => {
-    expect(() => parseBoxSpec('+2+4/not-an-axis/+1+3')).toThrow('Axis Y must use +offset+size syntax.');
+    expect(() => parseBoxSpec('+2+4/not-an-axis/+1+3')).toThrow(
+      'Axis Y must use +offset+size syntax.',
+    );
   });
 });
 
@@ -79,10 +81,24 @@ describe('parseDslDocument', () => {
   });
 
   it('parses ref declarations and reports missing reference targets', () => {
-    const result = parseDslDocument('"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"');
+    const result = parseDslDocument(
+      '"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/; ref-scale: true"',
+    );
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].reference.targetPath).toBe('Sofa/');
+    expect(result.value?.[0].reference.scale).toBe(true);
+  });
+
+  it('reports invalid ref-scale booleans', () => {
+    const result = parseDslDocument(
+      '"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/; ref-scale: maybe"',
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0].message).toBe(
+      'Reference scale must be a boolean, received "maybe".',
+    );
   });
 
   it('reports legacy leading-zero decimals in axis values', () => {
@@ -98,11 +114,15 @@ describe('parseDslDocument', () => {
     const result = parseDslDocument('"Table/+1+2/+0+3" : ""');
 
     expect(result.ok).toBe(false);
-    expect(result.diagnostics[0].message).toBe('Namespaced instance paths must end with exactly X/Y/Z axis segments.');
+    expect(result.diagnostics[0].message).toBe(
+      'Namespaced instance paths must end with exactly X/Y/Z axis segments.',
+    );
   });
 
   it('parses rotation declarations as XYZ degree triples converted to radians', () => {
-    const result = parseDslDocument('\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, 90, 180\"');
+    const result = parseDslDocument(
+      '\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, 90, 180\"',
+    );
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].transform.rotation[0]).toBe(0);
@@ -111,15 +131,21 @@ describe('parseDslDocument', () => {
   });
 
   it('reports malformed rotation triples', () => {
-    const result = parseDslDocument('\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, nope, 0\"');
+    const result = parseDslDocument(
+      '\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, nope, 0\"',
+    );
 
     expect(result.ok).toBe(false);
     expect(result.value?.[0].transform.rotation).toEqual([0, 0, 0]);
-    expect(result.diagnostics[0].message).toBe('Rotation component \"nope\" must be numeric.');
+    expect(result.diagnostics[0].message).toBe(
+      'Rotation component \"nope\" must be numeric.',
+    );
   });
 
   it('parses box-radius as a box geometry modifier', () => {
-    const result = parseDslDocument('"+0+4/+0+2/+0+3" : "box-radius: 0.15; color: orange"');
+    const result = parseDslDocument(
+      '"+0+4/+0+2/+0+3" : "box-radius: 0.15; color: orange"',
+    );
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].geometry.kind).toBe('box');
@@ -136,16 +162,22 @@ describe('parseDslDocument', () => {
   });
 
   it('reports box-radius on non-box geometry', () => {
-    const result = parseDslDocument('"+0+4/+0+2/+0+3" : "geometry: sphere; box-radius: 0.15"');
+    const result = parseDslDocument(
+      '"+0+4/+0+2/+0+3" : "geometry: sphere; box-radius: 0.15"',
+    );
 
     expect(result.ok).toBe(false);
     expect(result.value?.[0].geometry.kind).toBe('sphere');
     expect(result.value?.[0].geometry['box-radius']).toBeUndefined();
-    expect(result.diagnostics[0].message).toBe('box-radius only applies to box geometry.');
+    expect(result.diagnostics[0].message).toBe(
+      'box-radius only applies to box geometry.',
+    );
   });
 
   it('parses compact material and puff declarations', () => {
-    const result = parseDslDocument('"Sofa/Cushion/+0+4/+0+1/+0+3" : "color: 0xf5f3ef; roughness: 0.88; fabric: 3; sheen: 4; clearcoat: 1; bump: 2; puff: 5"');
+    const result = parseDslDocument(
+      '"Sofa/Cushion/+0+4/+0+1/+0+3" : "color: 0xf5f3ef; roughness: 0.88; fabric: 3; sheen: 4; clearcoat: 1; bump: 2; puff: 5"',
+    );
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].material.color).toBe(0xf5f3ef);
@@ -175,18 +207,26 @@ describe('parseDslDocument', () => {
   });
 
   it('falls back to box geometry and reports unsupported geometry values', () => {
-    const result = parseDslDocument('"+0+1/+0+2/+0+3" : "geometry: torus; color: red"');
+    const result = parseDslDocument(
+      '"+0+1/+0+2/+0+3" : "geometry: torus; color: red"',
+    );
 
     expect(result.ok).toBe(false);
     expect(result.value?.[0].geometry.kind).toBe('box');
-    expect(result.diagnostics[0].message).toContain('Unsupported geometry "torus"');
+    expect(result.diagnostics[0].message).toContain(
+      'Unsupported geometry "torus"',
+    );
   });
 
   it('reports unsupported non-material and non-geometry properties once', () => {
-    const result = parseDslDocument('"+0+1/+0+2/+0+3" : "foo: bar; geometry: box"');
+    const result = parseDslDocument(
+      '"+0+1/+0+2/+0+3" : "foo: bar; geometry: box"',
+    );
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics).toHaveLength(1);
-    expect(result.diagnostics[0].message).toBe('Ignoring unsupported object property "foo".');
+    expect(result.diagnostics[0].message).toBe(
+      'Ignoring unsupported object property "foo".',
+    );
   });
 });

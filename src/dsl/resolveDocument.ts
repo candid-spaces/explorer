@@ -16,6 +16,8 @@ export interface ResolvedSpatialObject extends SpatialObject {
   namespacePath: string;
   parentNamespacePath: string;
   renderable: boolean;
+  materializedFrom?: string;
+  anchorScale?: [number, number, number];
 }
 
 interface ResolvedProperties {
@@ -30,7 +32,10 @@ const DEFAULT_PROPERTIES: ResolvedProperties = {
   transform: { rotation: [0, 0, 0], diagnostics: [] },
 };
 
-function mergeGeometry(base: DslGeometrySpec, override: DslGeometrySpec): DslGeometrySpec {
+function mergeGeometry(
+  base: DslGeometrySpec,
+  override: DslGeometrySpec,
+): DslGeometrySpec {
   if (!override.declared) {
     return { ...base, diagnostics: [] };
   }
@@ -40,7 +45,9 @@ function mergeGeometry(base: DslGeometrySpec, override: DslGeometrySpec): DslGeo
   return {
     diagnostics: [],
     declared: true,
-    ...(override.kindDeclared ? { kindDeclared: true } : { kindDeclared: base.kindDeclared }),
+    ...(override.kindDeclared
+      ? { kindDeclared: true }
+      : { kindDeclared: base.kindDeclared }),
     kind,
     ...(kind === 'box'
       ? {
@@ -81,10 +88,14 @@ function mergeProperties(
 }
 
 function namespacePrefixes(namespace: string[]): string[] {
-  return namespace.map((_, index) => canonicalNamespacePath(namespace.slice(0, index + 1)));
+  return namespace.map((_, index) =>
+    canonicalNamespacePath(namespace.slice(0, index + 1)),
+  );
 }
 
-function firstInstanceByNamespace(objects: SpatialObject[]): Map<string, SpatialObject> {
+function firstInstanceByNamespace(
+  objects: SpatialObject[],
+): Map<string, SpatialObject> {
   const instances = new Map<string, SpatialObject>();
 
   objects.forEach((object) => {
@@ -118,7 +129,9 @@ function resolvePropertiesFor(
 
     const instance = namespaceInstances.get(prefix);
     if (prefix !== fullNamespacePath && instance && instance !== object) {
-      properties = mergeProperties(properties, instance, { includeTransform: false });
+      properties = mergeProperties(properties, instance, {
+        includeTransform: false,
+      });
     }
   });
 
@@ -132,7 +145,9 @@ function resolvePropertiesFor(
         message: `Cyclic ref detected: ${[...visitedRefs, targetPath].join(' -> ')}`,
       });
     } else {
-      const target = namespaceDeclarations.get(targetPath) ?? namespaceInstances.get(targetPath);
+      const target =
+        namespaceDeclarations.get(targetPath) ??
+        namespaceInstances.get(targetPath);
 
       if (!target) {
         diagnostics.push({
@@ -147,7 +162,12 @@ function resolvePropertiesFor(
           message: `Reference target "${targetPath}" must be declared before it is referenced.`,
         });
       } else {
-        const resolvedTarget = resolvePropertiesFor(target, namespaceDeclarations, namespaceInstances, [...visitedRefs, targetPath]);
+        const resolvedTarget = resolvePropertiesFor(
+          target,
+          namespaceDeclarations,
+          namespaceInstances,
+          [...visitedRefs, targetPath],
+        );
         diagnostics.push(...resolvedTarget.diagnostics);
         properties = mergeProperties(properties, resolvedTarget.properties);
       }
@@ -159,7 +179,74 @@ function resolvePropertiesFor(
   return { properties, diagnostics };
 }
 
-function hasChildInstance(object: SpatialObject, instances: SpatialObject[]): boolean {
+function namespaceStartsWith(namespace: string[], prefix: string[]): boolean {
+  return prefix.every((segment, index) => namespace[index] === segment);
+}
+
+function hasConcreteAncestorInstance(
+  object: SpatialObject,
+  concreteNamespaces: Set<string>,
+): boolean {
+  if (object.namespace.length <= 1) {
+    return true;
+  }
+
+  for (let length = object.namespace.length - 1; length > 0; length -= 1) {
+    if (
+      concreteNamespaces.has(
+        canonicalNamespacePath(object.namespace.slice(0, length)),
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function concreteNamespaceSet(objects: SpatialObject[]): Set<string> {
+  const concreteNamespaces = new Set<string>();
+
+  objects
+    .filter(
+      (object) =>
+        !object.declarationOnly && object.box && object.namespace.length <= 1,
+    )
+    .forEach((object) =>
+      concreteNamespaces.add(canonicalNamespacePath(object.namespace)),
+    );
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    objects.forEach((object) => {
+      if (
+        object.declarationOnly ||
+        !object.box ||
+        object.namespace.length === 0
+      ) {
+        return;
+      }
+
+      const key = canonicalNamespacePath(object.namespace);
+      if (
+        !concreteNamespaces.has(key) &&
+        hasConcreteAncestorInstance(object, concreteNamespaces)
+      ) {
+        concreteNamespaces.add(key);
+        changed = true;
+      }
+    });
+  }
+
+  return concreteNamespaces;
+}
+
+function hasMaterializedChildInstance(
+  object: ResolvedSpatialObject,
+  instances: ResolvedSpatialObject[],
+): boolean {
   if (object.namespace.length === 0) {
     return false;
   }
@@ -167,17 +254,78 @@ function hasChildInstance(object: SpatialObject, instances: SpatialObject[]): bo
   return instances.some(
     (candidate) =>
       candidate !== object &&
-      !candidate.declarationOnly &&
       candidate.namespace.length > object.namespace.length &&
-      object.namespace.every((segment, index) => candidate.namespace[index] === segment),
+      object.namespace.every(
+        (segment, index) => candidate.namespace[index] === segment,
+      ),
   );
 }
 
-export function resolveDslDocument(objects: SpatialObject[]): { objects: ResolvedSpatialObject[]; diagnostics: ParseDiagnostic[] } {
+function mergeResolvedProperties(
+  base: ResolvedProperties,
+  override: ResolvedProperties,
+): ResolvedProperties {
+  return mergeProperties(base, override);
+}
+
+function dimensionsFromBox(box: DslBoxSpec): [number, number, number] {
+  return [box.width, box.height, box.depth];
+}
+
+function dimensionsFromRootChildren(
+  descendants: SpatialObject[],
+  targetNamespace: string[],
+): [number, number, number] | undefined {
+  const rootChildren = descendants.filter(
+    (descendant) => descendant.namespace.length === targetNamespace.length + 1,
+  );
+  const boxes = (rootChildren.length > 0 ? rootChildren : descendants)
+    .map((descendant) => descendant.box)
+    .filter(Boolean) as DslBoxSpec[];
+
+  if (boxes.length === 0) {
+    return undefined;
+  }
+
+  const minX = Math.min(...boxes.map((box) => box.x));
+  const minY = Math.min(...boxes.map((box) => box.y));
+  const minZ = Math.min(...boxes.map((box) => box.z));
+  const maxX = Math.max(...boxes.map((box) => box.x + box.width));
+  const maxY = Math.max(...boxes.map((box) => box.y + box.height));
+  const maxZ = Math.max(...boxes.map((box) => box.z + box.depth));
+
+  return [maxX - minX, maxY - minY, maxZ - minZ];
+}
+
+function scaleToFit(
+  sourceDimensions: [number, number, number] | undefined,
+  targetBox: DslBoxSpec,
+): [number, number, number] | undefined {
+  if (
+    !sourceDimensions ||
+    sourceDimensions.some((dimension) => dimension <= 0)
+  ) {
+    return undefined;
+  }
+
+  return [
+    targetBox.width / sourceDimensions[0],
+    targetBox.height / sourceDimensions[1],
+    targetBox.depth / sourceDimensions[2],
+  ];
+}
+
+export function resolveDslDocument(objects: SpatialObject[]): {
+  objects: ResolvedSpatialObject[];
+  diagnostics: ParseDiagnostic[];
+} {
   const diagnostics: ParseDiagnostic[] = [];
   const namespaceDeclarations = new Map<string, SpatialObject>();
   const namespaceInstances = firstInstanceByNamespace(objects);
-  const instances = objects.filter((object) => !object.declarationOnly && object.box);
+  const instances = objects.filter(
+    (object) => !object.declarationOnly && object.box,
+  );
+  const concreteNamespaces = concreteNamespaceSet(objects);
 
   objects.forEach((object) => {
     if (!object.declarationOnly) {
@@ -196,31 +344,139 @@ export function resolveDslDocument(objects: SpatialObject[]): { objects: Resolve
     namespaceDeclarations.set(key, object);
   });
 
-  const resolvedObjects = instances.map((object, index) => {
-    const { properties, diagnostics: propertyDiagnostics } = resolvePropertiesFor(
-      object,
-      namespaceDeclarations,
-      namespaceInstances,
-    );
+  const resolveObject = (
+    object: SpatialObject,
+    index: number,
+    options: {
+      materializedFrom?: string;
+      namespace?: string[];
+      idPrefix?: string;
+    } = {},
+  ): ResolvedSpatialObject => {
+    const { properties, diagnostics: propertyDiagnostics } =
+      resolvePropertiesFor(object, namespaceDeclarations, namespaceInstances);
     diagnostics.push(...propertyDiagnostics);
 
-    const namespacePath = canonicalNamespacePath(object.namespace);
-    const parentNamespacePath = canonicalNamespacePath(object.namespace.slice(0, -1));
-    const renderable = !hasChildInstance(object, instances);
-    const duplicateSuffix = object.namespace.length > 0 ? `#${index + 1}` : '';
+    const namespace = options.namespace ?? object.namespace;
+    const namespacePath = canonicalNamespacePath(namespace);
+    const parentNamespacePath = canonicalNamespacePath(namespace.slice(0, -1));
+    const duplicateSuffix = namespace.length > 0 ? `#${index + 1}` : '';
+    const idPath =
+      namespace.length > 0
+        ? `${namespacePath}${object.box!.source}${duplicateSuffix}`
+        : object.id;
 
     return {
       ...object,
-      id: object.namespace.length > 0 ? `${namespacePath}${object.box!.source}${duplicateSuffix}` : object.id,
+      namespace,
+      id: options.idPrefix ? `${options.idPrefix}${idPath}` : idPath,
       box: object.box!,
       namespacePath,
       parentNamespacePath,
-      renderable,
+      renderable: false,
       material: properties.material,
       geometry: properties.geometry,
       transform: properties.transform,
+      materializedFrom: options.materializedFrom,
     };
+  };
+
+  const resolvedObjects = instances.map((object, index) =>
+    resolveObject(object, index),
+  );
+  const originalByObject = new Map<SpatialObject, ResolvedSpatialObject>();
+  instances.forEach((object, index) =>
+    originalByObject.set(object, resolvedObjects[index]),
+  );
+  const materializedObjects: ResolvedSpatialObject[] = [];
+  const anchorScaleById = new Map<string, [number, number, number]>();
+
+  resolvedObjects.forEach((object, objectIndex) => {
+    if (
+      !object.reference.targetPath ||
+      !hasConcreteAncestorInstance(object, concreteNamespaces)
+    ) {
+      return;
+    }
+
+    const targetNamespace = object.reference.targetPath
+      .split('/')
+      .filter(Boolean);
+    const descendants = instances.filter(
+      (candidate) =>
+        candidate !== object &&
+        candidate.namespace.length > targetNamespace.length &&
+        namespaceStartsWith(candidate.namespace, targetNamespace),
+    );
+    const target = namespaceInstances.get(object.reference.targetPath);
+    const anchorScale = object.reference.scale
+      ? scaleToFit(
+          target?.box
+            ? dimensionsFromBox(target.box)
+            : dimensionsFromRootChildren(descendants, targetNamespace),
+          object.box,
+        )
+      : undefined;
+
+    if (anchorScale) {
+      anchorScaleById.set(object.id, anchorScale);
+    }
+
+    descendants.forEach((descendant, descendantIndex) => {
+      const resolvedDescendant =
+        originalByObject.get(descendant) ??
+        resolveObject(descendant, descendantIndex);
+      const suffix = descendant.namespace.slice(targetNamespace.length);
+      const namespace = [...object.namespace, ...suffix];
+      const properties = mergeResolvedProperties(
+        {
+          material: object.material,
+          geometry: object.geometry,
+          transform: object.transform,
+        },
+        {
+          material: resolvedDescendant.material,
+          geometry: resolvedDescendant.geometry,
+          transform: resolvedDescendant.transform,
+        },
+      );
+
+      materializedObjects.push({
+        ...resolvedDescendant,
+        id: `${object.id}->${resolvedDescendant.namespacePath}${resolvedDescendant.box.source}#${objectIndex + 1}-${descendantIndex + 1}`,
+        namespace,
+        namespacePath: canonicalNamespacePath(namespace),
+        parentNamespacePath: canonicalNamespacePath(namespace.slice(0, -1)),
+        material: properties.material,
+        geometry: properties.geometry,
+        transform: properties.transform,
+        reference: { diagnostics: [] },
+        materializedFrom: object.reference.targetPath,
+        renderable: false,
+      });
+    });
   });
 
-  return { objects: resolvedObjects, diagnostics };
+  const allObjects = [...resolvedObjects, ...materializedObjects];
+  const materializedConcreteNamespaces = new Set(concreteNamespaces);
+  materializedObjects.forEach((object) =>
+    materializedConcreteNamespaces.add(object.namespacePath),
+  );
+
+  const renderEligibleObjects = allObjects.filter(
+    (object) =>
+      object.materializedFrom ||
+      hasConcreteAncestorInstance(object, materializedConcreteNamespaces),
+  );
+
+  return {
+    objects: allObjects.map((object) => ({
+      ...object,
+      anchorScale: anchorScaleById.get(object.id) ?? object.anchorScale,
+      renderable:
+        renderEligibleObjects.includes(object) &&
+        !hasMaterializedChildInstance(object, renderEligibleObjects),
+    })),
+    diagnostics,
+  };
 }
