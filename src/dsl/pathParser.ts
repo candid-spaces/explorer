@@ -1,8 +1,10 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, DslPathSpec } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
-const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:p\d+)?$/;
-const LEGACY_LEADING_ZERO_PATTERN = /^0\d+$/;
+const DSL_UNITS_PER_PACE = 100;
+const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:c)?$/;
+const LEGACY_LEADING_ZERO_PATTERN = /^0\d+(?:c)?$/;
+const LEGACY_P_DECIMAL_PATTERN = /^(?<whole>\d+)p(?<fraction>\d+)$/;
 const AXIS_PATTERN = /^\+(?<offset>[^+]+)\+(?<size>[^+]+)$/;
 const NAMESPACE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
@@ -10,16 +12,55 @@ function isAxisSegment(segment: string): boolean {
   return /^\+[^+]*\+[^+]*$/.test(segment);
 }
 
+function centipaceMigration(raw: string): string | undefined {
+  const match = raw.match(LEGACY_P_DECIMAL_PATTERN);
+
+  if (!match?.groups) {
+    return undefined;
+  }
+
+  const whole = Number(match.groups.whole);
+  const fraction = match.groups.fraction.replace(/0+$/, '');
+
+  if (fraction.length === 0) {
+    return String(whole);
+  }
+
+  if (fraction.length > 2) {
+    return undefined;
+  }
+
+  const centipaces = whole * DSL_UNITS_PER_PACE + Number(fraction.padEnd(2, '0'));
+
+  return `${centipaces}c`;
+}
+
 export function parsePathNumber(raw: string): number {
+  const pDecimalMigration = centipaceMigration(raw);
+
+  if (pDecimalMigration) {
+    throw new Error(`p-decimal path numbers are no longer supported; use "${pDecimalMigration}" instead of "${raw}".`);
+  }
+
+  if (LEGACY_P_DECIMAL_PATTERN.test(raw)) {
+    throw new Error(`p-decimal path numbers are no longer supported and "${raw}" cannot be represented exactly as centipaces.`);
+  }
+
   if (LEGACY_LEADING_ZERO_PATTERN.test(raw)) {
-    throw new Error(`Legacy leading-zero decimals are no longer supported; use "0p${raw.slice(1)}" instead of "${raw}".`);
+    const suffix = raw.endsWith('c') ? 'c' : '';
+    const digits = suffix ? raw.slice(0, -1) : raw;
+    throw new Error(`Leading-zero path numbers are no longer supported; use "${Number(digits)}${suffix}" instead of "${raw}".`);
   }
 
   if (!PATH_NUMBER_PATTERN.test(raw)) {
-    throw new Error(`Expected a number using digits with optional p-decimal syntax, received "${raw}".`);
+    throw new Error(`Expected a path number using digits with an optional centipace suffix, received "${raw}".`);
   }
 
-  return Number(raw.replace('p', '.'));
+  if (raw.endsWith('c')) {
+    return Number(raw.slice(0, -1)) / DSL_UNITS_PER_PACE;
+  }
+
+  return Number(raw);
 }
 
 export function parsePathAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
