@@ -8,19 +8,19 @@ The long-term model is intentionally DOM-like: the DSL compiles into a neutral s
 
 ## Unit model
 
-- 1 adult step/pace = 3 DSL units.
-- 1 DSL unit = 1/3 adult step/pace.
-- Numeric values use Base64-safe digits with an optional lowercase `p` decimal marker.
-- `p` represents the unavailable `.` decimal point and is reserved inside axis numeric values:
-  - `0p1` = `0.1`
-  - `0p01` = `0.01`
-  - `0p5` = `0.5`
-  - `10p0` = `10.0`
-- Integer values parse as plain integers and should not include extra leading zeroes:
-  - `0` = `0`
-  - `2` = `2`
-  - `15` = `15`
-- Legacy leading-zero decimals such as `01`, `001`, and `05` are rejected so older documents fail loudly instead of changing geometry silently. Use `0p1`, `0p01`, and `0p5` instead.
+- 1 adult step/pace = 1 bare pace-scale DSL unit.
+- A bare path integer is measured in paces:
+  - `0` = `0` paces
+  - `2` = `2` paces
+  - `15` = `15` paces
+- A lowercase `c` suffix switches that individual path number to centipaces. One centipace is `1/100` pace, and `100c` equals `1` pace:
+  - `1c` = `0.01` pace
+  - `10c` = `0.1` pace
+  - `50c` = `0.5` pace
+  - `125c` = `1.25` paces
+- Axis values may mix bare paces and centipaces in the same `+offset+size` segment. For example, `+1+3c` means offset `1` pace and size `0.03` paces.
+- Numeric path values use Base64-safe digits with an optional lowercase `c` suffix. Decimal path markers such as `0p1` are no longer supported; use `10c` instead.
+- Integer values should not include extra leading zeroes. Leading-zero path values such as `004` are rejected so older documents fail loudly instead of changing geometry silently. Use `4` for paces or `4c` for centipaces instead.
 
 ## DSL grammar
 
@@ -30,7 +30,7 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 "+xOffset+width/+yOffset+height/+zOffset+depth" : "geometry: cone; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `p` + `digits`; the `p` marker may appear at most once and must have digits on both sides. Namespace identifiers are parsed separately, so they may still contain the letter `p` as a normal identifier character. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
+Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `c`; the `c` suffix changes only that number from paces to centipaces. Namespace identifiers are parsed separately, so they may still contain the letter `c` as a normal identifier character. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
 Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
 
@@ -47,7 +47,7 @@ Namespaced declarations extend the quoted coordinate expression with slash-separ
 "Table/Leg/+7+1/+0+5/+7+1" : ""
 ```
 
-A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. Nested coordinates are definitions in the local space of their parent namespace until that parent namespace is materialized. In other words, `Sofa/Base/+0+6/+0+0p4/+0+3` defines `Base` inside `Sofa`; it does not render in world space unless `Sofa` has an explicit concrete instance such as `Sofa/+10+6/+0+2/+0+3` or another concrete instance references `Sofa/`.
+A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. Nested coordinates are definitions in the local space of their parent namespace until that parent namespace is materialized. In other words, `Sofa/Base/+0+6/+0+40c/+0+3` defines `Base` inside `Sofa`; it does not render in world space unless `Sofa` has an explicit concrete instance such as `Sofa/+10+6/+0+2/+0+3` or another concrete instance references `Sofa/`.
 
 References must point to a namespace that has already been declared or instantiated. A reference to a namespace with local descendants materializes those descendants below the referring instance. By default, the referring instance is an unscaled anchor transform, so referenced templates preserve their authored local dimensions and the referring box establishes only the world-space origin and rotation for the cloned local subtree. Authors can opt into fit-to-box scaling with `ref-scale: true`; in that mode, the referring box scales the referenced local subtree on X/Y/Z so the prototype root dimensions fit the referring box. References to namespaces without local descendants keep the previous primitive-copy behavior: the referring instance renders its own box with the target namespace properties. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults.
 
@@ -105,13 +105,13 @@ Boxes map these values directly to box dimensions. Boxes with `box-radius` set t
 This renders a rounded box that is 4 units wide, offset 2 units from the X origin, rests on the floor at Y = 0, is 6 units high, is 1 unit away from the back wall, and is 3 units deep. Its edge radius is 0.15 world units.
 
 ```txt
-"+2+4/+7+6/+0+0p1" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
+"+2+4/+7+6/+0+10c" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
 ```
 
 This renders a cone above the first box with a 4 × 0.1 footprint and a height of 6 units.
 
 ```txt
-"+7+6/+0+15/+0+0p5" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"
+"+7+6/+0+15/+0+50c" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
 This renders a right-side scaled sphere inside a 6 × 15 × 0.5 bounding box.

@@ -22,6 +22,8 @@ Each declaration lays out a primitive inside an edge-based X/Y/Z bounding box. T
 
 Declaration keys can be anonymous world-space boxes, named world-space instances, declaration-only namespaces, or child instances inside a named parent namespace. Namespaces use slash-separated identifiers before the final three coordinate segments. Declaration-only namespaces end in `/` and do not render by themselves; they define inherited defaults for matching child instances. The `ref` property copies material, geometry, and transform defaults from a previously declared namespace and applies them to the referencing instance's own box.
 
+Path coordinates use bare integers for paces and an optional `c` suffix for centipaces, where `100c = 1` pace. The suffix applies per number, so mixed axis values are valid: `+1+3c` means offset `1` pace and size `0.03` paces. Decimal path notation is intentionally avoided; write `10c` instead of `0.1`.
+
 ```txt
 "+2+4/+0+6/+1+3" : "geometry: box; box-radius: 0.15; color: 0x333333; metalness: 0.8; roughness: 0.2"
 "Sofa/+7+4/+0+3/+0+2" : "color: brown; metalness: 0.2; roughness: 0.8"

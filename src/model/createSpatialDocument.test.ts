@@ -117,8 +117,8 @@ describe('createSpatialDocument namespaced DSL', () => {
   it('does not render nested local definitions without a concrete namespace anchor', () => {
     const document =
       createSpatialDocument(`"Sofa/" : "color: 0x2d3f4f; roughness: 0.92; box-radius: 0.16"
-"Sofa/Base/+0+6/+0+0p4/+0+3" : "box-radius: 0.1"
-"Sofa/Back/+0+6/+0p44+1p8/+0+0p5" : "box-radius: 0.18; rotation: -3.4,0,0"`);
+"Sofa/Base/+0+6/+0+40c/+0+3" : "box-radius: 0.1"
+"Sofa/Back/+0+6/+44c+180c/+0+50c" : "box-radius: 0.18; rotation: -3.4,0,0"`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes).toHaveLength(0);
@@ -132,8 +132,8 @@ describe('createSpatialDocument namespaced DSL', () => {
     const document =
       createSpatialDocument(`"Sofa/" : "color: 0x2d3f4f; roughness: 0.92; box-radius: 0.16"
 "Sofa/+10+6/+0+2/+0+3" : ""
-"Sofa/Base/+0+6/+0+0p4/+0+3" : "box-radius: 0.1"
-"Sofa/Back/+0+6/+0p44+1p8/+0+0p5" : "box-radius: 0.18; rotation: -3.4,0,0"`);
+"Sofa/Base/+0+6/+0+40c/+0+3" : "box-radius: 0.1"
+"Sofa/Back/+0+6/+44c+180c/+0+50c" : "box-radius: 0.18; rotation: -3.4,0,0"`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes).toHaveLength(2);
@@ -148,8 +148,8 @@ describe('createSpatialDocument namespaced DSL', () => {
   it('materializes referenced template descendants at the referring instance anchor', () => {
     const document =
       createSpatialDocument(`"Sofa/" : "color: 0x2d3f4f; roughness: 0.92; box-radius: 0.16"
-"Sofa/Base/+0+6/+0+0p4/+0+3" : "box-radius: 0.1"
-"Sofa/Back/+0+6/+0p44+1p8/+0+0p5" : "box-radius: 0.18; rotation: -3.4,0,0"
+"Sofa/Base/+0+6/+0+40c/+0+3" : "box-radius: 0.1"
+"Sofa/Back/+0+6/+44c+180c/+0+50c" : "box-radius: 0.18; rotation: -3.4,0,0"
 "Seat/+10+6/+0+2/+0+3" : "ref: Sofa/"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -193,7 +193,7 @@ describe('createSpatialDocument namespaced DSL', () => {
 
   it('keeps repeated template ref materializations distinct', () => {
     const document = createSpatialDocument(`"Sofa/" : "color: brown"
-"Sofa/Base/+0+6/+0+0p4/+0+3" : ""
+"Sofa/Base/+0+6/+0+40c/+0+3" : ""
 "SeatA/+0+6/+0+2/+0+3" : "ref: Sofa/"
 "SeatB/+10+6/+0+2/+0+3" : "ref: Sofa/"`);
 

@@ -114,6 +114,12 @@ button {
   font-weight: 700;
 }
 
+.dsl-editor small {
+  color: #bfdbfe;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
 .dsl-editor textarea {
   min-height: 13rem;
   resize: vertical;

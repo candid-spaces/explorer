@@ -3,7 +3,7 @@ import type { DslBoxSpec, DslGeometrySpec } from '../dsl/types';
 import { geometryFromBox } from './geometry';
 
 const box: DslBoxSpec = {
-  source: '+2+4/+7+6/+0+0p1',
+  source: '+2+4/+7+6/+0+10c',
   x: 2,
   y: 7,
   z: 0,

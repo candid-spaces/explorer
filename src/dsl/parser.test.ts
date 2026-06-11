@@ -2,29 +2,38 @@ import { describe, expect, it } from 'vitest';
 import { parseBoxSpec, parseCompactNumber, parseDslDocument } from './parser';
 
 const EXAMPLE = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
-"+2+4/+7+6/+0+0p1" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
-"+7+6/+0+15/+0+0p5" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"`;
+"+2+4/+7+6/+0+10c" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
+"+7+6/+0+15/+0+50c" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"`;
 
 describe('parseCompactNumber', () => {
-  it('parses integers and p-decimal values', () => {
+  it('parses pace integers and centipace-suffixed values', () => {
     expect(parseCompactNumber('0')).toBe(0);
     expect(parseCompactNumber('2')).toBe(2);
     expect(parseCompactNumber('15')).toBe(15);
-    expect(parseCompactNumber('0p1')).toBe(0.1);
-    expect(parseCompactNumber('0p01')).toBe(0.01);
-    expect(parseCompactNumber('0p5')).toBe(0.5);
-    expect(parseCompactNumber('10p0')).toBe(10);
+    expect(parseCompactNumber('10c')).toBe(0.1);
+    expect(parseCompactNumber('1c')).toBe(0.01);
+    expect(parseCompactNumber('50c')).toBe(0.5);
+    expect(parseCompactNumber('10')).toBe(10);
   });
 
-  it('rejects legacy leading-zero decimals and malformed p-decimal values', () => {
+  it('rejects legacy p-decimal, leading-zero, and malformed centipace values', () => {
+    expect(() => parseCompactNumber('0p04')).toThrow(
+      'p-decimal path numbers are no longer supported; use "4c" instead of "0p04".',
+    );
+    expect(() => parseCompactNumber('0p001')).toThrow(
+      'p-decimal path numbers are no longer supported and "0p001" cannot be represented exactly as centipaces.',
+    );
     expect(() => parseCompactNumber('004')).toThrow(
-      'Legacy leading-zero decimals are no longer supported; use "0p04" instead of "004".',
+      'Leading-zero path numbers are no longer supported; use "4" instead of "004".',
     );
     expect(() => parseCompactNumber('p5')).toThrow(
-      'Expected a number using digits with optional p-decimal syntax, received "p5".',
+      'Expected a path number using digits with an optional centipace suffix, received "p5".',
     );
     expect(() => parseCompactNumber('5p')).toThrow(
-      'Expected a number using digits with optional p-decimal syntax, received "5p".',
+      'Expected a path number using digits with an optional centipace suffix, received "5p".',
+    );
+    expect(() => parseCompactNumber('1cc')).toThrow(
+      'Expected a path number using digits with an optional centipace suffix, received "1cc".',
     );
   });
 });
@@ -39,6 +48,18 @@ describe('parseBoxSpec', () => {
       width: 4,
       height: 6,
       depth: 3,
+    });
+  });
+
+  it('allows mixed pace and centipace values in the same axis segment', () => {
+    expect(parseBoxSpec('+1+3c/+0c+1c/+25c+50c')).toEqual({
+      source: '+1+3c/+0c+1c/+25c+50c',
+      x: 1,
+      y: 0,
+      z: 0.25,
+      width: 0.03,
+      height: 0.01,
+      depth: 0.5,
     });
   });
 
@@ -101,12 +122,12 @@ describe('parseDslDocument', () => {
     );
   });
 
-  it('reports legacy leading-zero decimals in axis values', () => {
+  it('reports legacy leading-zero path numbers in axis values', () => {
     const result = parseDslDocument('"+0+004/+0+2/+0+3" : ""');
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics[0].message).toBe(
-      'Legacy leading-zero decimals are no longer supported; use "0p04" instead of "004".',
+      'Leading-zero path numbers are no longer supported; use "4" instead of "004".',
     );
   });
 
