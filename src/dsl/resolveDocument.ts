@@ -2,6 +2,8 @@ import type {
   DslBoxSpec,
   DslGeometrySpec,
   DslMaterialSpec,
+  DslTextureChannel,
+  DslTextureSpec,
   DslTransformSpec,
   ParseDiagnostic,
   SpatialObject,
@@ -24,6 +26,44 @@ interface ResolvedProperties {
   material: DslMaterialSpec;
   geometry: DslGeometrySpec;
   transform: DslTransformSpec;
+}
+
+
+function cloneTextureSpec(texture: DslTextureSpec): DslTextureSpec {
+  return {
+    ...texture,
+    ...(texture.repeat ? { repeat: [...texture.repeat] as [number, number] } : {}),
+    ...(texture.offset ? { offset: [...texture.offset] as [number, number] } : {}),
+  };
+}
+
+function mergeTextures(
+  base: DslMaterialSpec['textures'],
+  override: DslMaterialSpec['textures'],
+): DslMaterialSpec['textures'] {
+  const merged: DslMaterialSpec['textures'] = {};
+
+  (Object.keys(base ?? {}) as DslTextureChannel[]).forEach((channel) => {
+    const texture = base?.[channel];
+
+    if (texture) {
+      merged[channel] = cloneTextureSpec(texture);
+    }
+  });
+
+  (Object.keys(override ?? {}) as DslTextureChannel[]).forEach((channel) => {
+    const baseTexture = merged[channel];
+    const overrideTexture = override?.[channel];
+
+    if (overrideTexture) {
+      merged[channel] = {
+        ...(baseTexture ? cloneTextureSpec(baseTexture) : {}),
+        ...cloneTextureSpec(overrideTexture),
+      };
+    }
+  });
+
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
 const DEFAULT_PROPERTIES: ResolvedProperties = {
@@ -71,13 +111,11 @@ function mergeProperties(
   return {
     material: {
       diagnostics: [],
+      materialPreset: overrideMaterial.materialPreset ?? base.material.materialPreset,
+      textures: mergeTextures(base.material.textures, overrideMaterial.textures),
       color: overrideMaterial.color ?? base.material.color,
       metalness: overrideMaterial.metalness ?? base.material.metalness,
       roughness: overrideMaterial.roughness ?? base.material.roughness,
-      fabric: overrideMaterial.fabric ?? base.material.fabric,
-      sheen: overrideMaterial.sheen ?? base.material.sheen,
-      clearcoat: overrideMaterial.clearcoat ?? base.material.clearcoat,
-      bump: overrideMaterial.bump ?? base.material.bump,
     },
     geometry: mergeGeometry(base.geometry, overrideGeometry),
     transform:

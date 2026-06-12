@@ -1,5 +1,5 @@
 import { parseGeometryDeclaration } from './geometryParser';
-import { parseMaterialDeclaration } from './materialParser';
+import { parseMaterialDeclaration, SUPPORTED_MATERIAL_KEYS } from './materialParser';
 import { parsePropertyDeclarations } from './propertyParser';
 import { parseReferenceDeclaration } from './referenceParser';
 import { parseTransformDeclaration } from './transformParser';
@@ -11,13 +11,7 @@ import type {
 } from './types';
 
 const SUPPORTED_OBJECT_PROPERTIES = new Set([
-  'color',
-  'metalness',
-  'roughness',
-  'fabric',
-  'sheen',
-  'clearcoat',
-  'bump',
+  ...SUPPORTED_MATERIAL_KEYS,
   'geometry',
   'box-radius',
   'puff',

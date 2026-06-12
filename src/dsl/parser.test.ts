@@ -195,29 +195,63 @@ describe('parseDslDocument', () => {
     );
   });
 
-  it('parses compact material and puff declarations', () => {
+  it('parses texture material and puff declarations', () => {
     const result = parseDslDocument(
-      '"Sofa/Cushion/+0+4/+0+1/+0+3" : "color: 0xf5f3ef; roughness: 0.88; fabric: 3; sheen: 4; clearcoat: 1; bump: 2; puff: 5"',
+      '"Sofa/Cushion/+0+4/+0+1/+0+3" : "color: 0xf5f3ef; roughness: 0.88; material-preset: upholstery.fabric; bump-texture-strength: 2; puff: 5"',
     );
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].material.color).toBe(0xf5f3ef);
     expect(result.value?.[0].material.roughness).toBe(0.88);
-    expect(result.value?.[0].material.fabric).toBe(3);
-    expect(result.value?.[0].material.sheen).toBe(4);
-    expect(result.value?.[0].material.clearcoat).toBe(1);
-    expect(result.value?.[0].material.bump).toBe(2);
+    expect(result.value?.[0].material.materialPreset).toBe('upholstery.fabric');
+    expect(result.value?.[0].material.textures?.bumpMap?.strength).toBe(2);
     expect(result.value?.[0].geometry.puff).toBe(5);
   });
 
-  it('reports compact material and puff values outside the supported 0..5 range', () => {
-    const result = parseDslDocument('"+0+4/+0+1/+0+3" : "fabric: 6; puff: -1"');
+  it('reports removed compact material properties as unsupported', () => {
+    const result = parseDslDocument('"+0+4/+0+1/+0+3" : "fabric: 3; puff: -1"');
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics.map(({ message }) => message)).toEqual([
-      'Material property "fabric" must be between 0 and 5.',
       'puff must be between 0 and 5.',
+      'Ignoring unsupported object property "fabric".',
     ]);
+  });
+
+  it('parses material presets and generic texture declarations', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+1/+0+3" : "material-preset: upholstery.fabric; texture: wood.oak; texture-repeat: 2, 3; bump-texture: bump.noise; bump-texture-strength: 4; texture-offset: 0.25 0.5; texture-rotation: 1.57"',
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].material.materialPreset).toBe('upholstery.fabric');
+    expect(result.value?.[0].material.roughness).toBe(0.88);
+    expect(result.value?.[0].material.textures?.map).toEqual({
+      preset: 'wood.oak',
+      repeat: [2, 3],
+      offset: [0.25, 0.5],
+      rotation: 1.57,
+    });
+    expect(result.value?.[0].material.textures?.bumpMap).toEqual({
+      preset: 'bump.noise',
+      repeat: [2, 3],
+      strength: 4,
+      offset: [0.25, 0.5],
+      rotation: 1.57,
+    });
+  });
+
+  it('parses custom image texture sources separately from preset textures', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+1/+0+3" : "texture-src: /textures/custom.png; normal-texture-src: /textures/custom-normal.png; normal-texture-repeat: 1 2"',
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].material.textures?.map).toEqual({ src: '/textures/custom.png' });
+    expect(result.value?.[0].material.textures?.normalMap).toEqual({
+      src: '/textures/custom-normal.png',
+      repeat: [1, 2],
+    });
   });
 
   it('defaults to box geometry when geometry is omitted', () => {
