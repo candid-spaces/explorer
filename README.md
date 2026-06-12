@@ -27,7 +27,7 @@ Path coordinates use bare integers for paces and an optional `c` suffix for cent
 ```txt
 "+2+4/+0+6/+1+3" : "geometry: box; box-radius: 0.15; color: 0x333333; metalness: 0.8; roughness: 0.2"
 "Sofa/+7+4/+0+3/+0+2" : "color: brown; metalness: 0.2; roughness: 0.8"
-"Sofa/Cushion/" : "color: 0xf5f3ef; roughness: 0.88; fabric: 3; sheen: 4; bump: 2; puff: 5"
+"Sofa/Cushion/" : "material-preset: upholstery.fabric; color: 0xf5f3ef; texture: fabric.weave; texture-repeat: 6 6; puff: 5"
 "Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"
 
 "Table/+18+8/+0+5/+4+8" : "color: white; metalness: 0.8; roughness: 0.2"
@@ -39,6 +39,15 @@ Path coordinates use bare integers for paces and an optional `c` suffix for cent
 "Table/Leg/+7+1/+0+5/+7+1" : ""
 ```
 
-Primitive dimensions are derived from the bounding box. For example, a cone or cylinder uses X/Z as its footprint and Y as its height. Non-square footprints are rendered as scaled elliptical primitives so every primitive fills the declared bounding box. `box-radius` applies only to box geometry; omitted or zero radius renders a sharp box, and the renderer clamps positive radii to half of the smallest box dimension. Compact material strengths (`fabric`, `sheen`, `clearcoat`, and `bump`) use a documented `0..5` perceptual range that the ThreeJS renderer maps to physical material and procedural texture settings. `puff` is intentionally a geometry modifier, not a material setting, because it changes the rendered cushion shape.
+Primitive dimensions are derived from the bounding box. For example, a cone or cylinder uses X/Z as its footprint and Y as its height. Non-square footprints are rendered as scaled elliptical primitives so every primitive fills the declared bounding box. `box-radius` applies only to box geometry; omitted or zero radius renders a sharp box, and the renderer clamps positive radii to half of the smallest box dimension. `puff` is intentionally a geometry modifier, not a material setting, because it changes the rendered cushion shape.
+
+Materials can also opt into scalable texture descriptors. `material-preset` expands to ordinary material and texture defaults (for example `upholstery.fabric`, `wood.oak`, `metal.brushed`, and `plastic.matte`), and local declarations can override those defaults. Use `texture` for built-in procedural presets, `texture-src` for a custom image color map, and channel-specific properties such as `roughness-texture`, `normal-texture-src`, `bump-texture`, and `metalness-texture`. Texture transforms are data-driven with `texture-repeat`, `texture-offset`, and `texture-rotation`, plus channel-specific variants such as `normal-texture-repeat`. Common objects should remain reusable declaration-only namespaces plus `ref` instances rather than renderer-special-cased names, so custom objects and built-in object templates inherit texture descriptors through the same path as color, roughness, and geometry.
+
+```txt
+"WoodTable/" : "material-preset: wood.oak; texture-repeat: 3 1"
+"WoodTable/Top/+0+8/+4+1/+0+8" : ""
+"Poster/+0+4/+2+3/+0+10c" : "texture-src: /textures/poster.png; texture-repeat: 1 1"
+"Copy/+10+8/+0+5/+0+8" : "ref: WoodTable/"
+```
 
 See [docs/implementation-plan.md](docs/implementation-plan.md) for architecture details and the feature roadmap.

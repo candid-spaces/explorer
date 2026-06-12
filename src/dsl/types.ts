@@ -35,14 +35,23 @@ export interface DslGeometrySpec {
   puff?: number;
 }
 
+export type DslTextureChannel = 'map' | 'roughnessMap' | 'normalMap' | 'bumpMap' | 'metalnessMap' | 'alphaMap';
+
+export interface DslTextureSpec {
+  preset?: string;
+  src?: string;
+  repeat?: [number, number];
+  rotation?: number;
+  offset?: [number, number];
+  strength?: number;
+}
+
 export interface DslMaterialSpec {
+  materialPreset?: string;
+  textures?: Partial<Record<DslTextureChannel, DslTextureSpec>>;
   color?: string | number;
   metalness?: number;
   roughness?: number;
-  fabric?: number;
-  sheen?: number;
-  clearcoat?: number;
-  bump?: number;
   diagnostics: string[];
 }
 

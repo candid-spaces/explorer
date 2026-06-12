@@ -3,7 +3,7 @@ import type { MeshPhysicalMaterialParameters, MeshStandardMaterialParameters } f
 import type { SpatialGeometry } from '../model/geometry';
 import type { SpatialNode } from '../model/SpatialNode';
 import { defaultBoxMaterial, unionHighlightMaterial } from './materials';
-import { bumpTexturePreset, fabricTexturePreset } from './materialTexturePresets';
+import { resolveMaterialTextures } from './textureRegistry';
 
 interface SpatialPrimitiveProps {
   node: SpatialNode;
@@ -63,29 +63,29 @@ function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
   }
 }
 
+function textureBumpScale(node: SpatialNode): number | undefined {
+  const bumpStrength = normalizedDslStrength(node.material.textures?.bumpMap?.strength);
+
+  return bumpStrength === undefined ? undefined : bumpStrength * 0.045;
+}
+
 function materialParameters(node: SpatialNode): MeshPhysicalMaterialParameters {
-  const fabric = normalizedDslStrength(node.material.fabric) ?? 0;
-  const sheen = normalizedDslStrength(node.material.sheen) ?? (fabric > 0 ? fabric * 0.65 : undefined);
-  const clearcoat = normalizedDslStrength(node.material.clearcoat);
-  const bump = normalizedDslStrength(node.material.bump);
-  const fabricMap = fabricTexturePreset(node.material.fabric);
-  const bumpMap = bumpTexturePreset(node.material.bump, node.material.fabric);
+  const textureParameters = resolveMaterialTextures(node.material);
+  const bumpScale = textureBumpScale(node);
 
   return {
     ...defaultBoxMaterial,
     color: node.material.color ?? defaultBoxMaterial.color,
     metalness: node.material.metalness ?? defaultBoxMaterial.metalness,
-    roughness: node.material.roughness ?? (fabric > 0 ? Math.max(defaultBoxMaterial.roughness ?? 0, 0.74) : defaultBoxMaterial.roughness),
-    ...(fabricMap ? { roughnessMap: fabricMap } : {}),
-    ...(bumpMap ? { bumpMap, bumpScale: (bump ?? fabric * 0.4) * 0.045 } : {}),
-    ...(sheen === undefined ? {} : { sheen, sheenRoughness: Math.max(node.material.roughness ?? 0.75, 0.55) }),
-    ...(clearcoat === undefined ? {} : { clearcoat, clearcoatRoughness: Math.max(0.03, 1 - clearcoat) * 0.35 }),
+    roughness: node.material.roughness ?? defaultBoxMaterial.roughness,
+    ...textureParameters,
+    ...(textureParameters.bumpMap && bumpScale !== undefined ? { bumpScale } : {}),
     ...(node.unionGroupId ? unionHighlightMaterial : {}),
   };
 }
 
 function needsPhysicalMaterial(node: SpatialNode): boolean {
-  return node.material.fabric !== undefined || node.material.sheen !== undefined || node.material.clearcoat !== undefined;
+  return Boolean(node.material.textures?.normalMap);
 }
 
 export function SpatialPrimitive({ node }: SpatialPrimitiveProps) {
