@@ -1,8 +1,8 @@
-# 3D Spatial Object Model Implementation Plan
+# Coordinate Object Model Implementation Plan
 
 ## Product goal
 
-The project renders realistic interior spatial compositions from a declarative DSL. The default document is an XYZ corner-room scene: a floor on the X/Z plane, a back wall at Z = 0, and a side wall at X = 0. Users add fixtures, fittings, furniture, and primitive geometry by composing DSL declarations in the same shared world space.
+The project renders realistic interior spatial compositions from a declarative DSL. The default space is an XYZ corner scene: a floor on the X/Z plane, a back wall at Z = 0, and a side wall at X = 0. Users add fixtures, fittings, furniture, and primitive geometry by composing DSL declarations in the same shared world space.
 
 The long-term model is intentionally DOM-like: the DSL compiles into a neutral spatial document model, and the ThreeJS renderer consumes that document. This keeps parsing, layout, collision handling, and rendering independently extensible.
 

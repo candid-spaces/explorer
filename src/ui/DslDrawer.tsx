@@ -21,9 +21,8 @@ export function DslDrawer({ document, isOpen, source, onChange, onToggle }: DslD
       {isOpen ? (
         <div className="drawer-panel">
           <header>
-            <p className="eyebrow">Spatial document</p>
-            <h1>3D Object DSL</h1>
-            <p>Compose primitive geometry in a shared XYZ corner-room coordinate space.</p>
+            <p className="eyebrow">Coordinate Spaces</p>
+            <p>Compose primitive geometry in a shared coordinate space.</p>
           </header>
 
           <DslEditor value={source} onChange={onChange} />
