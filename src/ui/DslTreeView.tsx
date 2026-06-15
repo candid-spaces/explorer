@@ -32,6 +32,7 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
   const isCollapsed = collapsedIds.has(node.id);
   const lineNumber = metadataValue<number>(node, 'lineNumber');
   const reference = metadataValue<string>(node, 'reference');
+  const transaction = metadataValue<{ amount?: number; publicKey?: string }>(node, 'transaction');
 
   return (
     <li className="dsl-tree-item">
@@ -62,6 +63,8 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
           {lineNumber ? <em>line {lineNumber}</em> : null}
           {node.renderable ? null : <em>container</em>}
           {reference ? <em>ref {reference}</em> : null}
+          {transaction ? <em>tx</em> : null}
+          {transaction?.amount !== undefined ? <em>amount {transaction.amount}</em> : null}
         </div>
       </div>
 
