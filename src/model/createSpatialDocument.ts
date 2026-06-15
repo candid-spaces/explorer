@@ -1,6 +1,7 @@
 import { parseDslDocument } from '../dsl/parser';
 import { resolveDslDocument } from '../dsl/resolveDocument';
 import { canonicalNamespacePath } from '../dsl/pathParser';
+import type { TransactionMetadata } from '../transactions/types';
 import type { SpatialDocument } from './SpatialDocument';
 import type { SpatialNode } from './SpatialNode';
 import { assignUnionGroups, boundsFromTransformedBox } from './collision';
@@ -54,7 +55,11 @@ function assignUnionGroupsToTree(
   }));
 }
 
-export function createSpatialDocument(source: string): SpatialDocument {
+export interface CreateSpatialDocumentOptions {
+  transactionMetadataByNamespace?: Record<string, TransactionMetadata>;
+}
+
+export function createSpatialDocument(source: string, options: CreateSpatialDocumentOptions = {}): SpatialDocument {
   const parsed = parseDslDocument(source);
   const resolved = resolveDslDocument(parsed.value ?? []);
   const diagnostics = [...parsed.diagnostics, ...resolved.diagnostics];
@@ -109,6 +114,7 @@ export function createSpatialDocument(source: string): SpatialDocument {
           reference: object.reference.targetPath,
           materializedFrom: object.materializedFrom,
           anchorScale: object.anchorScale,
+          transaction: options.transactionMetadataByNamespace?.[object.namespacePath],
         },
       };
 
