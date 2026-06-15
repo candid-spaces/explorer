@@ -2,8 +2,14 @@ import { canonicalNamespacePath, parseDslPath } from '../dsl/pathParser';
 import type { DslPathSpec } from '../dsl/types';
 import type { DslTransaction, TransactionDslBundle, TransactionMetadata } from './types';
 
+const FILLER_SUFFIX_PATTERN = /(?:0{8}=)+$/u;
+
 function normalizeTransactionPath(path: string): string {
-  return path.trim().replace(/^\/+/, '');
+  return path
+    .trim()
+    .replace(/^\/+/, '')
+    .replace(FILLER_SUFFIX_PATTERN, '')
+    .replace(/\/+$/u, '');
 }
 
 export function parseTransactionDslPath(path: string): DslPathSpec | undefined {
@@ -14,13 +20,7 @@ export function parseTransactionDslPath(path: string): DslPathSpec | undefined {
   }
 
   try {
-    const parsed = parseDslPath(normalized);
-
-    if (parsed.isDeclarationOnly || !parsed.box) {
-      return undefined;
-    }
-
-    return parsed;
+    return parseDslPath(normalized);
   } catch {
     return undefined;
   }
@@ -32,6 +32,24 @@ function declarationLine(namespace: string[], color: string): string {
 
 function concreteLine(path: DslPathSpec): string {
   return `"${path.canonicalPath}" : "geometry: box; color: #60a5fa; metalness: 0.1; roughness: 0.45"`;
+}
+
+function transactionMetadata(
+  transaction: DslTransaction,
+  publicKey: string,
+  transactionIndex: number,
+): TransactionMetadata {
+  return {
+    publicKey,
+    transactionIndex,
+    from: transaction.from,
+    to: transaction.to,
+    amount: transaction.amount,
+    fee: transaction.fee,
+    memo: transaction.memo,
+    time: transaction.time,
+    signature: transaction.signature,
+  };
 }
 
 export function transactionsToDsl(
@@ -60,18 +78,11 @@ export function transactionsToDsl(
     });
 
     const namespacePath = canonicalNamespacePath(path.namespace);
-    lines.push(concreteLine(path));
-    metadataByNamespace[namespacePath] = {
-      publicKey,
-      transactionIndex,
-      from: transaction.from,
-      to: transaction.to,
-      amount: transaction.amount,
-      fee: transaction.fee,
-      memo: transaction.memo,
-      time: transaction.time,
-      signature: transaction.signature,
-    };
+    metadataByNamespace[namespacePath] = transactionMetadata(transaction, publicKey, transactionIndex);
+
+    if (!path.isDeclarationOnly && path.box) {
+      lines.push(concreteLine(path));
+    }
   });
 
   return {
