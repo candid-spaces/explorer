@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import { SceneRoot } from './scene/SceneRoot';
+import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { transactionsToDslSource } from './transactions/transactionDsl';
 import type { TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
@@ -19,6 +20,8 @@ const INITIAL_DSL = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; me
 "Table/Leg/+0+1/+0+5/+7+1" : ""
 "Table/Leg/+7+1/+0+5/+7+1" : ""`;
 
+const DEFAULT_TRANSACTION_ENDPOINT = 'wss://sure-formerly-filly.ngrok-free.app/00000000e29a7850088d660489b7b9ae2da763bc3bd83324ecc54eee04840adb';
+
 const DEFAULT_TRANSACTION_RANGE: TransactionRange = {
   startHeight: 0,
   endHeight: 0,
@@ -28,12 +31,15 @@ const DEFAULT_TRANSACTION_RANGE: TransactionRange = {
 export default function App() {
   const [source, setSource] = useState(INITIAL_DSL);
   const [drawerOpen, setDrawerOpen] = useState(true);
-  const [transactionEndpoint, setTransactionEndpoint] = usePersistentState('dsl-transaction-endpoint', '');
+  const [transactionEndpoint, setTransactionEndpoint] = usePersistentState('dsl-transaction-endpoint', DEFAULT_TRANSACTION_ENDPOINT);
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState('dsl-transaction-public-key', '');
   const [transactionRange, setTransactionRange] = usePersistentState<TransactionRange>(
     'dsl-transaction-range',
     DEFAULT_TRANSACTION_RANGE,
   );
+  const [tipHeight, setTipHeight] = useState<number | undefined>();
+  const [tipLoading, setTipLoading] = useState(false);
+  const [tipError, setTipError] = useState<string | undefined>();
   const {
     transactions,
     loading: transactionsLoading,
@@ -44,6 +50,35 @@ export default function App() {
     publicKey: transactionPublicKey,
     range: transactionRange,
   });
+  const loadTipHeight = useCallback(() => {
+    const controller = new AbortController();
+    setTipLoading(true);
+    setTipError(undefined);
+
+    fetchTipHeight(transactionEndpoint, controller.signal)
+      .then((height) => {
+        setTipHeight(height);
+        setTransactionRange((range) => ({
+          ...range,
+          startHeight: height,
+          endHeight: Math.min(range.endHeight, height),
+        }));
+      })
+      .catch((caught: unknown) => {
+        if (caught instanceof DOMException && caught.name === 'AbortError') {
+          return;
+        }
+
+        setTipError(caught instanceof Error ? caught.message : 'Unable to load blockchain tip.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setTipLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [setTransactionRange, transactionEndpoint]);
   const transactionDsl = useMemo(() => transactionsToDslSource(transactions), [transactions]);
   const combinedSource = useMemo(
     () => [transactionDsl.source, source].filter((part) => part.trim().length > 0).join('\n'),
@@ -63,6 +98,9 @@ export default function App() {
         transactionRange={transactionRange}
         transactionsLoading={transactionsLoading}
         transactionError={transactionError}
+        tipHeight={tipHeight}
+        tipLoading={tipLoading}
+        tipError={tipError}
         transactionCount={transactions.length}
         acceptedTransactionCount={transactionDsl.source ? transactionDsl.source.split('\n').filter(Boolean).length : 0}
         rejectedTransactions={transactionDsl.rejected}
@@ -72,6 +110,7 @@ export default function App() {
         onTransactionPublicKeyChange={setTransactionPublicKey}
         onTransactionRangeChange={setTransactionRange}
         onReloadTransactions={reloadTransactions}
+        onUseTransactionTip={loadTipHeight}
       />
     </main>
   );

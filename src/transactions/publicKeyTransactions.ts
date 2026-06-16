@@ -21,23 +21,28 @@ function normalizeEndpoint(endpoint: string): string {
   return `wss://${trimmed}`;
 }
 
-export function fetchPublicKeyTransactions({
-  endpoint,
-  publicKey,
-  range,
-  signal,
-}: PublicKeyTransactionRequest): Promise<DslTransaction[]> {
-  if (!publicKey.trim()) {
-    return Promise.resolve([]);
-  }
+type SocketRequestOptions<T> = {
+  endpoint: string;
+  signal?: AbortSignal;
+  send: (socket: WebSocket) => void;
+  handleMessage: (event: MessageEvent<string>) => T | undefined;
+  prematureCloseMessage: string;
+};
 
+function requestSocketMessage<T>({
+  endpoint,
+  signal,
+  send,
+  handleMessage,
+  prematureCloseMessage,
+}: SocketRequestOptions<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     let settled = false;
     const socket = new WebSocket(normalizeEndpoint(endpoint), ['cruzbit.1']);
 
     const cleanup = () => {
       socket.removeEventListener('open', handleOpen);
-      socket.removeEventListener('message', handleMessage);
+      socket.removeEventListener('message', onMessage);
       socket.removeEventListener('error', handleError);
       socket.removeEventListener('close', handleClose);
       signal?.removeEventListener('abort', handleAbort);
@@ -61,59 +66,95 @@ export function fetchPublicKeyTransactions({
     }
 
     function handleOpen() {
-      socket.send(JSON.stringify({
-        type: 'get_public_key_transactions',
-        body: {
-          public_key: publicKey,
-          start_height: range.startHeight,
-          end_height: range.endHeight,
-          limit: range.limit,
-        },
-      }));
+      send(socket);
     }
 
-    function handleMessage(event: MessageEvent<string>) {
-      let parsed: unknown;
-
-      try {
-        parsed = JSON.parse(event.data);
-      } catch {
-        return;
+    function onMessage(event: MessageEvent<string>) {
+      const result = handleMessage(event);
+      if (result !== undefined) {
+        finish(() => resolve(result));
       }
-
-      if (!parsed || typeof parsed !== 'object') {
-        return;
-      }
-
-      const { type, body } = parsed as {
-        type?: string;
-        body?: {
-          public_key?: string;
-          filter_blocks?: { transactions?: DslTransaction[] }[];
-          transactions?: DslTransaction[];
-        };
-      };
-
-      if (type !== 'public_key_transactions' || body?.public_key !== publicKey) {
-        return;
-      }
-
-      const transactions = body.filter_blocks?.flatMap((block) => block.transactions ?? []) ?? body.transactions ?? [];
-      finish(() => resolve(transactions));
     }
 
     function handleError() {
-      finish(() => reject(new Error('Unable to load public-key transactions.')));
+      finish(() => reject(new Error('Unable to communicate with transaction endpoint.')));
     }
 
     function handleClose() {
-      finish(() => reject(new Error('Transaction endpoint closed before returning transactions.')));
+      finish(() => reject(new Error(prematureCloseMessage)));
     }
 
     signal?.addEventListener('abort', handleAbort, { once: true });
     socket.addEventListener('open', handleOpen);
-    socket.addEventListener('message', handleMessage);
+    socket.addEventListener('message', onMessage);
     socket.addEventListener('error', handleError);
     socket.addEventListener('close', handleClose);
+  });
+}
+
+function parseJsonMessage(event: MessageEvent<string>): { type?: string; body?: unknown } | undefined {
+  try {
+    const parsed = JSON.parse(event.data) as unknown;
+    return parsed && typeof parsed === 'object' ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function fetchTipHeight(endpoint: string, signal?: AbortSignal): Promise<number> {
+  return requestSocketMessage({
+    endpoint,
+    signal,
+    send: (socket) => socket.send(JSON.stringify({ type: 'get_tip_header' })),
+    prematureCloseMessage: 'Transaction endpoint closed before returning the blockchain tip.',
+    handleMessage: (event) => {
+      const parsed = parseJsonMessage(event);
+      if (parsed?.type !== 'tip_header' || !parsed.body || typeof parsed.body !== 'object') {
+        return undefined;
+      }
+
+      const { header } = parsed.body as { header?: { height?: number } };
+      return typeof header?.height === 'number' ? header.height : undefined;
+    },
+  });
+}
+
+export function fetchPublicKeyTransactions({
+  endpoint,
+  publicKey,
+  range,
+  signal,
+}: PublicKeyTransactionRequest): Promise<DslTransaction[]> {
+  if (!publicKey.trim()) {
+    return Promise.resolve([]);
+  }
+
+  return requestSocketMessage({
+    endpoint,
+    signal,
+    send: (socket) => socket.send(JSON.stringify({
+      type: 'get_public_key_transactions',
+      body: {
+        public_key: publicKey,
+        start_height: range.startHeight,
+        end_height: range.endHeight,
+        limit: range.limit,
+      },
+    })),
+    prematureCloseMessage: 'Transaction endpoint closed before returning transactions.',
+    handleMessage: (event) => {
+      const parsed = parseJsonMessage(event);
+      const body = parsed?.body as {
+        public_key?: string;
+        filter_blocks?: { transactions?: DslTransaction[] }[];
+        transactions?: DslTransaction[];
+      } | undefined;
+
+      if (parsed?.type !== 'public_key_transactions' || body?.public_key !== publicKey) {
+        return undefined;
+      }
+
+      return body.filter_blocks?.flatMap((block) => block.transactions ?? []) ?? body.transactions ?? [];
+    },
   });
 }

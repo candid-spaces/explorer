@@ -14,6 +14,9 @@ interface DslDrawerProps {
   transactionRange: TransactionRange;
   transactionsLoading: boolean;
   transactionError?: string;
+  tipHeight?: number;
+  tipLoading: boolean;
+  tipError?: string;
   transactionCount: number;
   acceptedTransactionCount: number;
   rejectedTransactions: RejectedTransaction[];
@@ -23,6 +26,7 @@ interface DslDrawerProps {
   onTransactionPublicKeyChange: (publicKey: string) => void;
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
+  onUseTransactionTip: () => void;
 }
 
 export function DslDrawer({
@@ -34,6 +38,9 @@ export function DslDrawer({
   transactionRange,
   transactionsLoading,
   transactionError,
+  tipHeight,
+  tipLoading,
+  tipError,
   transactionCount,
   acceptedTransactionCount,
   rejectedTransactions,
@@ -43,6 +50,7 @@ export function DslDrawer({
   onTransactionPublicKeyChange,
   onTransactionRangeChange,
   onReloadTransactions,
+  onUseTransactionTip,
 }: DslDrawerProps) {
   return (
     <aside className={`dsl-drawer ${isOpen ? 'is-open' : ''}`}>
@@ -63,6 +71,9 @@ export function DslDrawer({
             range={transactionRange}
             loading={transactionsLoading}
             error={transactionError}
+            tipHeight={tipHeight}
+            tipLoading={tipLoading}
+            tipError={tipError}
             transactionCount={transactionCount}
             acceptedCount={acceptedTransactionCount}
             rejectedCount={rejectedTransactions.length}
@@ -70,13 +81,14 @@ export function DslDrawer({
             onPublicKeyChange={onTransactionPublicKeyChange}
             onRangeChange={onTransactionRangeChange}
             onReload={onReloadTransactions}
+            onUseTip={onUseTransactionTip}
           />
 
           <DslEditor value={source} onChange={onChange} />
 
           {document.diagnostics.length > 0 ? (
-            <section className="diagnostics" aria-label="DSL parse diagnostics">
-              <h2>Diagnostics</h2>
+            <details className="diagnostics" aria-label="DSL parse diagnostics">
+              <summary>Diagnostics</summary>
               <ul>
                 {document.diagnostics.map((diagnostic, index) => (
                   <li key={`${diagnostic.line}-${index}`}>
@@ -84,12 +96,12 @@ export function DslDrawer({
                   </li>
                 ))}
               </ul>
-            </section>
+            </details>
           ) : null}
 
           {rejectedTransactions.length > 0 ? (
-            <section className="diagnostics" aria-label="Remote transaction diagnostics">
-              <h2>Remote transaction diagnostics</h2>
+            <details className="diagnostics" aria-label="Remote transaction diagnostics">
+              <summary>Remote transaction diagnostics</summary>
               <ul>
                 {rejectedTransactions.map((rejection) => (
                   <li key={rejection.id}>
@@ -102,7 +114,7 @@ export function DslDrawer({
                   </li>
                 ))}
               </ul>
-            </section>
+            </details>
           ) : null}
 
           <DslTreeView document={document} />

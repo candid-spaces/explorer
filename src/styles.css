@@ -376,3 +376,53 @@ button {
 .transaction-error {
   color: #fecaca;
 }
+
+.transaction-config {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.transaction-config[open] {
+  gap: 0.75rem;
+}
+
+.transaction-config summary,
+.diagnostics summary {
+  cursor: pointer;
+  color: #bfdbfe;
+  font-weight: 700;
+}
+
+.transaction-config > label,
+.transaction-config > .transaction-range-grid,
+.transaction-config > .transaction-tip-row,
+.transaction-config > .transaction-range-slider {
+  margin-top: 0.75rem;
+}
+
+.transaction-tip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  color: #bfdbfe;
+  font-size: 0.78rem;
+}
+
+.transaction-range-slider {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.transaction-range-slider label {
+  gap: 0.2rem;
+}
+
+.transaction-range-slider input {
+  padding-inline: 0;
+}
+
+.transaction-range-slider small {
+  color: #bfdbfe;
+  font-size: 0.72rem;
+}
