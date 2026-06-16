@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { transactionsToDslSource, trimTransactionMemoFiller } from './transactionDsl';
+import { transactionsToDslSource, trimTransactionMemoFiller, trimTransactionPathFiller } from './transactionDsl';
 import type { DslTransaction } from './types';
 
-function transaction(memo: string, index = 0): DslTransaction {
+function transaction(memo: string, index = 0, to = `key-${index}`): DslTransaction {
   return {
     time: 100 + index,
-    to: `key-${index}`,
+    to,
     amount: 1,
     fee: 0,
     memo,
@@ -53,6 +53,23 @@ describe('transactionsToDslSource', () => {
 
   it('trims filler at the end of memo text', () => {
     expect(trimTransactionMemoFiller('"+0+1/+0+1/+0+1" : ""/000=')).toBe('"+0+1/+0+1/+0+1" : ""');
+  });
+
+  it('builds a DSL declaration from transaction to path plus memo properties', () => {
+    const result = transactionsToDslSource([
+      transaction(
+        'geometry: sphere; color: blue;',
+        0,
+        '+2+6/+0+6/+1+13/000000000000000000000000000=',
+      ),
+    ]);
+
+    expect(result.source).toBe('"+2+6/+0+6/+1+13" : "geometry: sphere; color: blue;"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('trims filler from transaction to paths', () => {
+    expect(trimTransactionPathFiller('+2+6/+0+6/+1+13/000000000=')).toBe('+2+6/+0+6/+1+13');
   });
 
   it('preserves transaction order for accepted memos', () => {

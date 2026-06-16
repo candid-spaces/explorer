@@ -6,8 +6,13 @@ const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
 const QUOTED_PATH_FILLER_PATTERN = /("[^"]*?)\/[0=]+("\s*:)/g;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
 
+interface CandidateDsl {
+  source: string;
+  preview: string;
+}
+
 function transactionFallbackId(transaction: DslTransaction, index: number): string {
-  return [transaction.time, transaction.to, transaction.series ?? 'none', index].join(':');
+  return [transaction.time, trimTransactionPathFiller(transaction.to), transaction.series ?? 'none', index].join(':');
 }
 
 function previewMemo(memo: string): string {
@@ -27,6 +32,10 @@ function trimTrailingFillerFromLine(line: string): string {
   return trimmedRight.replace(QUOTED_PATH_FILLER_PATTERN, '$1$2');
 }
 
+export function trimTransactionPathFiller(path: string): string {
+  return path.trim().replace(TRAILING_FILLER_PATTERN, '');
+}
+
 export function trimTransactionMemoFiller(memo: string): string {
   return memo
     .split('\n')
@@ -39,6 +48,40 @@ function diagnosticsToReasons(diagnostics: readonly ParseDiagnostic[]): string[]
   return diagnostics.map((diagnostic) => `Line ${diagnostic.line}: ${diagnostic.message}`);
 }
 
+function quoteDslDeclaration(path: string, properties: string): string {
+  return `"${path}" : "${properties.replace(/"/g, '\\"')}"`;
+}
+
+function transactionCandidates(transaction: DslTransaction): CandidateDsl[] {
+  const memo = trimTransactionMemoFiller(transaction.memo ?? '');
+  const path = trimTransactionPathFiller(transaction.to ?? '');
+  const candidates: CandidateDsl[] = [];
+
+  if (memo) {
+    candidates.push({ source: memo, preview: memo });
+  }
+
+  if (path) {
+    candidates.push({
+      source: quoteDslDeclaration(path, memo),
+      preview: `${path}: ${memo}`,
+    });
+  }
+
+  return candidates;
+}
+
+function parseValidDsl(source: string) {
+  const parsed = parseDslDocument(source);
+  const objects = parsed.value ?? [];
+  const hasInvalidObject = objects.some((object) => !object.declarationOnly && !object.box);
+
+  return {
+    parsed,
+    valid: parsed.ok && objects.length > 0 && !hasInvalidObject,
+  };
+}
+
 export function transactionsToDslSource(transactions: readonly DslTransaction[]): {
   source: string;
   rejected: RejectedTransaction[];
@@ -47,28 +90,32 @@ export function transactionsToDslSource(transactions: readonly DslTransaction[])
   const rejected: RejectedTransaction[] = [];
 
   transactions.forEach((transaction, index) => {
-    const memo = trimTransactionMemoFiller(transaction.memo ?? '');
+    const candidates = transactionCandidates(transaction);
     const id = transactionFallbackId(transaction, index);
+    const rejectionReasons: string[] = [];
 
-    if (!memo) {
+    for (const candidate of candidates) {
+      const { parsed, valid } = parseValidDsl(candidate.source);
+
+      if (valid) {
+        accepted.push(candidate.source);
+        return;
+      }
+
+      rejectionReasons.push(...diagnosticsToReasons(parsed.diagnostics));
+    }
+
+    if (candidates.length === 0) {
       return;
     }
 
-    const parsed = parseDslDocument(memo);
-    const objects = parsed.value ?? [];
-    const hasInvalidObject = objects.some((object) => !object.declarationOnly && !object.box);
-
-    if (!parsed.ok || objects.length === 0 || hasInvalidObject) {
-      const reasons = diagnosticsToReasons(parsed.diagnostics);
-      rejected.push({
-        id,
-        memoPreview: previewMemo(memo),
-        reasons: reasons.length > 0 ? reasons : ['Memo did not contain valid DSL coordinates, namespaces, or declarations.'],
-      });
-      return;
-    }
-
-    accepted.push(memo);
+    rejected.push({
+      id,
+      memoPreview: previewMemo(candidates[candidates.length - 1].preview),
+      reasons: rejectionReasons.length > 0
+        ? Array.from(new Set(rejectionReasons))
+        : ['Memo did not contain valid DSL coordinates, namespaces, or declarations.'],
+    });
   });
 
   return {
