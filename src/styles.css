@@ -315,3 +315,64 @@ button {
   font-style: normal;
   white-space: nowrap;
 }
+
+.transaction-controls {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgb(96 165 250 / 28%);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: rgb(15 23 42 / 68%);
+}
+
+.transaction-controls label {
+  display: grid;
+  gap: 0.35rem;
+  color: #dbeafe;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.transaction-controls input {
+  width: 100%;
+  border: 1px solid rgb(147 197 253 / 28%);
+  border-radius: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  background: rgb(2 6 23 / 72%);
+  color: #e2e8f0;
+  font: inherit;
+}
+
+.transaction-controls button {
+  border: 1px solid rgb(147 197 253 / 22%);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  background: rgb(30 41 59 / 72%);
+  color: #bfdbfe;
+}
+
+.transaction-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.transaction-range-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.transaction-status,
+.transaction-error {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.transaction-status {
+  color: #bfdbfe;
+}
+
+.transaction-error {
+  color: #fecaca;
+}
