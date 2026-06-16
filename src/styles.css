@@ -426,3 +426,38 @@ button {
   color: #bfdbfe;
   font-size: 0.72rem;
 }
+
+.dual-range-slider {
+  position: relative;
+  min-height: 2rem;
+}
+
+.dual-range-slider::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgb(147 197 253 / 20%);
+  content: "";
+  transform: translateY(-50%);
+}
+
+.dual-range-slider input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.dual-range-slider input::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+
+.dual-range-slider input::-moz-range-thumb {
+  pointer-events: auto;
+}

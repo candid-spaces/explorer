@@ -119,9 +119,10 @@ export function DslTransactionControls({
         </div>
 
         <div className="transaction-range-slider" aria-label="Height window range">
-          <label>
-            <span>End height slider</span>
+          <span>Height window</span>
+          <div className="dual-range-slider">
             <input
+              aria-label="End height"
               type="range"
               min={0}
               max={sliderMax}
@@ -129,10 +130,8 @@ export function DslTransactionControls({
               value={lowerHeight}
               onChange={(event) => updateWindow(Number(event.target.value), upperHeight)}
             />
-          </label>
-          <label>
-            <span>Start height slider</span>
             <input
+              aria-label="Start height"
               type="range"
               min={0}
               max={sliderMax}
@@ -140,8 +139,8 @@ export function DslTransactionControls({
               value={upperHeight}
               onChange={(event) => updateWindow(lowerHeight, Number(event.target.value))}
             />
-          </label>
-          <small>Height window: {lowerHeight} - {upperHeight}</small>
+          </div>
+          <small>{lowerHeight} - {upperHeight}</small>
         </div>
       </details>
 
