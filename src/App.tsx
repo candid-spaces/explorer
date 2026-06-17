@@ -79,7 +79,10 @@ export default function App() {
 
     return () => controller.abort();
   }, [setTransactionRange, transactionEndpoint]);
-  const transactionDsl = useMemo(() => transactionsToDslSource(transactions), [transactions]);
+  const transactionDsl = useMemo(
+    () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey }),
+    [transactions, transactionPublicKey],
+  );
   const combinedSource = useMemo(
     () => [transactionDsl.source, source].filter((part) => part.trim().length > 0).join('\n'),
     [source, transactionDsl.source],
@@ -103,6 +106,7 @@ export default function App() {
         tipError={tipError}
         transactionCount={transactions.length}
         acceptedTransactionCount={transactionDsl.source ? transactionDsl.source.split('\n').filter(Boolean).length : 0}
+        mappedTransactionSource={transactionDsl.source}
         rejectedTransactions={transactionDsl.rejected}
         onChange={setSource}
         onToggle={() => setDrawerOpen((isOpen) => !isOpen)}

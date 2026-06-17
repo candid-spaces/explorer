@@ -137,6 +137,14 @@ button {
   white-space: pre;
 }
 
+
+.dsl-editor-readonly textarea {
+  min-height: 8rem;
+  border-color: rgb(34 197 94 / 35%);
+  background: rgb(6 78 59 / 28%);
+  color: #bbf7d0;
+}
+
 .diagnostics,
 .object-list {
   margin-top: 1rem;

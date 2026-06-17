@@ -43,14 +43,26 @@ function parseValidDsl(source: string) {
   };
 }
 
-export function transactionsToDslSource(transactions: readonly DslTransaction[]): {
+interface TransactionsToDslSourceOptions {
+  publicKey?: string;
+}
+
+export function transactionsToDslSource(
+  transactions: readonly DslTransaction[],
+  options: TransactionsToDslSourceOptions = {},
+): {
   source: string;
   rejected: RejectedTransaction[];
 } {
   const accepted: string[] = [];
   const rejected: RejectedTransaction[] = [];
+  const publicKey = options.publicKey?.trim();
 
   transactions.forEach((transaction, index) => {
+    if (publicKey && transaction.from !== publicKey) {
+      return;
+    }
+
     const memo = trimTransactionMemoFiller(transaction.memo ?? '');
     const path = trimTransactionPathFiller(transaction.to ?? '');
     const id = transactionFallbackId(transaction, index);
