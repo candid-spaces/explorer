@@ -19,6 +19,7 @@ interface DslDrawerProps {
   tipError?: string;
   transactionCount: number;
   acceptedTransactionCount: number;
+  mappedTransactionSource: string;
   rejectedTransactions: RejectedTransaction[];
   onChange: (source: string) => void;
   onToggle: () => void;
@@ -43,6 +44,7 @@ export function DslDrawer({
   tipError,
   transactionCount,
   acceptedTransactionCount,
+  mappedTransactionSource,
   rejectedTransactions,
   onChange,
   onToggle,
@@ -83,6 +85,14 @@ export function DslDrawer({
             onReload={onReloadTransactions}
             onUseTip={onUseTransactionTip}
           />
+
+          {mappedTransactionSource.trim().length > 0 ? (
+            <label className="dsl-editor dsl-editor-readonly">
+              <span>Mapped transaction DSL</span>
+              <small>Accepted outgoing transactions are rendered from this read-only DSL.</small>
+              <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
+            </label>
+          ) : null}
 
           <DslEditor value={source} onChange={onChange} />
 

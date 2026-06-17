@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { transactionsToDslSource, trimTransactionMemoFiller, trimTransactionPathFiller } from './transactionDsl';
 import type { DslTransaction } from './types';
 
-function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`): DslTransaction {
+function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from?: string): DslTransaction {
   return {
     time: 100 + index,
+    from,
     to,
     amount: 1,
     fee: 0,
@@ -66,6 +67,34 @@ describe('transactionsToDslSource', () => {
 
   it('trims filler from transaction to paths', () => {
     expect(trimTransactionPathFiller('+2+6/+0+6/+1+13/000000000=')).toBe('+2+6/+0+6/+1+13');
+  });
+
+  it('maps only outgoing transactions when a public key is provided', () => {
+    const result = transactionsToDslSource([
+      transaction('color: red', 1, '+0+1/+0+1/+0+1', 'sender-key'),
+      transaction('color: blue', 2, '+1+1/+0+1/+0+1', 'other-key'),
+    ], { publicKey: 'sender-key' });
+
+    expect(result.source).toBe('"+0+1/+0+1/+0+1" : "color: red"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('ignores incoming transactions sent to the public key', () => {
+    const result = transactionsToDslSource([
+      transaction('color: red', 1, 'sender-key', 'other-key'),
+    ], { publicKey: 'sender-key' });
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('ignores transactions missing a sender when a public key is provided', () => {
+    const result = transactionsToDslSource([
+      transaction('color: red', 1, '+0+1/+0+1/+0+1'),
+    ], { publicKey: 'sender-key' });
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toEqual([]);
   });
 
   it('preserves transaction order for accepted transactions', () => {
