@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import type { TransactionRange } from '../transactions/types';
 
 interface DslTransactionControlsProps {
@@ -51,12 +51,103 @@ export function DslTransactionControls({
   const lowerHeight = Math.min(range.startHeight, range.endHeight);
   const upperHeight = Math.max(range.startHeight, range.endHeight);
 
+  const lowerPercent = (lowerHeight / sliderMax) * 100;
+  const upperPercent = (upperHeight / sliderMax) * 100;
+
   function updateWindow(nextLower: number, nextUpper: number) {
     onRangeChange({
       ...range,
       startHeight: clampHeight(Math.max(nextLower, nextUpper), sliderMax),
       endHeight: clampHeight(Math.min(nextLower, nextUpper), sliderMax),
     });
+  }
+
+  function valueFromPointer(track: HTMLElement, clientX: number): number {
+    const rect = track.getBoundingClientRect();
+    const ratio = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+    return clampHeight(ratio * sliderMax, sliderMax);
+  }
+
+  function startPointerDrag(thumb: 'lower' | 'upper', track: HTMLElement, pointerId: number, clientX: number) {
+    track.setPointerCapture?.(pointerId);
+
+    const updateFromClientX = (nextClientX: number) => {
+      const nextValue = valueFromPointer(track, nextClientX);
+      if (thumb === 'lower') {
+        updateWindow(nextValue, upperHeight);
+      } else {
+        updateWindow(lowerHeight, nextValue);
+      }
+    };
+
+    const handlePointerMove = (event: PointerEvent) => updateFromClientX(event.clientX);
+    const stopPointerDrag = () => {
+      track.releasePointerCapture?.(pointerId);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopPointerDrag);
+      window.removeEventListener('pointercancel', stopPointerDrag);
+    };
+
+    updateFromClientX(clientX);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopPointerDrag, { once: true });
+    window.addEventListener('pointercancel', stopPointerDrag, { once: true });
+  }
+
+  function handleTrackPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    const nextValue = valueFromPointer(event.currentTarget, event.clientX);
+    const thumb = Math.abs(nextValue - lowerHeight) <= Math.abs(nextValue - upperHeight) ? 'lower' : 'upper';
+    startPointerDrag(thumb, event.currentTarget, event.pointerId, event.clientX);
+  }
+
+  function handleThumbPointerDown(thumb: 'lower' | 'upper', event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    const track = event.currentTarget.closest<HTMLElement>('.dual-range-slider');
+    if (track) {
+      startPointerDrag(thumb, track, event.pointerId, event.clientX);
+    }
+  }
+
+  function handleThumbKeyDown(thumb: 'lower' | 'upper', event: KeyboardEvent<HTMLButtonElement>) {
+    const largeStep = Math.max(10, Math.round(sliderMax / 20));
+    const currentValue = thumb === 'lower' ? lowerHeight : upperHeight;
+    const applyValue = (nextValue: number) => {
+      if (thumb === 'lower') {
+        updateWindow(nextValue, upperHeight);
+      } else {
+        updateWindow(lowerHeight, nextValue);
+      }
+    };
+
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowDown':
+        event.preventDefault();
+        applyValue(currentValue - 1);
+        break;
+      case 'ArrowRight':
+      case 'ArrowUp':
+        event.preventDefault();
+        applyValue(currentValue + 1);
+        break;
+      case 'PageDown':
+        event.preventDefault();
+        applyValue(currentValue - largeStep);
+        break;
+      case 'PageUp':
+        event.preventDefault();
+        applyValue(currentValue + largeStep);
+        break;
+      case 'Home':
+        event.preventDefault();
+        applyValue(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        applyValue(sliderMax);
+        break;
+    }
   }
 
   return (
@@ -120,24 +211,35 @@ export function DslTransactionControls({
 
         <div className="transaction-range-slider" aria-label="Height window range">
           <span>Height window</span>
-          <div className="dual-range-slider">
-            <input
-              aria-label="End height"
-              type="range"
-              min={0}
-              max={sliderMax}
-              step={1}
-              value={lowerHeight}
-              onChange={(event) => updateWindow(Number(event.target.value), upperHeight)}
+          <div className="dual-range-slider" onPointerDown={handleTrackPointerDown}>
+            <div className="dual-range-track" />
+            <div
+              className="dual-range-selection"
+              style={{ left: `${lowerPercent}%`, right: `${100 - upperPercent}%` }}
             />
-            <input
+            <button
+              aria-label="End height"
+              aria-valuemax={sliderMax}
+              aria-valuemin={0}
+              aria-valuenow={lowerHeight}
+              className="dual-range-thumb"
+              role="slider"
+              style={{ left: `${lowerPercent}%` }}
+              type="button"
+              onKeyDown={(event) => handleThumbKeyDown('lower', event)}
+              onPointerDown={(event) => handleThumbPointerDown('lower', event)}
+            />
+            <button
               aria-label="Start height"
-              type="range"
-              min={0}
-              max={sliderMax}
-              step={1}
-              value={upperHeight}
-              onChange={(event) => updateWindow(lowerHeight, Number(event.target.value))}
+              aria-valuemax={sliderMax}
+              aria-valuemin={0}
+              aria-valuenow={upperHeight}
+              className="dual-range-thumb"
+              role="slider"
+              style={{ left: `${upperPercent}%` }}
+              type="button"
+              onKeyDown={(event) => handleThumbKeyDown('upper', event)}
+              onPointerDown={(event) => handleThumbPointerDown('upper', event)}
             />
           </div>
           <small>{lowerHeight} - {upperHeight}</small>
