@@ -315,3 +315,157 @@ button {
   font-style: normal;
   white-space: nowrap;
 }
+
+.transaction-controls {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgb(96 165 250 / 28%);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: rgb(15 23 42 / 68%);
+}
+
+.transaction-controls label {
+  display: grid;
+  gap: 0.35rem;
+  color: #dbeafe;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.transaction-controls input {
+  width: 100%;
+  border: 1px solid rgb(147 197 253 / 28%);
+  border-radius: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  background: rgb(2 6 23 / 72%);
+  color: #e2e8f0;
+  font: inherit;
+}
+
+.transaction-controls button {
+  border: 1px solid rgb(147 197 253 / 22%);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  background: rgb(30 41 59 / 72%);
+  color: #bfdbfe;
+}
+
+.transaction-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.transaction-range-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.transaction-status,
+.transaction-error {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.transaction-status {
+  color: #bfdbfe;
+}
+
+.transaction-error {
+  color: #fecaca;
+}
+
+.transaction-config {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.transaction-config[open] {
+  gap: 0.75rem;
+}
+
+.transaction-config summary,
+.diagnostics summary {
+  cursor: pointer;
+  color: #bfdbfe;
+  font-weight: 700;
+}
+
+.transaction-config > label,
+.transaction-config > .transaction-range-grid,
+.transaction-config > .transaction-tip-row,
+.transaction-config > .transaction-range-slider {
+  margin-top: 0.75rem;
+}
+
+.transaction-tip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  color: #bfdbfe;
+  font-size: 0.78rem;
+}
+
+.transaction-range-slider {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.transaction-range-slider label {
+  gap: 0.2rem;
+}
+
+.transaction-range-slider input {
+  padding-inline: 0;
+}
+
+.transaction-range-slider small {
+  color: #bfdbfe;
+  font-size: 0.72rem;
+}
+
+.dual-range-slider {
+  position: relative;
+  min-height: 2rem;
+  touch-action: none;
+}
+
+.dual-range-track,
+.dual-range-selection {
+  position: absolute;
+  top: 50%;
+  height: 0.35rem;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.dual-range-track {
+  right: 0;
+  left: 0;
+  background: rgb(147 197 253 / 20%);
+}
+
+.dual-range-selection {
+  background: rgb(96 165 250 / 70%);
+}
+
+.dual-range-thumb {
+  position: absolute;
+  top: 50%;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #dbeafe;
+  border-radius: 999px;
+  padding: 0;
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgb(37 99 235 / 18%);
+  transform: translate(-50%, -50%);
+}
+
+.dual-range-thumb:focus-visible {
+  outline: 2px solid #f8fafc;
+  outline-offset: 3px;
+}

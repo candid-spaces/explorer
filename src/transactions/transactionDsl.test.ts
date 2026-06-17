@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+import { transactionsToDslSource, trimTransactionMemoFiller, trimTransactionPathFiller } from './transactionDsl';
+import type { DslTransaction } from './types';
+
+function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`): DslTransaction {
+  return {
+    time: 100 + index,
+    to,
+    amount: 1,
+    fee: 0,
+    memo,
+  };
+}
+
+describe('transactionsToDslSource', () => {
+  it('builds valid XYZ coordinate declarations from transaction path and memo properties', () => {
+    const result = transactionsToDslSource([
+      transaction('geometry: box', 0, '+0+1/+0+1/+0+1'),
+    ]);
+
+    expect(result.source).toBe('"+0+1/+0+1/+0+1" : "geometry: box"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('accepts namespaces and declaration-only namespaces from transaction paths', () => {
+    const result = transactionsToDslSource([
+      transaction('color: red', 0, 'Room/'),
+      transaction('', 1, 'Room/Chair/+0+1/+0+1/+0+1'),
+    ]);
+
+    expect(result.source).toContain('"Room/" : "color: red"');
+    expect(result.source).toContain('"Room/Chair/+0+1/+0+1/+0+1" : ""');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('does not accept full DSL declarations embedded directly in memo text', () => {
+    const result = transactionsToDslSource([
+      transaction('"+0+1/+0+1/+0+1" : "geometry: box"', 0, 'not-a-valid-dsl-path'),
+    ]);
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toHaveLength(1);
+  });
+
+  it('rejects malformed transaction paths', () => {
+    const result = transactionsToDslSource([
+      transaction('geometry: box', 0, '+0+1/+0+1'),
+    ]);
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toHaveLength(1);
+  });
+
+  it('trims filler from transaction to paths before parsing', () => {
+    const result = transactionsToDslSource([
+      transaction('geometry: sphere; color: blue;', 0, '+2+6/+0+6/+1+13/000000000000000000000000000='),
+    ]);
+
+    expect(result.source).toBe('"+2+6/+0+6/+1+13" : "geometry: sphere; color: blue;"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('trims whitespace around memo properties', () => {
+    expect(trimTransactionMemoFiller('  geometry: box  ')).toBe('geometry: box');
+  });
+
+  it('trims filler from transaction to paths', () => {
+    expect(trimTransactionPathFiller('+2+6/+0+6/+1+13/000000000=')).toBe('+2+6/+0+6/+1+13');
+  });
+
+  it('preserves transaction order for accepted transactions', () => {
+    const result = transactionsToDslSource([
+      transaction('color: red', 1, '+0+1/+0+1/+0+1'),
+      transaction('color: blue', 2, '+1+1/+0+1/+0+1'),
+    ]);
+
+    expect(result.source).toBe('"+0+1/+0+1/+0+1" : "color: red"\n"+1+1/+0+1/+0+1" : "color: blue"');
+  });
+});
