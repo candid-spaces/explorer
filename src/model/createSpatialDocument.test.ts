@@ -253,6 +253,42 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.renderNodes.some((node) => node.box.source === '+19+4/+0+6/+7+3')).toBe(false);
   });
 
+  it('avoids existing namespaces when naming anonymous compound ref containers', () => {
+    const document =
+      createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
+"Ref7/+0+1/+0+1/+0+1" : "color: red"
+"Table/Top/+0+8/+4+1/+0+8" : ""
+"Table/Leg/" : "geometry: cylinder"
+"Table/Leg/+0+1/+0+5/+0+1" : ""
+"Table/Leg/+7+1/+0+5/+0+1" : ""
+"Table/Leg/+0+1/+0+5/+7+1" : ""
+"Table/Leg/+7+1/+0+5/+7+1" : ""
+"+19+4/+0+6/+7+3" : "ref: Table/"`);
+
+    expect(document.diagnostics).toEqual([]);
+
+    const userNamespace = document.nodes.find(
+      (node) => node.namespacePath === 'Ref7/',
+    );
+    const generatedContainer = document.nodes.find(
+      (node) => node.metadata?.reference === 'Table/',
+    );
+    const top = document.renderNodes.find(
+      (node) => node.namespacePath === 'Ref8/Top/',
+    );
+    const firstLeg = document.renderNodes.find(
+      (node) =>
+        node.namespacePath === 'Ref8/Leg/' &&
+        node.box.source === '+0+1/+0+5/+0+1',
+    );
+
+    expect(userNamespace?.metadata?.reference).toBeUndefined();
+    expect(userNamespace?.children).toEqual([]);
+    expect(generatedContainer?.namespacePath).toBe('Ref8/');
+    expect(top?.transform.position).toEqual([23, 4.5, 11]);
+    expect(firstLeg?.transform.position).toEqual([19.5, 2.5, 7.5]);
+  });
+
   it('scales anonymous compound refs when ref-scale is true', () => {
     const document =
       createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"

@@ -98,6 +98,26 @@ function mergeGeometry(
   };
 }
 
+function anonymousCompoundRefNamespace(
+  objectIndex: number,
+  occupiedNamespaces: Set<string>,
+): string[] {
+  let suffix = objectIndex + 1;
+
+  while (
+    [...occupiedNamespaces].some((namespacePath) =>
+      namespacePath.startsWith(canonicalNamespacePath([`Ref${suffix}`])),
+    )
+  ) {
+    suffix += 1;
+  }
+
+  const namespace = [`Ref${suffix}`];
+  occupiedNamespaces.add(canonicalNamespacePath(namespace));
+
+  return namespace;
+}
+
 function mergeProperties(
   base: ResolvedProperties,
   override: SpatialObject | ResolvedProperties,
@@ -428,6 +448,11 @@ export function resolveDslDocument(objects: SpatialObject[]): {
   );
   const materializedObjects: ResolvedSpatialObject[] = [];
   const anchorScaleById = new Map<string, [number, number, number]>();
+  const occupiedNamespaces = new Set(
+    objects
+      .map((object) => canonicalNamespacePath(object.namespace))
+      .filter(Boolean),
+  );
 
   resolvedObjects.forEach((object, objectIndex) => {
     if (
@@ -449,7 +474,7 @@ export function resolveDslDocument(objects: SpatialObject[]): {
     const isCompoundReference = descendants.length > 0;
     const instanceNamespace =
       isCompoundReference && object.namespace.length === 0
-        ? [`Ref${objectIndex + 1}`]
+        ? anonymousCompoundRefNamespace(objectIndex, occupiedNamespaces)
         : object.namespace;
 
     if (isCompoundReference && object.namespace.length === 0) {
