@@ -216,6 +216,78 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(part.transform.scale).toEqual([8, 4, 1]);
   });
 
+  it('anchors anonymous compound refs under a synthetic container without rendering the ref box', () => {
+    const document =
+      createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
+"Table/Top/+0+8/+4+1/+0+8" : ""
+"Table/Leg/" : "geometry: cylinder"
+"Table/Leg/+0+1/+0+5/+0+1" : ""
+"Table/Leg/+7+1/+0+5/+0+1" : ""
+"Table/Leg/+0+1/+0+5/+7+1" : ""
+"Table/Leg/+7+1/+0+5/+7+1" : ""
+"+19+4/+0+6/+7+3" : "ref: Table/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(5);
+
+    const container = document.nodes.find(
+      (node) => node.metadata?.reference === 'Table/',
+    );
+    const top = document.renderNodes.find((node) =>
+      node.namespacePath?.endsWith('/Top/'),
+    );
+    const firstLeg = document.renderNodes.find(
+      (node) =>
+        node.namespacePath?.endsWith('/Leg/') &&
+        node.box.source === '+0+1/+0+5/+0+1',
+    );
+
+    expect(container?.renderable).toBe(false);
+    expect(container?.namespacePath).toBe('Ref6/');
+    expect(container?.metadata?.anchorScale).toBeUndefined();
+    expect(top?.namespacePath).toBe('Ref6/Top/');
+    expect(top?.transform.position).toEqual([23, 4.5, 11]);
+    expect(firstLeg?.namespacePath).toBe('Ref6/Leg/');
+    expect(firstLeg?.geometry.kind).toBe('cylinder');
+    expect(firstLeg?.transform.position).toEqual([19.5, 2.5, 7.5]);
+    expect(document.renderNodes.some((node) => node.box.source === '+19+4/+0+6/+7+3')).toBe(false);
+  });
+
+  it('scales anonymous compound refs when ref-scale is true', () => {
+    const document =
+      createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
+"Table/Top/+0+8/+4+1/+0+8" : ""
+"Table/Leg/" : "geometry: cylinder"
+"Table/Leg/+0+1/+0+5/+0+1" : ""
+"Table/Leg/+7+1/+0+5/+0+1" : ""
+"Table/Leg/+0+1/+0+5/+7+1" : ""
+"Table/Leg/+7+1/+0+5/+7+1" : ""
+"+19+4/+0+6/+7+3" : "ref: Table/; ref-scale: true"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(5);
+
+    const container = document.nodes.find(
+      (node) => node.metadata?.reference === 'Table/',
+    );
+    const top = document.renderNodes.find((node) =>
+      node.namespacePath?.endsWith('/Top/'),
+    );
+    const firstLeg = document.renderNodes.find(
+      (node) =>
+        node.namespacePath?.endsWith('/Leg/') &&
+        node.box.source === '+0+1/+0+5/+0+1',
+    );
+
+    expect(container?.metadata?.anchorScale).toEqual([0.5, 1.2, 0.375]);
+    expect(top?.transform.position[0]).toBeCloseTo(21);
+    expect(top?.transform.position[1]).toBeCloseTo(5.4);
+    expect(top?.transform.position[2]).toBeCloseTo(8.5);
+    expect(top?.transform.scale).toEqual([4, 1.2, 3]);
+    expect(firstLeg?.transform.position).toEqual([19.25, 3, 7.1875]);
+    expect(firstLeg?.transform.scale).toEqual([0.5, 6, 0.375]);
+  });
+
   it('keeps repeated template ref materializations distinct', () => {
     const document = createSpatialDocument(`"Sofa/" : "color: brown"
 "Sofa/Base/+0+6/+0+40c/+0+3" : ""

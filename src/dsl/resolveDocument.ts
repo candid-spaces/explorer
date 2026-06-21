@@ -446,6 +446,20 @@ export function resolveDslDocument(objects: SpatialObject[]): {
         candidate.namespace.length > targetNamespace.length &&
         namespaceStartsWith(candidate.namespace, targetNamespace),
     );
+    const isCompoundReference = descendants.length > 0;
+    const instanceNamespace =
+      isCompoundReference && object.namespace.length === 0
+        ? [`Ref${objectIndex + 1}`]
+        : object.namespace;
+
+    if (isCompoundReference && object.namespace.length === 0) {
+      object.namespace = instanceNamespace;
+      object.namespacePath = canonicalNamespacePath(instanceNamespace);
+      object.parentNamespacePath = canonicalNamespacePath(
+        instanceNamespace.slice(0, -1),
+      );
+    }
+
     const target = namespaceInstances.get(object.reference.targetPath);
     const anchorScale = object.reference.scale
       ? scaleToFit(
@@ -465,7 +479,7 @@ export function resolveDslDocument(objects: SpatialObject[]): {
         originalByObject.get(descendant) ??
         resolveObject(descendant, descendantIndex);
       const suffix = descendant.namespace.slice(targetNamespace.length);
-      const namespace = [...object.namespace, ...suffix];
+      const namespace = [...instanceNamespace, ...suffix];
       const properties = mergeResolvedProperties(
         {
           material: object.material,
