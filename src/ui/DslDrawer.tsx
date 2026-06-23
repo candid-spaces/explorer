@@ -9,7 +9,6 @@ interface DslDrawerProps {
   document: SpatialDocument;
   isOpen: boolean;
   source: string;
-  transactionEndpoint: string;
   transactionPublicKey: string;
   transactionPublicKeyShareUrl?: string;
   transactionRange: TransactionRange;
@@ -24,7 +23,6 @@ interface DslDrawerProps {
   rejectedTransactions: RejectedTransaction[];
   onChange: (source: string) => void;
   onToggle: () => void;
-  onTransactionEndpointChange: (endpoint: string) => void;
   onTransactionPublicKeyChange: (publicKey: string) => void;
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
@@ -35,7 +33,6 @@ export function DslDrawer({
   document,
   isOpen,
   source,
-  transactionEndpoint,
   transactionPublicKey,
   transactionPublicKeyShareUrl,
   transactionRange,
@@ -50,7 +47,6 @@ export function DslDrawer({
   rejectedTransactions,
   onChange,
   onToggle,
-  onTransactionEndpointChange,
   onTransactionPublicKeyChange,
   onTransactionRangeChange,
   onReloadTransactions,
@@ -70,7 +66,6 @@ export function DslDrawer({
           </header>
 
           <DslTransactionControls
-            endpoint={transactionEndpoint}
             publicKey={transactionPublicKey}
             publicKeyShareUrl={transactionPublicKeyShareUrl}
             range={transactionRange}
@@ -82,7 +77,6 @@ export function DslDrawer({
             transactionCount={transactionCount}
             acceptedCount={acceptedTransactionCount}
             rejectedCount={rejectedTransactions.length}
-            onEndpointChange={onTransactionEndpointChange}
             onPublicKeyChange={onTransactionPublicKeyChange}
             onRangeChange={onTransactionRangeChange}
             onReload={onReloadTransactions}

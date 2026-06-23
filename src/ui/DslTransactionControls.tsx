@@ -2,7 +2,6 @@ import { useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as Re
 import type { TransactionRange } from '../transactions/types';
 
 interface DslTransactionControlsProps {
-  endpoint: string;
   publicKey: string;
   publicKeyShareUrl?: string;
   range: TransactionRange;
@@ -14,7 +13,6 @@ interface DslTransactionControlsProps {
   transactionCount: number;
   acceptedCount: number;
   rejectedCount: number;
-  onEndpointChange: (endpoint: string) => void;
   onPublicKeyChange: (publicKey: string) => void;
   onRangeChange: (range: TransactionRange) => void;
   onReload: () => void;
@@ -31,7 +29,6 @@ function clampHeight(value: number, max: number): number {
 }
 
 export function DslTransactionControls({
-  endpoint,
   publicKey,
   publicKeyShareUrl,
   range,
@@ -43,7 +40,6 @@ export function DslTransactionControls({
   transactionCount,
   acceptedCount,
   rejectedCount,
-  onEndpointChange,
   onPublicKeyChange,
   onRangeChange,
   onReload,
@@ -179,11 +175,6 @@ export function DslTransactionControls({
         <summary>Remote config</summary>
 
         <label>
-          <span>WebSocket endpoint</span>
-          <input value={endpoint} placeholder="node.example.com" onChange={(event) => onEndpointChange(event.target.value)} />
-        </label>
-
-        <label>
           <span>Public key</span>
           <input
             value={publicKey}
@@ -241,7 +232,7 @@ export function DslTransactionControls({
         </div>
 
         <div className="transaction-tip-row">
-          <button type="button" disabled={tipLoading || !endpoint.trim()} onClick={onUseTip}>
+          <button type="button" disabled={tipLoading} onClick={onUseTip}>
             {tipLoading ? 'Loading tip…' : 'Set start to tip'}
           </button>
           <span>{tipHeight === undefined ? 'Tip unknown' : `Tip: ${tipHeight}`}</span>

@@ -34,7 +34,6 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 export default function App() {
   const [source, setSource] = useState(INITIAL_DSL);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [transactionEndpoint, setTransactionEndpoint] = useState(DEFAULT_TRANSACTION_ENDPOINT);
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
     '',
@@ -64,7 +63,7 @@ export default function App() {
     error: transactionError,
     reload: reloadTransactions,
   } = usePublicKeyTransactions({
-    endpoint: transactionEndpoint,
+    endpoint: DEFAULT_TRANSACTION_ENDPOINT,
     publicKey: transactionPublicKey,
     range: transactionRange,
   });
@@ -73,7 +72,7 @@ export default function App() {
     setTipLoading(true);
     setTipError(undefined);
 
-    fetchTipHeight(transactionEndpoint, controller.signal)
+    fetchTipHeight(DEFAULT_TRANSACTION_ENDPOINT, controller.signal)
       .then((height) => {
         setTipHeight(height);
         setTransactionRange((range) => ({
@@ -97,7 +96,7 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [transactionEndpoint]);
+  }, []);
 
   useEffect(() => loadTipHeight(), [loadTipHeight]);
 
@@ -118,7 +117,6 @@ export default function App() {
         document={document}
         isOpen={drawerOpen}
         source={source}
-        transactionEndpoint={transactionEndpoint}
         transactionPublicKey={transactionPublicKey}
         transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}
@@ -133,7 +131,6 @@ export default function App() {
         rejectedTransactions={transactionDsl.rejected}
         onChange={setSource}
         onToggle={() => setDrawerOpen((isOpen) => !isOpen)}
-        onTransactionEndpointChange={setTransactionEndpoint}
         onTransactionPublicKeyChange={setTransactionPublicKey}
         onTransactionRangeChange={setTransactionRange}
         onReloadTransactions={reloadTransactions}
