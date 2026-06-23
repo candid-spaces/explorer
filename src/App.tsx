@@ -33,7 +33,7 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 
 export default function App() {
   const [source, setSource] = useState(INITIAL_DSL);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [transactionEndpoint, setTransactionEndpoint] = useState(DEFAULT_TRANSACTION_ENDPOINT);
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
