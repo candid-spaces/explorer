@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 
-function readStoredValue<T>(key: string, fallback: T): T {
+function readStoredValue<T>(key: string, fallback: T, initialValue?: T): T {
+  if (initialValue !== undefined) {
+    return initialValue;
+  }
+
   if (typeof window === 'undefined') {
     return fallback;
   }
@@ -17,8 +21,8 @@ function readStoredValue<T>(key: string, fallback: T): T {
   }
 }
 
-export function usePersistentState<T>(key: string, fallback: T) {
-  const [value, setValue] = useState<T>(() => readStoredValue(key, fallback));
+export function usePersistentState<T>(key: string, fallback: T, initialValue?: T) {
+  const [value, setValue] = useState<T>(() => readStoredValue(key, fallback, initialValue));
 
   const setPersistentValue: typeof setValue = useCallback((nextValue) => {
     setValue((previous) => {

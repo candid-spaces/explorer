@@ -37,7 +37,8 @@ export default function App() {
   const [transactionEndpoint, setTransactionEndpoint] = useState(DEFAULT_TRANSACTION_ENDPOINT);
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
-    SHARED_TRANSACTION_PUBLIC_KEY ?? '',
+    '',
+    SHARED_TRANSACTION_PUBLIC_KEY,
   );
   const [transactionRange, setTransactionRange] = useState<TransactionRange>(DEFAULT_TRANSACTION_RANGE);
   const [tipHeight, setTipHeight] = useState<number | undefined>();
