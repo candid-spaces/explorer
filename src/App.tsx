@@ -34,15 +34,12 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 export default function App() {
   const [source, setSource] = useState(INITIAL_DSL);
   const [drawerOpen, setDrawerOpen] = useState(true);
-  const [transactionEndpoint, setTransactionEndpoint] = usePersistentState('dsl-transaction-endpoint', DEFAULT_TRANSACTION_ENDPOINT);
+  const [transactionEndpoint, setTransactionEndpoint] = useState(DEFAULT_TRANSACTION_ENDPOINT);
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
     SHARED_TRANSACTION_PUBLIC_KEY ?? '',
   );
-  const [transactionRange, setTransactionRange] = usePersistentState<TransactionRange>(
-    'dsl-transaction-range',
-    DEFAULT_TRANSACTION_RANGE,
-  );
+  const [transactionRange, setTransactionRange] = useState<TransactionRange>(DEFAULT_TRANSACTION_RANGE);
   const [tipHeight, setTipHeight] = useState<number | undefined>();
   const [tipLoading, setTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | undefined>();
@@ -82,6 +79,7 @@ export default function App() {
           ...range,
           startHeight: height,
           endHeight: Math.min(range.endHeight, height),
+          limit: DEFAULT_TRANSACTION_RANGE.limit,
         }));
       })
       .catch((caught: unknown) => {
@@ -98,7 +96,10 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [setTransactionRange, transactionEndpoint]);
+  }, [transactionEndpoint]);
+
+  useEffect(() => loadTipHeight(), [loadTipHeight]);
+
   const transactionDsl = useMemo(
     () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey }),
     [transactions, transactionPublicKey],
