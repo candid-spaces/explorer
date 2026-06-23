@@ -1,9 +1,10 @@
-import type { ChangeEvent, KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import type { TransactionRange } from '../transactions/types';
 
 interface DslTransactionControlsProps {
   endpoint: string;
   publicKey: string;
+  publicKeyShareUrl?: string;
   range: TransactionRange;
   loading: boolean;
   tipHeight?: number;
@@ -32,6 +33,7 @@ function clampHeight(value: number, max: number): number {
 export function DslTransactionControls({
   endpoint,
   publicKey,
+  publicKeyShareUrl,
   range,
   loading,
   tipHeight,
@@ -47,6 +49,7 @@ export function DslTransactionControls({
   onReload,
   onUseTip,
 }: DslTransactionControlsProps) {
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const sliderMax = Math.max(tipHeight ?? 0, range.startHeight, range.endHeight, 1);
   const lowerHeight = Math.min(range.startHeight, range.endHeight);
   const upperHeight = Math.max(range.startHeight, range.endHeight);
@@ -106,6 +109,19 @@ export function DslTransactionControls({
     const track = event.currentTarget.closest<HTMLElement>('.dual-range-slider');
     if (track) {
       startPointerDrag(thumb, track, event.pointerId, event.clientX);
+    }
+  }
+
+  async function copyShareLink() {
+    if (!publicKeyShareUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(publicKeyShareUrl);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
     }
   }
 
@@ -169,8 +185,30 @@ export function DslTransactionControls({
 
         <label>
           <span>Public key</span>
-          <input value={publicKey} placeholder="Enter a public key" onChange={(event) => onPublicKeyChange(event.target.value)} />
+          <input
+            value={publicKey}
+            placeholder="Enter a public key"
+            onChange={(event) => {
+              setCopyStatus('idle');
+              onPublicKeyChange(event.target.value);
+            }}
+          />
         </label>
+
+        <div className="transaction-share-row">
+          <button type="button" disabled={!publicKeyShareUrl} onClick={copyShareLink}>
+            Copy public key link
+          </button>
+          <small>
+            {copyStatus === 'copied'
+              ? 'Share link copied.'
+              : copyStatus === 'error'
+                ? 'Unable to copy link.'
+                : publicKeyShareUrl
+                  ? 'Encodes this public key into the URL.'
+                  : 'Enter a public key to create a share link.'}
+          </small>
+        </div>
 
         <div className="transaction-range-grid">
           <label>

@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
+import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { transactionsToDslSource } from './transactions/transactionDsl';
 import type { TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
@@ -28,18 +29,35 @@ const DEFAULT_TRANSACTION_RANGE: TransactionRange = {
   limit: 500,
 };
 
+const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
+
 export default function App() {
   const [source, setSource] = useState(INITIAL_DSL);
   const [drawerOpen, setDrawerOpen] = useState(true);
-  const [transactionEndpoint, setTransactionEndpoint] = usePersistentState('dsl-transaction-endpoint', DEFAULT_TRANSACTION_ENDPOINT);
-  const [transactionPublicKey, setTransactionPublicKey] = usePersistentState('dsl-transaction-public-key', '');
-  const [transactionRange, setTransactionRange] = usePersistentState<TransactionRange>(
-    'dsl-transaction-range',
-    DEFAULT_TRANSACTION_RANGE,
+  const [transactionEndpoint, setTransactionEndpoint] = useState(DEFAULT_TRANSACTION_ENDPOINT);
+  const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
+    'dsl-transaction-public-key',
+    '',
+    SHARED_TRANSACTION_PUBLIC_KEY,
   );
+  const [transactionRange, setTransactionRange] = useState<TransactionRange>(DEFAULT_TRANSACTION_RANGE);
   const [tipHeight, setTipHeight] = useState<number | undefined>();
   const [tipLoading, setTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | undefined>();
+  const transactionPublicKeyShareUrl = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    return createPublicKeyShareUrl(transactionPublicKey, window.location.href);
+  }, [transactionPublicKey]);
+
+  useEffect(() => {
+    if (SHARED_TRANSACTION_PUBLIC_KEY !== undefined) {
+      setTransactionPublicKey(SHARED_TRANSACTION_PUBLIC_KEY);
+    }
+  }, [setTransactionPublicKey]);
+
   const {
     transactions,
     loading: transactionsLoading,
@@ -62,6 +80,7 @@ export default function App() {
           ...range,
           startHeight: height,
           endHeight: Math.min(range.endHeight, height),
+          limit: DEFAULT_TRANSACTION_RANGE.limit,
         }));
       })
       .catch((caught: unknown) => {
@@ -78,7 +97,10 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [setTransactionRange, transactionEndpoint]);
+  }, [transactionEndpoint]);
+
+  useEffect(() => loadTipHeight(), [loadTipHeight]);
+
   const transactionDsl = useMemo(
     () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey }),
     [transactions, transactionPublicKey],
@@ -98,6 +120,7 @@ export default function App() {
         source={source}
         transactionEndpoint={transactionEndpoint}
         transactionPublicKey={transactionPublicKey}
+        transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}
         transactionsLoading={transactionsLoading}
         transactionError={transactionError}
