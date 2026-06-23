@@ -11,6 +11,7 @@ interface DslDrawerProps {
   source: string;
   transactionEndpoint: string;
   transactionPublicKey: string;
+  transactionPublicKeyShareUrl?: string;
   transactionRange: TransactionRange;
   transactionsLoading: boolean;
   transactionError?: string;
@@ -36,6 +37,7 @@ export function DslDrawer({
   source,
   transactionEndpoint,
   transactionPublicKey,
+  transactionPublicKeyShareUrl,
   transactionRange,
   transactionsLoading,
   transactionError,
@@ -70,6 +72,7 @@ export function DslDrawer({
           <DslTransactionControls
             endpoint={transactionEndpoint}
             publicKey={transactionPublicKey}
+            publicKeyShareUrl={transactionPublicKeyShareUrl}
             range={transactionRange}
             loading={transactionsLoading}
             error={transactionError}

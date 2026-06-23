@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 function readStoredValue<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') {
@@ -20,13 +20,13 @@ function readStoredValue<T>(key: string, fallback: T): T {
 export function usePersistentState<T>(key: string, fallback: T) {
   const [value, setValue] = useState<T>(() => readStoredValue(key, fallback));
 
-  const setPersistentValue: typeof setValue = (nextValue) => {
+  const setPersistentValue: typeof setValue = useCallback((nextValue) => {
     setValue((previous) => {
       const resolved = nextValue instanceof Function ? nextValue(previous) : nextValue;
       window.localStorage.setItem(key, JSON.stringify(resolved));
       return resolved;
     });
-  };
+  }, [key]);
 
   return [value, setPersistentValue] as const;
 }

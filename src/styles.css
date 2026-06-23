@@ -403,11 +403,13 @@ button {
 
 .transaction-config > label,
 .transaction-config > .transaction-range-grid,
+.transaction-config > .transaction-share-row,
 .transaction-config > .transaction-tip-row,
 .transaction-config > .transaction-range-slider {
   margin-top: 0.75rem;
 }
 
+.transaction-share-row,
 .transaction-tip-row {
   display: flex;
   flex-wrap: wrap;
