@@ -24,6 +24,8 @@ Declaration keys can be anonymous world-space boxes, named world-space instances
 
 Path coordinates use bare integers for paces and an optional `c` suffix for centipaces, where `100c = 1` pace. The suffix applies per number, so mixed axis values are valid: `+1+3c` means offset `1` pace and size `0.03` paces. Decimal path notation is intentionally avoided; write `10c` instead of `0.1`.
 
+Remote transaction validation may limit each memo/properties field to 100 bytes, but that is a transport constraint rather than a renderer limit. Once declarations are loaded, the renderer consumes the resolved DSL document and does not impose a practical size limit on the inherited property set. Authors targeting the remote format can fit richer scenes into the 100-byte fields by putting shared material, geometry, texture, and deformation properties on declaration-only namespaces, then letting child instances inherit those defaults or add compact overrides across additional declarations.
+
 ```txt
 "+2+4/+0+6/+1+3" : "geometry: box; box-radius: 0.15; color: 0x333333; metalness: 0.8; roughness: 0.2"
 "Sofa/+7+4/+0+3/+0+2" : "color: brown; metalness: 0.2; roughness: 0.8"
