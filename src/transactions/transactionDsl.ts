@@ -24,6 +24,38 @@ export function trimTransactionMemoFiller(memo: string): string {
   return memo.trim();
 }
 
+function isPlainHttpUrlMemo(memo: string): boolean {
+  try {
+    const url = new URL(memo);
+    return memo.trim() === memo && (url.protocol === 'http:' || url.protocol === 'https:');
+  } catch {
+    return false;
+  }
+}
+
+function encodeDslContentValue(value: string): string {
+  return encodeURIComponent(value);
+}
+
+function memoToContentProperties(memo: string): string {
+  if (isPlainHttpUrlMemo(memo)) {
+    return `content-kind: url; content-url-uri: ${encodeDslContentValue(memo)}`;
+  }
+
+  return `content-kind: text; content-text-uri: ${encodeDslContentValue(memo)}`;
+}
+
+function memoToDslProperties(path: string, memo: string): string {
+  if (!memo) {
+    return memo;
+  }
+
+  const source = quoteDslDeclaration(path, memo);
+  const { valid } = parseValidDsl(source);
+
+  return valid ? memo : memoToContentProperties(memo);
+}
+
 function diagnosticsToReasons(diagnostics: readonly ParseDiagnostic[]): string[] {
   return diagnostics.map((diagnostic) => `Line ${diagnostic.line}: ${diagnostic.message}`);
 }
@@ -71,7 +103,8 @@ export function transactionsToDslSource(
       return;
     }
 
-    const source = quoteDslDeclaration(path, memo);
+    const properties = memoToDslProperties(path, memo);
+    const source = quoteDslDeclaration(path, properties);
     const { parsed, valid } = parseValidDsl(source);
 
     if (valid) {

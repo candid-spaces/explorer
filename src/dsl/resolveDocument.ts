@@ -1,5 +1,6 @@
 import type {
   DslBoxSpec,
+  DslContentSpec,
   DslGeometrySpec,
   DslMaterialSpec,
   DslTextureChannel,
@@ -15,6 +16,7 @@ export interface ResolvedSpatialObject extends SpatialObject {
   material: DslMaterialSpec;
   geometry: DslGeometrySpec;
   transform: DslTransformSpec;
+  content: DslContentSpec;
   namespacePath: string;
   parentNamespacePath: string;
   renderable: boolean;
@@ -435,6 +437,7 @@ export function resolveDslDocument(objects: SpatialObject[]): {
       material: properties.material,
       geometry: properties.geometry,
       transform: properties.transform,
+      content: object.content,
       materializedFrom: options.materializedFrom,
     };
   };

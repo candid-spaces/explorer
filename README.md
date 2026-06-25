@@ -39,6 +39,22 @@ Path coordinates use bare integers for paces and an optional `c` suffix for cent
 "Table/Leg/+7+1/+0+5/+7+1" : ""
 ```
 
+## Memo content declarations
+
+Transaction memos can still contain ordinary DSL properties such as `geometry: sphere; color: blue`. If a memo is not valid property DSL, the transaction importer treats it as scene content instead:
+
+- Plain text becomes a paper/card mesh inscribed with the memo text.
+- Plain `http` or `https` URLs become a 2D HTML card in the 3D scene.
+
+Internally these content memos are normalized to explicit DSL properties:
+
+```txt
+"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: Hello%20world"
+"+5+4/+0+3/+0+10c" : "content-kind: url; content-url-uri: https%3A%2F%2Fexample.com"
+```
+
+Manual DSL can use `content-text`/`content-url` for simple values, or the URI-encoded `content-text-uri`/`content-url-uri` properties when values may contain semicolons, quotes, newlines, or other DSL delimiters. URL content is limited to absolute `http` and `https` URLs and is embedded in a sandboxed iframe; some sites may block iframe embedding, in which case the card still shows an external "Open URL" link.
+
 Primitive dimensions are derived from the bounding box. For example, a cone or cylinder uses X/Z as its footprint and Y as its height. Non-square footprints are rendered as scaled elliptical primitives so every primitive fills the declared bounding box. `box-radius` applies only to box geometry; omitted or zero radius renders a sharp box, and the renderer clamps positive radii to half of the smallest box dimension. `puff` is intentionally a geometry modifier, not a material setting, because it changes the rendered cushion shape.
 
 ## Texture DSL reference

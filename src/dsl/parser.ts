@@ -49,6 +49,7 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
         geometry: properties.geometry,
         transform: properties.transform,
         reference: properties.reference,
+        content: properties.content,
         declarationOnly: path.isDeclarationOnly,
         lineNumber,
       },

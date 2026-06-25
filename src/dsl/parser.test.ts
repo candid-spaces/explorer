@@ -139,6 +139,35 @@ describe('parseDslDocument', () => {
     expect(result.value?.[0].box?.width).toBe(1);
   });
 
+  it('parses text content declarations', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: Hello%20world"',
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].content.kind).toBe('text');
+    expect(result.value?.[0].content.kind === 'text' ? result.value[0].content.text : undefined).toBe('Hello world');
+  });
+
+  it('parses and validates URL content declarations', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+2/+0+1" : "content-kind: url; content-url-uri: https%3A%2F%2Fexample.com%2Fview%3Fx%3D1"',
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].content.kind).toBe('url');
+    expect(result.value?.[0].content.kind === 'url' ? result.value[0].content.url : undefined).toBe('https://example.com/view?x=1');
+  });
+
+  it('reports unsupported URL content schemes', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+2/+0+1" : "content-kind: url; content-url: javascript:alert(1)"',
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0].message).toBe('URL content declarations require an absolute http or https URL.');
+  });
+
   it('parses ref declarations and reports missing reference targets', () => {
     const result = parseDslDocument(
       '"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/; ref-scale: true"',

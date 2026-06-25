@@ -1,9 +1,11 @@
+import { parseContentDeclaration } from './contentParser';
 import { parseGeometryDeclaration } from './geometryParser';
 import { parseMaterialDeclaration, SUPPORTED_MATERIAL_KEYS } from './materialParser';
 import { parsePropertyDeclarations } from './propertyParser';
 import { parseReferenceDeclaration } from './referenceParser';
 import { parseTransformDeclaration } from './transformParser';
 import type {
+  DslContentSpec,
   DslGeometrySpec,
   DslMaterialSpec,
   DslReferenceSpec,
@@ -19,6 +21,11 @@ const SUPPORTED_OBJECT_PROPERTIES = new Set([
   'rotate',
   'ref',
   'ref-scale',
+  'content-kind',
+  'content-text',
+  'content-text-uri',
+  'content-url',
+  'content-url-uri',
 ]);
 
 export interface DslObjectPropertiesSpec {
@@ -26,6 +33,7 @@ export interface DslObjectPropertiesSpec {
   geometry: DslGeometrySpec;
   transform: DslTransformSpec;
   reference: DslReferenceSpec;
+  content: DslContentSpec;
   diagnostics: string[];
 }
 
@@ -35,6 +43,7 @@ export function parseObjectProperties(source: string): DslObjectPropertiesSpec {
   const geometry = parseGeometryDeclaration(declarations);
   const transform = parseTransformDeclaration(declarations);
   const reference = parseReferenceDeclaration(declarations);
+  const content = parseContentDeclaration(declarations);
   const unsupportedDiagnostics = declarations
     .filter(({ property }) => !SUPPORTED_OBJECT_PROPERTIES.has(property))
     .map(
@@ -46,12 +55,14 @@ export function parseObjectProperties(source: string): DslObjectPropertiesSpec {
     geometry,
     transform,
     reference,
+    content,
     diagnostics: [
       ...diagnostics,
       ...material.diagnostics,
       ...geometry.diagnostics,
       ...transform.diagnostics,
       ...reference.diagnostics,
+      ...content.diagnostics,
       ...unsupportedDiagnostics,
     ],
   };
