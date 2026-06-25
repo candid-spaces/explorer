@@ -34,6 +34,33 @@ describe('transactionsToDslSource', () => {
     expect(result.rejected).toEqual([]);
   });
 
+  it('accepts plain-text memos as text content declarations', () => {
+    const result = transactionsToDslSource([
+      transaction('Hello from a memo', 0, '+0+4/+0+2/+0+1'),
+    ]);
+
+    expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: Hello%20from%20a%20memo"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('accepts plain URL memos as URL content declarations', () => {
+    const result = transactionsToDslSource([
+      transaction('https://example.com/view?x=1', 0, '+0+4/+0+2/+0+1'),
+    ]);
+
+    expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: url; content-url-uri: https%3A%2F%2Fexample.com%2Fview%3Fx%3D1"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('treats non-http URL-like memos as text content', () => {
+    const result = transactionsToDslSource([
+      transaction('javascript:alert(1)', 0, '+0+4/+0+2/+0+1'),
+    ]);
+
+    expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: javascript%3Aalert(1)"');
+    expect(result.rejected).toEqual([]);
+  });
+
   it('does not accept full DSL declarations embedded directly in memo text', () => {
     const result = transactionsToDslSource([
       transaction('"+0+1/+0+1/+0+1" : "geometry: box"', 0, 'not-a-valid-dsl-path'),

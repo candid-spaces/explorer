@@ -208,6 +208,8 @@ The renderer uses React Three Fiber and Drei. `SceneRoot` owns the canvas, camer
 
 ## UI drawer workflow
 
+Content declarations are modeled separately from primitive geometry. Text content renders as a paper/card mesh with Drei text on its front face. URL content renders as a card with a sandboxed Drei `Html` iframe overlay instead of trying to rasterize remote pages into a WebGL texture, which avoids CORS-tainted canvas issues and keeps unsafe URL schemes out of the scene.
+
 The UI is a full-screen 3D canvas with a popup drawer. The drawer allows users to edit declarations, see parse diagnostics, and inspect parsed objects. The scene updates immediately as the DSL source changes.
 
 ## Deferred design notes

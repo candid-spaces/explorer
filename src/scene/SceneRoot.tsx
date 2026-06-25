@@ -4,6 +4,7 @@ import type { SpatialDocument } from '../model/SpatialDocument';
 import { dimensionsFromNodes } from '../model/room';
 import { CornerRoom } from './CornerRoom';
 import { Lighting } from './Lighting';
+import { ContentPrimitive } from './ContentPrimitive';
 import { SpatialPrimitive } from './SpatialPrimitive';
 
 interface SceneRootProps {
@@ -20,7 +21,7 @@ export function SceneRoot({ document }: SceneRootProps) {
       <Lighting />
       <CornerRoom {...roomDimensions} />
       {document.renderNodes.map((node) => (
-        <SpatialPrimitive key={node.id} node={node} />
+        node.content?.kind ? <ContentPrimitive key={node.id} node={node} /> : <SpatialPrimitive key={node.id} node={node} />
       ))}
       <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI / 2.02} />
     </Canvas>

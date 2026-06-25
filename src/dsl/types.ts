@@ -61,6 +61,11 @@ export interface DslTransformSpec {
   declared?: boolean;
 }
 
+export type DslContentSpec =
+  | { kind?: undefined; diagnostics: string[] }
+  | { kind: 'text'; text: string; diagnostics: string[] }
+  | { kind: 'url'; url: string; diagnostics: string[] };
+
 export interface DslReferenceSpec {
   targetPath?: string;
   scale?: boolean;
@@ -77,6 +82,7 @@ export interface SpatialObject {
   geometry: DslGeometrySpec;
   transform: DslTransformSpec;
   reference: DslReferenceSpec;
+  content: DslContentSpec;
   declarationOnly: boolean;
   lineNumber: number;
   unionGroupId?: string;
