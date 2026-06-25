@@ -101,6 +101,31 @@ describe('parseDslDocument', () => {
     expect(result.value?.[2].box?.height).toBe(7);
   });
 
+  it('allows Base64 namespace segments before X/Y/Z coordinates except slash delimiters', () => {
+    const result = parseDslDocument(`"0abc/abc+123/+1+2/+0+7/+0+1" : ""
+"+abc/AbC123+/" : "geometry: sphere"`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].namespace).toEqual(['0abc', 'abc+123']);
+    expect(result.value?.[0].box?.width).toBe(2);
+    expect(result.value?.[1].namespace).toEqual(['+abc', 'AbC123+']);
+    expect(result.value?.[1].declarationOnly).toBe(true);
+  });
+
+  it('rejects namespace characters outside the slash-delimited unpadded Base64 subset', () => {
+    const underscoreResult = parseDslDocument('"Room_Name/+0+1/+0+1/+0+1" : ""');
+    const paddingResult = parseDslDocument('"Room=/+0+1/+0+1/+0+1" : ""');
+
+    expect(underscoreResult.ok).toBe(false);
+    expect(underscoreResult.diagnostics[0].message).toBe(
+      'Namespace segment "Room_Name" must contain only Base64 characters except the / delimiter.',
+    );
+    expect(paddingResult.ok).toBe(false);
+    expect(paddingResult.diagnostics[0].message).toBe(
+      'Namespace segment "Room=" must contain only Base64 characters except the / delimiter.',
+    );
+  });
+
   it('parses ref declarations and reports missing reference targets', () => {
     const result = parseDslDocument(
       '"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/; ref-scale: true"',

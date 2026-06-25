@@ -6,10 +6,10 @@ const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:c)?$/;
 const LEGACY_LEADING_ZERO_PATTERN = /^0\d+(?:c)?$/;
 const LEGACY_P_DECIMAL_PATTERN = /^(?<whole>\d+)p(?<fraction>\d+)$/;
 const AXIS_PATTERN = /^\+(?<offset>[^+]+)\+(?<size>[^+]+)$/;
-const NAMESPACE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
+const NAMESPACE_PATTERN = /^[A-Za-z0-9+]+$/;
 
 function isAxisSegment(segment: string): boolean {
-  return /^\+[^+]*\+[^+]*$/.test(segment);
+  return AXIS_PATTERN.test(segment);
 }
 
 function centipaceMigration(raw: string): string | undefined {
@@ -188,6 +188,6 @@ function validateNamespaceSegments(segments: string[]): void {
   const invalid = segments.find((segment) => !NAMESPACE_PATTERN.test(segment));
 
   if (invalid) {
-    throw new Error(`Namespace segment "${invalid}" must start with a letter and contain only letters, numbers, _ or -.`);
+    throw new Error(`Namespace segment "${invalid}" must contain only Base64 characters except the / delimiter.`);
   }
 }
