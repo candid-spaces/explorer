@@ -28,6 +28,7 @@ interface ResolvedProperties {
   material: DslMaterialSpec;
   geometry: DslGeometrySpec;
   transform: DslTransformSpec;
+  content: DslContentSpec;
 }
 
 
@@ -72,6 +73,7 @@ const DEFAULT_PROPERTIES: ResolvedProperties = {
   material: { diagnostics: [] },
   geometry: { kind: 'box', diagnostics: [] },
   transform: { rotation: [0, 0, 0], diagnostics: [] },
+  content: { diagnostics: [] },
 };
 
 function mergeGeometry(
@@ -98,6 +100,14 @@ function mergeGeometry(
         }
       : {}),
   };
+}
+
+function mergeContent(base: DslContentSpec, override: DslContentSpec): DslContentSpec {
+  if (!override.kind) {
+    return { ...base, diagnostics: [] };
+  }
+
+  return { ...override, diagnostics: [] };
 }
 
 function anonymousCompoundRefNamespace(
@@ -140,6 +150,7 @@ function mergeProperties(
       roughness: overrideMaterial.roughness ?? base.material.roughness,
     },
     geometry: mergeGeometry(base.geometry, overrideGeometry),
+    content: mergeContent(base.content, override.content),
     transform:
       includeTransform && overrideTransform.declared
         ? { ...overrideTransform, diagnostics: [] }
@@ -437,7 +448,7 @@ export function resolveDslDocument(objects: SpatialObject[]): {
       material: properties.material,
       geometry: properties.geometry,
       transform: properties.transform,
-      content: object.content,
+      content: properties.content,
       materializedFrom: options.materializedFrom,
     };
   };
@@ -513,11 +524,13 @@ export function resolveDslDocument(objects: SpatialObject[]): {
           material: object.material,
           geometry: object.geometry,
           transform: object.transform,
+          content: object.content,
         },
         {
           material: resolvedDescendant.material,
           geometry: resolvedDescendant.geometry,
           transform: resolvedDescendant.transform,
+          content: resolvedDescendant.content,
         },
       );
 
@@ -530,6 +543,7 @@ export function resolveDslDocument(objects: SpatialObject[]): {
         material: properties.material,
         geometry: properties.geometry,
         transform: properties.transform,
+        content: properties.content,
         reference: { diagnostics: [] },
         materializedFrom: object.reference.targetPath,
         renderable: false,

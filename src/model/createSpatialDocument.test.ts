@@ -65,6 +65,43 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.renderNodes[1].transform.position).toEqual([5.5, 1.5, 7.5]);
   });
 
+  it('inherits content through declaration-only namespaces and refs', () => {
+    const document =
+      createSpatialDocument(`"Poster/" : "content-kind: text; content-text-uri: Sale"
+"Poster/+0+4/+0+2/+0+1" : ""
+"Copy/+6+4/+0+2/+0+1" : "ref: Poster/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(2);
+    expect(document.renderNodes[0].content?.kind).toBe('text');
+    expect(
+      document.renderNodes[0].content?.kind === 'text'
+        ? document.renderNodes[0].content.text
+        : undefined,
+    ).toBe('Sale');
+    expect(document.renderNodes[1].content?.kind).toBe('text');
+    expect(
+      document.renderNodes[1].content?.kind === 'text'
+        ? document.renderNodes[1].content.text
+        : undefined,
+    ).toBe('Sale');
+  });
+
+  it('allows local content declarations to override inherited content', () => {
+    const document =
+      createSpatialDocument(`"Poster/" : "content-kind: text; content-text-uri: Sale"
+"Poster/+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: Sold"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].content?.kind).toBe('text');
+    expect(
+      document.renderNodes[0].content?.kind === 'text'
+        ? document.renderNodes[0].content.text
+        : undefined,
+    ).toBe('Sold');
+  });
+
   it('inherits box-radius through namespaces and refs', () => {
     const document =
       createSpatialDocument(`"Cabinet/" : "box-radius: 0.2; color: orange"
