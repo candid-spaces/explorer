@@ -1,8 +1,9 @@
-import type { DslGeometryKind, DslGeometrySpec } from './types';
+import type { DslCsgOperation, DslGeometryKind, DslGeometrySpec } from './types';
 import type { DslPropertyDeclaration } from './propertyParser';
 
 const SUPPORTED_GEOMETRY_KINDS = new Set<DslGeometryKind>(['box', 'cylinder', 'cone', 'sphere']);
 const COMPACT_GEOMETRY_STRENGTH_MAX = 5;
+const SUPPORTED_CSG_OPERATIONS = new Set<DslCsgOperation>(['union', 'subtraction', 'intersection']);
 
 function parseRoundedBoxRadius(declaration: DslPropertyDeclaration): { value?: number; diagnostics: string[] } {
   const numericValue = Number(declaration.value);
@@ -40,6 +41,7 @@ export function parseGeometryDeclaration(declarations: DslPropertyDeclaration[])
   const declaration = declarations.find(({ property }) => property === 'geometry');
   const radiusDeclaration = declarations.find(({ property }) => property === 'box-radius');
   const puffDeclaration = declarations.find(({ property }) => property === 'puff');
+  const csgDeclaration = declarations.find(({ property }) => property === 'csg');
 
   if (declaration) {
     if (!SUPPORTED_GEOMETRY_KINDS.has(declaration.value as DslGeometryKind)) {
@@ -78,6 +80,15 @@ export function parseGeometryDeclaration(declarations: DslPropertyDeclaration[])
         geometry.declared = true;
         geometry.puff = puff;
       }
+    }
+  }
+
+  if (csgDeclaration) {
+    if (!SUPPORTED_CSG_OPERATIONS.has(csgDeclaration.value as DslCsgOperation)) {
+      geometry.diagnostics.push(`Unsupported csg operation "${csgDeclaration.value}". Expected union, subtraction, or intersection.`);
+    } else {
+      geometry.declared = true;
+      geometry.csg = csgDeclaration.value as DslCsgOperation;
     }
   }
 

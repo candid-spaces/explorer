@@ -4,6 +4,7 @@ import { canonicalNamespacePath } from '../dsl/pathParser';
 import type { SpatialDocument } from './SpatialDocument';
 import type { SpatialNode } from './SpatialNode';
 import { assignUnionGroups, boundsFromTransformedBox } from './collision';
+import { buildCsgExpressions } from './csg';
 import { geometryFromBox } from './geometry';
 import {
   anchorTransformFromBox,
@@ -37,21 +38,23 @@ function flattenRenderable(nodes: SpatialNode[]): SpatialNode[] {
     .filter(Boolean) as SpatialNode[];
 }
 
-function assignUnionGroupsToTree(
+function applyRenderableStateToTree(
   nodes: SpatialNode[],
-  groupedNodes: SpatialNode[],
+  renderableNodes: SpatialNode[],
 ): SpatialNode[] {
-  const unionById = new Map(
-    groupedNodes.map((node) => [node.id, node.unionGroupId]),
-  );
+  const stateById = new Map(renderableNodes.map((node) => [node.id, node]));
 
-  return nodes.map((node) => ({
-    ...node,
-    unionGroupId: unionById.get(node.id) ?? node.unionGroupId,
-    children: node.children
-      ? assignUnionGroupsToTree(node.children, groupedNodes)
-      : undefined,
-  }));
+  return nodes.map((node) => {
+    const state = stateById.get(node.id);
+
+    return {
+      ...node,
+      unionGroupId: state?.unionGroupId ?? node.unionGroupId,
+      csgExpressionId: state?.csgExpressionId ?? node.csgExpressionId,
+      csgConsumed: state?.csgConsumed ?? node.csgConsumed,
+      children: node.children ? applyRenderableStateToTree(node.children, renderableNodes) : undefined,
+    };
+  });
 }
 
 export function createSpatialDocument(source: string): SpatialDocument {
@@ -124,13 +127,16 @@ export function createSpatialDocument(source: string): SpatialDocument {
       }
     });
 
-  const renderNodes = assignUnionGroups(flattenRenderable(topLevelNodes));
-  const nodes = assignUnionGroupsToTree(topLevelNodes, renderNodes);
+  const groupedNodes = assignUnionGroups(flattenRenderable(topLevelNodes));
+  const csg = buildCsgExpressions(groupedNodes);
+  const renderNodes = csg.nodes.filter((node) => !node.csgConsumed && !node.csgExpressionId);
+  const nodes = applyRenderableStateToTree(topLevelNodes, csg.nodes);
 
   return {
     id: 'spatial-document',
     nodes,
     renderNodes,
+    csgExpressions: csg.expressions,
     diagnostics,
   };
 }

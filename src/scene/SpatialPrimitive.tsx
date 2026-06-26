@@ -69,7 +69,7 @@ function textureBumpScale(node: SpatialNode): number | undefined {
   return bumpStrength === undefined ? undefined : bumpStrength * 0.045;
 }
 
-function materialParameters(node: SpatialNode): MeshPhysicalMaterialParameters {
+export function materialParameters(node: SpatialNode): MeshPhysicalMaterialParameters {
   const textureParameters = resolveMaterialTextures(node.material);
   const bumpScale = textureBumpScale(node);
 
@@ -84,7 +84,7 @@ function materialParameters(node: SpatialNode): MeshPhysicalMaterialParameters {
   };
 }
 
-function needsPhysicalMaterial(node: SpatialNode): boolean {
+export function needsPhysicalMaterial(node: SpatialNode): boolean {
   return Boolean(node.material.textures?.normalMap);
 }
 
