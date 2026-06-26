@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { transactionsToDslSource, trimTransactionMemoFiller, trimTransactionPathFiller } from './transactionDsl';
+import {
+  normalizeDslTransaction,
+  transactionsToDslSource,
+  trimTransactionMemoFiller,
+  trimTransactionPathFiller,
+} from './transactionDsl';
 import type { DslTransaction } from './types';
 
 function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from?: string): DslTransaction {
@@ -94,6 +99,48 @@ describe('transactionsToDslSource', () => {
 
   it('trims filler from transaction to paths', () => {
     expect(trimTransactionPathFiller('+2+6/+0+6/+1+13/000000000=')).toBe('+2+6/+0+6/+1+13');
+  });
+
+  it.each([
+    ['/000', '+2+6/+0+6/+1+13'],
+    ['/000=', '+2+6/+0+6/+1+13'],
+    ['/000000000=', '+2+6/+0+6/+1+13'],
+    ['/=', '+2+6/+0+6/+1+13'],
+  ])('trims trailing path filler suffix %s', (suffix, expected) => {
+    expect(trimTransactionPathFiller(`+2+6/+0+6/+1+13${suffix}`)).toBe(expected);
+  });
+
+  it('preserves ordinary namespace terminators when trimming transaction paths', () => {
+    expect(trimTransactionPathFiller('Room/')).toBe('Room/');
+  });
+
+  it('does not strip non-filler path text', () => {
+    expect(trimTransactionPathFiller('Room/Chair')).toBe('Room/Chair');
+  });
+
+  it('normalizes transaction paths before transactions are stored at rest', () => {
+    expect(normalizeDslTransaction(transaction('geometry: box', 0, '+2+6/+0+6/+1+13/000000000='))).toMatchObject({
+      memo: 'geometry: box',
+      to: '+2+6/+0+6/+1+13',
+    });
+  });
+
+  it('preserves text memo content ending with equals padding characters', () => {
+    const result = transactionsToDslSource([
+      transaction('token==', 0, '+0+4/+0+2/+0+1'),
+    ]);
+
+    expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: token%3D%3D"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('preserves URL memo content containing query-string equals characters', () => {
+    const result = transactionsToDslSource([
+      transaction('https://example.com/view?token=abc==', 0, '+0+4/+0+2/+0+1'),
+    ]);
+
+    expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: url; content-url-uri: https%3A%2F%2Fexample.com%2Fview%3Ftoken%3Dabc%3D%3D"');
+    expect(result.rejected).toEqual([]);
   });
 
   it('maps only outgoing transactions when a public key is provided', () => {
