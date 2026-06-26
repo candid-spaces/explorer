@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
@@ -31,8 +31,44 @@ const DEFAULT_TRANSACTION_RANGE: TransactionRange = {
 
 const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 
+interface LineChangeSummary {
+  added: number;
+  removed: number;
+}
+
+function countLines(source: string): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => counts.set(line, (counts.get(line) ?? 0) + 1));
+
+  return counts;
+}
+
+function summarizeLineChanges(originalSource: string, nextSource: string): LineChangeSummary {
+  const originalLines = countLines(originalSource);
+  const nextLines = countLines(nextSource);
+  let added = 0;
+  let removed = 0;
+
+  nextLines.forEach((count, line) => {
+    added += Math.max(0, count - (originalLines.get(line) ?? 0));
+  });
+
+  originalLines.forEach((count, line) => {
+    removed += Math.max(0, count - (nextLines.get(line) ?? 0));
+  });
+
+  return { added, removed };
+}
+
 export default function App() {
-  const [source, setSource] = useState(INITIAL_DSL);
+  const [authoringSource, setAuthoringSource] = useState(INITIAL_DSL);
+  const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
+  const latestRemoteBaselineRef = useRef('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
@@ -104,11 +140,55 @@ export default function App() {
     () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey }),
     [transactions, transactionPublicKey],
   );
-  const combinedSource = useMemo(
-    () => [transactionDsl.source, source].filter((part) => part.trim().length > 0).join('\n'),
-    [source, transactionDsl.source],
+  const remoteBaselineSource = transactionDsl.source;
+  const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
+  const hasAuthoringEdits = hasRemoteBaseline
+    ? authoringSource !== remoteBaselineAppliedToEditor
+    : authoringSource !== INITIAL_DSL;
+  const remoteBaselineChanged = hasRemoteBaseline && remoteBaselineSource !== remoteBaselineAppliedToEditor;
+
+  useEffect(() => {
+    const previousRemoteBaseline = latestRemoteBaselineRef.current;
+    latestRemoteBaselineRef.current = remoteBaselineSource;
+
+    if (!hasRemoteBaseline || remoteBaselineSource === previousRemoteBaseline) {
+      return;
+    }
+
+    const currentHasEdits = previousRemoteBaseline.trim().length > 0
+      ? authoringSource !== remoteBaselineAppliedToEditor
+      : authoringSource !== INITIAL_DSL;
+
+    if (currentHasEdits) {
+      return;
+    }
+
+    setRemoteBaselineAppliedToEditor(remoteBaselineSource);
+    setAuthoringSource(remoteBaselineSource);
+  }, [authoringSource, hasRemoteBaseline, remoteBaselineAppliedToEditor, remoteBaselineSource]);
+
+  const authoringChangeSummary = useMemo(
+    () => summarizeLineChanges(remoteBaselineAppliedToEditor, authoringSource),
+    [authoringSource, remoteBaselineAppliedToEditor],
   );
-  const document = useMemo(() => createSpatialDocument(combinedSource), [combinedSource]);
+  const document = useMemo(() => createSpatialDocument(authoringSource), [authoringSource]);
+
+  const handleAuthoringSourceChange = useCallback((nextSource: string) => {
+    setAuthoringSource(nextSource);
+  }, []);
+
+  const resetAuthoringToRemote = useCallback(() => {
+    if (!hasRemoteBaseline) {
+      return;
+    }
+
+    if (hasAuthoringEdits && !window.confirm('Discard local DSL edits and reset to the latest remote declarations?')) {
+      return;
+    }
+
+    setAuthoringSource(remoteBaselineSource);
+    setRemoteBaselineAppliedToEditor(remoteBaselineSource);
+  }, [hasAuthoringEdits, hasRemoteBaseline, remoteBaselineSource]);
 
   return (
     <main className="app-shell">
@@ -116,7 +196,7 @@ export default function App() {
       <DslDrawer
         document={document}
         isOpen={drawerOpen}
-        source={source}
+        source={authoringSource}
         transactionPublicKey={transactionPublicKey}
         transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}
@@ -127,9 +207,14 @@ export default function App() {
         tipError={tipError}
         transactionCount={transactions.length}
         acceptedTransactionCount={transactionDsl.source ? transactionDsl.source.split('\n').filter(Boolean).length : 0}
-        mappedTransactionSource={transactionDsl.source}
+        mappedTransactionSource={remoteBaselineSource}
         rejectedTransactions={transactionDsl.rejected}
-        onChange={setSource}
+        hasRemoteBaseline={hasRemoteBaseline}
+        hasAuthoringEdits={hasAuthoringEdits}
+        remoteBaselineChanged={remoteBaselineChanged}
+        authoringChangeSummary={authoringChangeSummary}
+        onChange={handleAuthoringSourceChange}
+        onResetToRemote={resetAuthoringToRemote}
         onToggle={() => setDrawerOpen((isOpen) => !isOpen)}
         onTransactionPublicKeyChange={setTransactionPublicKey}
         onTransactionRangeChange={setTransactionRange}

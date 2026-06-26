@@ -1,9 +1,75 @@
+import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import type { RejectedTransaction, TransactionRange } from '../transactions/types';
 import { DslEditor } from './DslEditor';
 import { DslTransactionControls } from './DslTransactionControls';
 import { DslTreeView } from './DslTreeView';
 import { ObjectList } from './ObjectList';
+
+function describeAuthoringState(
+  hasRemoteBaseline: boolean,
+  hasAuthoringEdits: boolean,
+  remoteBaselineChanged: boolean,
+): string {
+  if (!hasRemoteBaseline) {
+    return 'Editing local DSL declarations. Use bare path numbers for paces and a c suffix for centipaces.';
+  }
+
+  if (remoteBaselineChanged && hasAuthoringEdits) {
+    return 'Remote declarations changed after local edits. Keep editing, or reset to the latest remote state.';
+  }
+
+  if (hasAuthoringEdits) {
+    return 'Local draft differs from the loaded remote declarations. Edit, remove, or add declarations below.';
+  }
+
+  return 'Loaded from remote transactions. Edit, remove, or add declarations below.';
+}
+
+function summarizeChanges({ added, removed }: { added: number; removed: number }): string {
+  const parts: string[] = [];
+
+  if (added > 0) {
+    parts.push(`${added} added`);
+  }
+
+  if (removed > 0) {
+    parts.push(`${removed} removed`);
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : 'No line changes';
+}
+
+function renderAuthoringStatus(
+  hasRemoteBaseline: boolean,
+  hasAuthoringEdits: boolean,
+  remoteBaselineChanged: boolean,
+  authoringChangeSummary: { added: number; removed: number },
+): ReactNode {
+  if (!hasRemoteBaseline) {
+    return <em className="dsl-status-badge">Local sample</em>;
+  }
+
+  if (remoteBaselineChanged && hasAuthoringEdits) {
+    return (
+      <>
+        <em className="dsl-status-badge dsl-status-badge-warning">Remote changed</em>
+        <span>{summarizeChanges(authoringChangeSummary)}</span>
+      </>
+    );
+  }
+
+  if (hasAuthoringEdits) {
+    return (
+      <>
+        <em className="dsl-status-badge dsl-status-badge-warning">Modified locally</em>
+        <span>{summarizeChanges(authoringChangeSummary)}</span>
+      </>
+    );
+  }
+
+  return <em className="dsl-status-badge dsl-status-badge-success">Remote baseline loaded</em>;
+}
 
 interface DslDrawerProps {
   document: SpatialDocument;
@@ -21,7 +87,12 @@ interface DslDrawerProps {
   acceptedTransactionCount: number;
   mappedTransactionSource: string;
   rejectedTransactions: RejectedTransaction[];
+  hasRemoteBaseline: boolean;
+  hasAuthoringEdits: boolean;
+  remoteBaselineChanged: boolean;
+  authoringChangeSummary: { added: number; removed: number };
   onChange: (source: string) => void;
+  onResetToRemote: () => void;
   onToggle: () => void;
   onTransactionPublicKeyChange: (publicKey: string) => void;
   onTransactionRangeChange: (range: TransactionRange) => void;
@@ -45,7 +116,12 @@ export function DslDrawer({
   acceptedTransactionCount,
   mappedTransactionSource,
   rejectedTransactions,
+  hasRemoteBaseline,
+  hasAuthoringEdits,
+  remoteBaselineChanged,
+  authoringChangeSummary,
   onChange,
+  onResetToRemote,
   onToggle,
   onTransactionPublicKeyChange,
   onTransactionRangeChange,
@@ -83,15 +159,33 @@ export function DslDrawer({
             onUseTip={onUseTransactionTip}
           />
 
-          {mappedTransactionSource.trim().length > 0 ? (
-            <label className="dsl-editor dsl-editor-readonly">
-              <span>Mapped transaction DSL</span>
-              <small>Accepted outgoing transactions are rendered from this read-only DSL.</small>
-              <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
-            </label>
-          ) : null}
+          <DslEditor
+            actions={
+              <button type="button" disabled={!hasRemoteBaseline || !hasAuthoringEdits} onClick={onResetToRemote}>
+                Reset to remote
+              </button>
+            }
+            description={describeAuthoringState(hasRemoteBaseline, hasAuthoringEdits, remoteBaselineChanged)}
+            status={renderAuthoringStatus(
+              hasRemoteBaseline,
+              hasAuthoringEdits,
+              remoteBaselineChanged,
+              authoringChangeSummary,
+            )}
+            value={source}
+            onChange={onChange}
+          />
 
-          <DslEditor value={source} onChange={onChange} />
+          {mappedTransactionSource.trim().length > 0 ? (
+            <details className="remote-baseline-reference">
+              <summary>Original remote declarations</summary>
+              <label className="dsl-editor dsl-editor-readonly">
+                <span>Mapped transaction DSL</span>
+                <small>Current remote baseline used for reset.</small>
+                <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
+              </label>
+            </details>
+          ) : null}
 
           {document.diagnostics.length > 0 ? (
             <details className="diagnostics" aria-label="DSL parse diagnostics">
