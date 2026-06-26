@@ -514,3 +514,79 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.dsl-editor-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.dsl-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.dsl-editor-actions button {
+  border: 1px solid rgb(147 197 253 / 22%);
+  border-radius: 999px;
+  padding: 0.3rem 0.6rem;
+  background: rgb(30 41 59 / 72%);
+  color: #bfdbfe;
+  font-size: 0.72rem;
+}
+
+.dsl-editor-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dsl-editor-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  color: #bfdbfe;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.dsl-status-badge {
+  width: max-content;
+  border-radius: 999px;
+  padding: 0.14rem 0.48rem;
+  background: rgb(37 99 235 / 26%);
+  color: #bfdbfe;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.dsl-status-badge-success {
+  background: rgb(22 163 74 / 22%);
+  color: #bbf7d0;
+}
+
+.dsl-status-badge-warning {
+  background: rgb(217 119 6 / 22%);
+  color: #fde68a;
+}
+
+.remote-baseline-reference {
+  margin-top: 1rem;
+  border: 1px solid rgb(34 197 94 / 28%);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: rgb(6 78 59 / 18%);
+}
+
+.remote-baseline-reference summary {
+  cursor: pointer;
+  color: #bbf7d0;
+  font-weight: 700;
+}
+
+.remote-baseline-reference .dsl-editor {
+  margin-top: 0.75rem;
+}
