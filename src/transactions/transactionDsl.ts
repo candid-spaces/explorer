@@ -2,6 +2,10 @@ import { parseDslDocument } from '../dsl/parser';
 import type { ParseDiagnostic } from '../dsl/types';
 import type { DslTransaction, RejectedTransaction } from './types';
 
+// Remote transaction transport/validation can append slash-prefixed zero/equal
+// filler to the destination path. This filler must not be stored as part of
+// the renderable DSL path. Keep this path-scoped: memo/content values may
+// legitimately contain "=" and should not use this cleanup rule.
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
 
@@ -22,6 +26,13 @@ export function trimTransactionPathFiller(path: string): string {
 
 export function trimTransactionMemoFiller(memo: string): string {
   return memo.trim();
+}
+
+export function normalizeDslTransaction(transaction: DslTransaction): DslTransaction {
+  return {
+    ...transaction,
+    to: trimTransactionPathFiller(transaction.to ?? ''),
+  };
 }
 
 function isPlainHttpUrlMemo(memo: string): boolean {

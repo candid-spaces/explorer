@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchPublicKeyTransactions } from './publicKeyTransactions';
+import { normalizeDslTransaction } from './transactionDsl';
 import type { DslTransaction, TransactionRange } from './types';
 
 interface UsePublicKeyTransactionsOptions {
@@ -30,7 +31,7 @@ export function usePublicKeyTransactions({ endpoint, publicKey, range }: UsePubl
 
     fetchPublicKeyTransactions({ endpoint, publicKey: publicKey.trim(), range, signal: controller.signal })
       .then((nextTransactions) => {
-        setTransactions(nextTransactions);
+        setTransactions(nextTransactions.map(normalizeDslTransaction));
       })
       .catch((caught: unknown) => {
         if (caught instanceof DOMException && caught.name === 'AbortError') {
