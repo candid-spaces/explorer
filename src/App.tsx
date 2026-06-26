@@ -148,14 +148,19 @@ export default function App() {
   const remoteBaselineChanged = hasRemoteBaseline && remoteBaselineSource !== remoteBaselineAppliedToEditor;
 
   useEffect(() => {
-    const previousRemoteBaseline = latestRemoteBaselineRef.current;
-    latestRemoteBaselineRef.current = remoteBaselineSource;
-
-    if (!hasRemoteBaseline || remoteBaselineSource === previousRemoteBaseline) {
+    if (!hasRemoteBaseline) {
       return;
     }
 
-    const currentHasEdits = previousRemoteBaseline.trim().length > 0
+    const previousRemoteBaseline = latestRemoteBaselineRef.current;
+
+    if (remoteBaselineSource === previousRemoteBaseline) {
+      return;
+    }
+
+    latestRemoteBaselineRef.current = remoteBaselineSource;
+
+    const currentHasEdits = remoteBaselineAppliedToEditor.trim().length > 0
       ? authoringSource !== remoteBaselineAppliedToEditor
       : authoringSource !== INITIAL_DSL;
 
