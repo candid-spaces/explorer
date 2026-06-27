@@ -7,16 +7,14 @@ import { Lighting } from './Lighting';
 import { ContentPrimitive } from './ContentPrimitive';
 import { CsgPrimitive } from './CsgPrimitive';
 import { SpatialPrimitive } from './SpatialPrimitive';
+import { nodesForRoomSizing } from './roomSizing';
 
 interface SceneRootProps {
   document: SpatialDocument;
 }
 
 export function SceneRoot({ document }: SceneRootProps) {
-  const roomDimensions = dimensionsFromNodes([
-    ...document.renderNodes,
-    ...document.csgExpressions.map((expression) => expression.base),
-  ]);
+  const roomDimensions = dimensionsFromNodes(nodesForRoomSizing(document));
 
   return (
     <Canvas className="scene-canvas" shadows gl={{ antialias: true }}>
