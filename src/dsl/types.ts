@@ -34,7 +34,7 @@ export interface DslGeometrySpec {
   kindDeclared?: boolean;
   'box-radius'?: number;
   puff?: number;
-  csg?: DslCsgOperation;
+  operation?: DslCsgOperation;
 }
 
 

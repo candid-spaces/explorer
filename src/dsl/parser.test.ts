@@ -323,16 +323,16 @@ describe('parseDslDocument', () => {
 
 
   it('parses CSG geometry operations', () => {
-    const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; csg: subtraction"');
+    const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: subtraction"');
 
-    expect(result.value?.[0].geometry.csg).toBe('subtraction');
+    expect(result.value?.[0].geometry.operation).toBe('subtraction');
   });
 
   it('reports unsupported CSG operations', () => {
-    const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; csg: drill"');
+    const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: drill"');
 
-    expect(result.value?.[0].geometry.csg).toBeUndefined();
-    expect(result.diagnostics[0].message).toContain('Unsupported csg operation "drill"');
+    expect(result.value?.[0].geometry.operation).toBeUndefined();
+    expect(result.diagnostics[0].message).toContain('Unsupported operation "drill"');
   });
 
   it('defaults to box geometry when geometry is omitted', () => {

@@ -26,7 +26,7 @@ export function ObjectList({ document }: ObjectListProps) {
             <li key={node.id}>
               <strong>{node.id}</strong>
               <span>
-                {node.geometry.kind}{node.geometry.csg ? ` (${node.geometry.csg})` : ''}
+                {node.geometry.kind}{node.geometry.operation ? ` (${node.geometry.operation})` : ''}
                 {node.geometry['box-radius'] !== undefined ? ` (box-radius: ${node.geometry['box-radius']})` : ''} bounding box: {node.box.width} ×{' '}
                 {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y}, {node.box.z}); rotation:{' '}
                 {node.transform.rotation.map((radian) => Math.round((radian * 180) / Math.PI)).join(', ')}°

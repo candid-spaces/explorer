@@ -17,7 +17,7 @@ const SUPPORTED_OBJECT_PROPERTIES = new Set([
   'geometry',
   'box-radius',
   'puff',
-  'csg',
+  'operation',
   'rotation',
   'rotate',
   'ref',

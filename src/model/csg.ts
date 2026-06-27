@@ -2,7 +2,7 @@ import { boundsOverlap } from './collision';
 import type { SpatialNode } from './SpatialNode';
 
 export interface CsgOperationNode {
-  op: NonNullable<SpatialNode['geometry']['csg']>;
+  op: NonNullable<SpatialNode['geometry']['operation']>;
   tool: SpatialNode;
 }
 
@@ -17,7 +17,7 @@ function sourceOrder(node: SpatialNode): number {
 }
 
 function isCsgTool(node: SpatialNode): boolean {
-  return node.geometry.csg !== undefined;
+  return node.geometry.operation !== undefined;
 }
 
 export function buildCsgExpressions(nodes: SpatialNode[]): { expressions: CsgExpression[]; nodes: SpatialNode[] } {
@@ -36,11 +36,11 @@ export function buildCsgExpressions(nodes: SpatialNode[]): { expressions: CsgExp
       .filter((candidate) => boundsOverlap(candidate.bounds, tool.bounds))
       .at(-1);
 
-    if (!base || !tool.geometry.csg) {
+    if (!base || !tool.geometry.operation) {
       return;
     }
 
-    operationsByBase.set(base.id, [...(operationsByBase.get(base.id) ?? []), { op: tool.geometry.csg, tool }]);
+    operationsByBase.set(base.id, [...(operationsByBase.get(base.id) ?? []), { op: tool.geometry.operation, tool }]);
     const storedTool = byId.get(tool.id);
     if (storedTool) {
       storedTool.csgConsumed = true;

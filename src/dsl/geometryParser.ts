@@ -41,7 +41,7 @@ export function parseGeometryDeclaration(declarations: DslPropertyDeclaration[])
   const declaration = declarations.find(({ property }) => property === 'geometry');
   const radiusDeclaration = declarations.find(({ property }) => property === 'box-radius');
   const puffDeclaration = declarations.find(({ property }) => property === 'puff');
-  const csgDeclaration = declarations.find(({ property }) => property === 'csg');
+  const operationDeclaration = declarations.find(({ property }) => property === 'operation');
 
   if (declaration) {
     if (!SUPPORTED_GEOMETRY_KINDS.has(declaration.value as DslGeometryKind)) {
@@ -83,12 +83,12 @@ export function parseGeometryDeclaration(declarations: DslPropertyDeclaration[])
     }
   }
 
-  if (csgDeclaration) {
-    if (!SUPPORTED_CSG_OPERATIONS.has(csgDeclaration.value as DslCsgOperation)) {
-      geometry.diagnostics.push(`Unsupported csg operation "${csgDeclaration.value}". Expected union, subtraction, or intersection.`);
+  if (operationDeclaration) {
+    if (!SUPPORTED_CSG_OPERATIONS.has(operationDeclaration.value as DslCsgOperation)) {
+      geometry.diagnostics.push(`Unsupported operation "${operationDeclaration.value}". Expected union, subtraction, or intersection.`);
     } else {
       geometry.declared = true;
-      geometry.csg = csgDeclaration.value as DslCsgOperation;
+      geometry.operation = operationDeclaration.value as DslCsgOperation;
     }
   }
 
