@@ -99,6 +99,7 @@ function mergeGeometry(
           puff: override.puff ?? base.puff,
         }
       : {}),
+    operation: override.operation ?? base.operation,
   };
 }
 

@@ -321,6 +321,20 @@ describe('parseDslDocument', () => {
     });
   });
 
+
+  it('parses CSG geometry operations', () => {
+    const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: subtraction"');
+
+    expect(result.value?.[0].geometry.operation).toBe('subtraction');
+  });
+
+  it('reports unsupported CSG operations', () => {
+    const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: drill"');
+
+    expect(result.value?.[0].geometry.operation).toBeUndefined();
+    expect(result.diagnostics[0].message).toContain('Unsupported operation "drill"');
+  });
+
   it('defaults to box geometry when geometry is omitted', () => {
     const result = parseDslDocument('"+0+1/+0+2/+0+3" : "color: red"');
 

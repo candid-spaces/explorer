@@ -396,4 +396,27 @@ describe('createSpatialDocument namespaced DSL', () => {
       'Reference target "Sofa/" was not found.',
     );
   });
+  it('builds declaration-order CSG subtraction expressions from overlapping world-space tools', () => {
+    const document = createSpatialDocument(`"+0+6/+0+6/+0+6" : "geometry: sphere; color: blue"
+"+2+2/+0+6/+2+2" : "geometry: cylinder; operation: subtraction"`);
+
+    expect(document.csgExpressions).toHaveLength(1);
+    expect(document.csgExpressions[0].base.geometry.kind).toBe('sphere');
+    expect(document.csgExpressions[0].operations[0].op).toBe('subtraction');
+    expect(document.csgExpressions[0].operations[0].tool.geometry.kind).toBe('cylinder');
+    expect(document.renderNodes).toHaveLength(0);
+    expect(document.csgExpressions[0].operations[0].tool.csgConsumed).toBe(true);
+  });
+
+  it('applies a CSG tool to the nearest earlier overlapping world-space primitive', () => {
+    const document = createSpatialDocument(`"+0+4/+0+4/+0+4" : "geometry: box"
+"+1+4/+0+4/+0+4" : "geometry: sphere"
+"+2+1/+0+4/+0+1" : "geometry: cylinder; operation: subtraction"`);
+
+    expect(document.csgExpressions).toHaveLength(1);
+    expect(document.csgExpressions[0].base.geometry.kind).toBe('sphere');
+    expect(document.renderNodes.map((node) => node.geometry.kind)).toEqual(['box']);
+  });
+
+
 });

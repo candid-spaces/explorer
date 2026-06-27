@@ -26,6 +26,8 @@ export interface SpatialNode {
   parentNamespacePath?: string;
   renderable?: boolean;
   unionGroupId?: string;
+  csgExpressionId?: string;
+  csgConsumed?: boolean;
   children?: SpatialNode[];
   metadata?: Record<string, unknown>;
 }

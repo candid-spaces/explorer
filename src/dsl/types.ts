@@ -25,6 +25,7 @@ export interface DslPathSpec {
 }
 
 export type DslGeometryKind = 'box' | 'cylinder' | 'cone' | 'sphere';
+export type DslCsgOperation = 'union' | 'subtraction' | 'intersection';
 
 export interface DslGeometrySpec {
   kind: DslGeometryKind;
@@ -33,7 +34,9 @@ export interface DslGeometrySpec {
   kindDeclared?: boolean;
   'box-radius'?: number;
   puff?: number;
+  operation?: DslCsgOperation;
 }
+
 
 export type DslTextureChannel = 'map' | 'roughnessMap' | 'normalMap' | 'bumpMap' | 'metalnessMap' | 'alphaMap';
 

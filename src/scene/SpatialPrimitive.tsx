@@ -1,42 +1,13 @@
 import { RoundedBoxGeometry } from '@react-three/drei';
 import type { MeshPhysicalMaterialParameters, MeshStandardMaterialParameters } from 'three';
 import type { SpatialGeometry } from '../model/geometry';
+import { normalizedDslStrength, normalizedRoundedBoxRadius } from './primitiveGeometry';
 import type { SpatialNode } from '../model/SpatialNode';
 import { defaultBoxMaterial, unionHighlightMaterial } from './materials';
 import { resolveMaterialTextures } from './textureRegistry';
 
 interface SpatialPrimitiveProps {
   node: SpatialNode;
-}
-
-const COMPACT_STRENGTH_MAX = 5;
-
-function normalizedDslStrength(value?: number): number | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  return Math.min(Math.max(value, 0), COMPACT_STRENGTH_MAX) / COMPACT_STRENGTH_MAX;
-}
-
-function normalizedRoundedBoxRadius(geometry: SpatialGeometry): number {
-  const radius = geometry['box-radius'] ?? 0;
-  const puff = normalizedDslStrength(geometry.puff) ?? 0;
-
-  if (radius <= 0 && puff <= 0) {
-    return 0;
-  }
-
-  const smallestDimension = Math.min(...geometry.dimensions);
-
-  if (smallestDimension <= 0) {
-    return 0;
-  }
-
-  const puffRadius = puff * smallestDimension * 0.28;
-  const clampedRadius = Math.min(Math.max(radius, puffRadius), smallestDimension / 2);
-
-  return clampedRadius / smallestDimension;
 }
 
 function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
@@ -69,7 +40,7 @@ function textureBumpScale(node: SpatialNode): number | undefined {
   return bumpStrength === undefined ? undefined : bumpStrength * 0.045;
 }
 
-function materialParameters(node: SpatialNode): MeshPhysicalMaterialParameters {
+export function materialParameters(node: SpatialNode): MeshPhysicalMaterialParameters {
   const textureParameters = resolveMaterialTextures(node.material);
   const bumpScale = textureBumpScale(node);
 
@@ -84,7 +55,7 @@ function materialParameters(node: SpatialNode): MeshPhysicalMaterialParameters {
   };
 }
 
-function needsPhysicalMaterial(node: SpatialNode): boolean {
+export function needsPhysicalMaterial(node: SpatialNode): boolean {
   return Boolean(node.material.textures?.normalMap);
 }
 
