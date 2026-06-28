@@ -182,7 +182,8 @@ describe('createSpatialDocument namespaced DSL', () => {
 "Sofa/Base/+0+6/+0+40c/+0+3" : "box-radius: 0.1"
 "Sofa/Back/+0+6/+44c+180c/+0+50c" : "box-radius: 0.18; rotation: -3.4,0,0"`);
 
-    expect(document.diagnostics).toEqual([]);
+    expect(document.diagnostics).toHaveLength(2);
+    expect(document.diagnostics[0].message).toContain('has no concrete ancestor namespace anchor');
     expect(document.renderNodes).toHaveLength(0);
     expect(document.nodes).toHaveLength(2);
     expect(document.nodes.every((node) => node.renderable === false)).toBe(
@@ -418,5 +419,23 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.renderNodes.map((node) => node.geometry.kind)).toEqual(['box']);
   });
 
+  it('chains declaration-order CSG operations inside a concrete namespace scope', () => {
+    const document = createSpatialDocument(`"Mug/+0+1/+0+1/+0+1" : "color: white"
+"Mug/Body/+5+2/+1+2/+1+2" : "geometry: cylinder; color: 0xf5f3ef; roughness: 0.65"
+"Mug/Hollow/+530c+140c/+120c+190c/+130c+140c" : "geometry: cylinder; operation: subtraction"
+"Mug/Handle/+680c+110c/+155c+110c/+135c+130c" : "box-radius: 0.18; operation: union"
+"Mug/HandleHole/+700c+70c/+175c+70c/+155c+90c" : "box-radius: 0.12; operation: subtraction"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.csgExpressions).toHaveLength(1);
+    expect(document.csgExpressions[0].scopePath).toBe('Mug/');
+    expect(document.csgExpressions[0].base.namespacePath).toBe('Mug/Body/');
+    expect(document.csgExpressions[0].operations.map((operation) => operation.op)).toEqual([
+      'subtraction',
+      'union',
+      'subtraction',
+    ]);
+    expect(document.renderNodes).toHaveLength(0);
+  });
 
 });

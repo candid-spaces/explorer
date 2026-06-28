@@ -563,6 +563,30 @@ export function resolveDslDocument(objects: SpatialObject[]): {
       object.materializedFrom ||
       hasConcreteAncestorInstance(object, materializedConcreteNamespaces),
   );
+  const referencedTargetNamespaces = new Set(
+    objects
+      .map((object) => object.reference.targetPath)
+      .filter(Boolean) as string[],
+  );
+
+  allObjects.forEach((object) => {
+    const belongsToReferencedTemplate = [...referencedTargetNamespaces].some(
+      (targetPath) => object.namespacePath.startsWith(targetPath),
+    );
+
+    if (
+      object.namespace.length > 1 &&
+      !belongsToReferencedTemplate &&
+      !renderEligibleObjects.includes(object) &&
+      !hasConcreteAncestorInstance(object, materializedConcreteNamespaces)
+    ) {
+      diagnostics.push({
+        line: object.lineNumber,
+        source: object.source,
+        message: `Nested declaration "${object.namespacePath}${object.box.source}" has no concrete ancestor namespace anchor and will not render. Declare "${canonicalNamespacePath(object.namespace.slice(0, 1))}" as a concrete instance to materialize its local children.`,
+      });
+    }
+  });
 
   return {
     objects: allObjects.map((object) => ({

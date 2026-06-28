@@ -24,6 +24,16 @@ Declaration keys can be anonymous world-space boxes, named world-space instances
 
 Path coordinates use bare integers for paces and an optional `c` suffix for centipaces, where `100c = 1` pace. The suffix applies per number, so mixed axis values are valid: `+1+3c` means offset `1` pace and size `0.03` paces. Decimal path notation is intentionally avoided; write `10c` instead of `0.1`.
 
+CSG operations (`operation: union`, `operation: subtraction`, and `operation: intersection`) follow declaration order. A later overlapping operator first targets earlier solids in the same namespace/local scope; if no local scoped target overlaps, it falls back to the earlier overlapping world-space solid. This lets compound objects be authored as local groups, but the group must still have a concrete namespace anchor to materialize its children:
+
+```txt
+"Mug/+0+1/+0+1/+0+1" : "color: 0xf5f3ef"
+"Mug/Body/+5+2/+1+2/+1+2" : "geometry: cylinder; roughness: 0.65"
+"Mug/Hollow/+530c+140c/+120c+190c/+130c+140c" : "geometry: cylinder; operation: subtraction"
+"Mug/Handle/+680c+110c/+155c+110c/+135c+130c" : "box-radius: 0.18; operation: union"
+"Mug/HandleHole/+700c+70c/+175c+70c/+155c+90c" : "box-radius: 0.12; operation: subtraction"
+```
+
 Remote transaction validation may limit each memo/properties field to 100 bytes, but that is a transport constraint rather than a renderer limit. Once declarations are loaded, the renderer consumes the resolved DSL document and does not impose a practical size limit on the inherited property set. Authors targeting the remote format can fit richer scenes into the 100-byte fields by putting shared material, geometry, texture, and deformation properties on declaration-only namespaces, then letting child instances inherit those defaults or add compact overrides across additional declarations.
 
 ```txt
