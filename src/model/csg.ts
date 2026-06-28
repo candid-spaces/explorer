@@ -10,6 +10,7 @@ export interface CsgExpression {
   id: string;
   base: SpatialNode;
   operations: CsgOperationNode[];
+  scopePath?: string;
 }
 
 function sourceOrder(node: SpatialNode): number {
@@ -20,30 +21,53 @@ function isCsgTool(node: SpatialNode): boolean {
   return node.geometry.operation !== undefined;
 }
 
+function scopePath(node: SpatialNode): string {
+  return node.parentNamespacePath ?? '';
+}
+
+function candidateBaseId(candidate: SpatialNode): string | undefined {
+  if (!isCsgTool(candidate)) {
+    return candidate.id;
+  }
+
+  return candidate.csgExpressionId;
+}
+
 export function buildCsgExpressions(nodes: SpatialNode[]): { expressions: CsgExpression[]; nodes: SpatialNode[] } {
   const byId = new Map<string, SpatialNode>(nodes.map((node) => [node.id, { ...node, csgExpressionId: undefined, csgConsumed: false }]));
   const ordered = [...byId.values()].sort((a, b) => sourceOrder(a) - sourceOrder(b));
   const operationsByBase = new Map<string, CsgOperationNode[]>();
+  const scopeByBase = new Map<string, string>();
+  const baseByTool = new Map<string, string>();
 
   ordered.forEach((tool) => {
-    if (!isCsgTool(tool)) {
+    if (!isCsgTool(tool) || !tool.geometry.operation) {
       return;
     }
 
-    const base = ordered
+    const earlierOverlapping = ordered
       .filter((candidate) => sourceOrder(candidate) < sourceOrder(tool))
-      .filter((candidate) => !isCsgTool(candidate))
-      .filter((candidate) => boundsOverlap(candidate.bounds, tool.bounds))
+      .filter((candidate) => boundsOverlap(candidate.bounds, tool.bounds));
+    const scopedCandidate = earlierOverlapping
+      .filter((candidate) => scopePath(candidate) === scopePath(tool))
       .at(-1);
+    const candidate = scopedCandidate ?? earlierOverlapping.at(-1);
+    const baseId = candidate ? (baseByTool.get(candidate.id) ?? candidateBaseId(candidate)) : undefined;
+    const base = baseId ? byId.get(baseId) : undefined;
 
-    if (!base || !tool.geometry.operation) {
+    if (!base || isCsgTool(base)) {
       return;
     }
 
-    operationsByBase.set(base.id, [...(operationsByBase.get(base.id) ?? []), { op: tool.geometry.operation, tool }]);
+    const operation = { op: tool.geometry.operation, tool };
+    operationsByBase.set(base.id, [...(operationsByBase.get(base.id) ?? []), operation]);
+    scopeByBase.set(base.id, scopePath(base));
+    baseByTool.set(tool.id, base.id);
+
     const storedTool = byId.get(tool.id);
     if (storedTool) {
       storedTool.csgConsumed = true;
+      storedTool.csgExpressionId = base.id;
     }
   });
 
@@ -62,6 +86,7 @@ export function buildCsgExpressions(nodes: SpatialNode[]): { expressions: CsgExp
       id: expressionId,
       base,
       operations: operations.map(({ op, tool }) => ({ op, tool: byId.get(tool.id) ?? tool })),
+      scopePath: scopeByBase.get(baseId),
     };
   });
 
