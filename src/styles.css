@@ -145,8 +145,7 @@ button {
   color: #bbf7d0;
 }
 
-.diagnostics,
-.object-list {
+.diagnostics {
   margin-top: 1rem;
   border-radius: 1rem;
   padding: 0.85rem;
@@ -158,44 +157,12 @@ button {
   color: #fde68a;
 }
 
-.object-list {
-  border: 1px solid rgb(148 163 184 / 24%);
-}
-
-.diagnostics ul,
-.object-list ul {
+.diagnostics ul {
   display: grid;
   gap: 0.55rem;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.object-list li {
-  display: grid;
-  gap: 0.2rem;
-  border-bottom: 1px solid rgb(148 163 184 / 14%);
-  padding-bottom: 0.55rem;
-  color: #cbd5e1;
-  font-size: 0.85rem;
-}
-
-.object-list li:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.object-list strong {
-  color: #f8fafc;
-}
-
-.object-list em {
-  width: max-content;
-  border-radius: 999px;
-  padding: 0.15rem 0.45rem;
-  background: rgb(37 99 235 / 26%);
-  color: #bfdbfe;
-  font-style: normal;
 }
 
 .dsl-tree-view {
@@ -306,6 +273,10 @@ button {
   white-space: nowrap;
 }
 
+.dsl-tree-object-details {
+  color: #93c5fd;
+}
+
 .dsl-tree-badges {
   display: flex;
   flex-wrap: wrap;
@@ -322,6 +293,58 @@ button {
   font-size: 0.68rem;
   font-style: normal;
   white-space: nowrap;
+}
+
+.dsl-csg-summary {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+  border: 1px solid rgb(148 163 184 / 16%);
+  border-radius: 0.75rem;
+  padding: 0.65rem;
+  background: rgb(2 6 23 / 28%);
+}
+
+.dsl-csg-summary h3 {
+  margin: 0;
+  color: #dbeafe;
+  font-size: 0.8rem;
+}
+
+.dsl-csg-summary ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dsl-csg-summary li {
+  display: grid;
+  gap: 0.2rem;
+  border-bottom: 1px solid rgb(148 163 184 / 14%);
+  padding-bottom: 0.45rem;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.dsl-csg-summary li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.dsl-csg-summary strong {
+  color: #f8fafc;
+}
+
+.dsl-csg-summary em {
+  width: max-content;
+  border-radius: 999px;
+  padding: 0.12rem 0.4rem;
+  background: rgb(37 99 235 / 26%);
+  color: #bfdbfe;
+  font-size: 0.68rem;
+  font-style: normal;
 }
 
 .transaction-controls {

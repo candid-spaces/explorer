@@ -26,6 +26,24 @@ function hasNestedNodes(nodes: SpatialNode[]): boolean {
   return nodes.some((node) => (node.children?.length ?? 0) > 0 || hasNestedNodes(node.children ?? []));
 }
 
+function rotationDegrees(node: SpatialNode): string {
+  return node.transform.rotation.map((radian) => Math.round((radian * 180) / Math.PI)).join(', ');
+}
+
+function geometryLabel(node: SpatialNode): string {
+  const parts: string[] = [node.geometry.kind];
+
+  if (node.geometry.operation) {
+    parts.push(`operation ${node.geometry.operation}`);
+  }
+
+  if (node.geometry['box-radius'] !== undefined) {
+    parts.push(`box-radius ${node.geometry['box-radius']}`);
+  }
+
+  return parts.join(' · ');
+}
+
 function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collapsedIds: Set<string>; onToggle: (id: string) => void }) {
   const children = node.children ?? [];
   const hasChildren = children.length > 0;
@@ -57,6 +75,12 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
             {node.renderable ? node.geometry.kind : 'group'} · {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x},{' '}
             {node.box.y}, {node.box.z})
           </span>
+          {node.renderable ? (
+            <span className="dsl-tree-object-details">
+              {geometryLabel(node)} bounding box: {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y},{' '}
+              {node.box.z}); rotation: {rotationDegrees(node)}°
+            </span>
+          ) : null}
         </div>
 
         <div className="dsl-tree-badges" aria-label="DSL node metadata">
@@ -64,6 +88,7 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
           {node.renderable ? null : <em>container</em>}
           {reference ? <em>ref {reference}</em> : null}
           {node.geometry.operation ? <em>operation {node.geometry.operation}</em> : null}
+          {node.unionGroupId ? <em>{node.unionGroupId}</em> : null}
           {csgLabel ? <em>{csgLabel}</em> : null}
         </div>
       </div>
@@ -125,11 +150,32 @@ export function DslTreeView({ document }: DslTreeViewProps) {
       {document.nodes.length === 0 ? (
         <p>No valid definitions yet.</p>
       ) : (
-        <ul className="dsl-tree-root">
-          {document.nodes.map((node) => (
-            <TreeItem key={node.id} node={node} collapsedIds={collapsedIds} onToggle={toggleNode} />
-          ))}
-        </ul>
+        <>
+          {document.csgExpressions.length > 0 ? (
+            <div className="dsl-csg-summary" aria-label="CSG expression summary">
+              <h3>CSG expressions</h3>
+              <ul>
+                {document.csgExpressions.map((expression) => (
+                  <li key={expression.id}>
+                    <strong>{expression.id}</strong>
+                    <span>
+                      {expression.base.geometry.kind} with {expression.operations.length} CSG operation
+                      {expression.operations.length === 1 ? '' : 's'}:{' '}
+                      {expression.operations.map((operation) => `${operation.op} ${operation.tool.geometry.kind}`).join(', ')}
+                    </span>
+                    <em>{expression.base.id}</em>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <ul className="dsl-tree-root">
+            {document.nodes.map((node) => (
+              <TreeItem key={node.id} node={node} collapsedIds={collapsedIds} onToggle={toggleNode} />
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );
