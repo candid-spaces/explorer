@@ -4,7 +4,6 @@ import type { RejectedTransaction, TransactionRange } from '../transactions/type
 import { DslEditor } from './DslEditor';
 import { DslTransactionControls } from './DslTransactionControls';
 import { DslTreeView } from './DslTreeView';
-import { ObjectList } from './ObjectList';
 
 function describeAuthoringState(
   hasRemoteBaseline: boolean,
@@ -219,8 +218,6 @@ export function DslDrawer({
           ) : null}
 
           <DslTreeView document={document} />
-
-          <ObjectList document={document} />
         </div>
       ) : null}
     </aside>
