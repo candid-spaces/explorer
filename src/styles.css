@@ -233,11 +233,11 @@ button {
 
 .dsl-tree-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.55rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.45rem 0.55rem;
   align-items: start;
   border-radius: 0.75rem;
-  padding: 0.45rem;
+  padding: 0.55rem;
   background: rgb(2 6 23 / 36%);
 }
 
@@ -264,6 +264,7 @@ button {
   gap: 0.18rem;
   color: #cbd5e1;
   font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .dsl-tree-node-summary strong {
@@ -273,26 +274,33 @@ button {
   white-space: nowrap;
 }
 
+.dsl-tree-node-summary span,
+.dsl-tree-object-details {
+  overflow-wrap: anywhere;
+}
+
 .dsl-tree-object-details {
   color: #93c5fd;
 }
 
 .dsl-tree-badges {
+  grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  min-width: 0;
 }
 
 .dsl-tree-badges em {
-  width: max-content;
+  max-width: 100%;
   border-radius: 999px;
   padding: 0.12rem 0.4rem;
   background: rgb(14 165 233 / 18%);
   color: #bae6fd;
   font-size: 0.68rem;
   font-style: normal;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .dsl-csg-summary {
