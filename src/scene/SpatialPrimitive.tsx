@@ -1,4 +1,5 @@
-import { RoundedBoxGeometry } from '@react-three/drei';
+import { Edges, RoundedBoxGeometry } from '@react-three/drei';
+import type { ThreeEvent } from '@react-three/fiber';
 import type { MeshPhysicalMaterialParameters, MeshStandardMaterialParameters } from 'three';
 import type { SpatialGeometry } from '../model/geometry';
 import { normalizedDslStrength, normalizedRoundedBoxRadius } from './primitiveGeometry';
@@ -8,6 +9,8 @@ import { resolveMaterialTextures } from './textureRegistry';
 
 interface SpatialPrimitiveProps {
   node: SpatialNode;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
 function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
@@ -59,9 +62,14 @@ export function needsPhysicalMaterial(node: SpatialNode): boolean {
   return Boolean(node.material.textures?.normalMap);
 }
 
-export function SpatialPrimitive({ node }: SpatialPrimitiveProps) {
+export function SpatialPrimitive({ node, isSelected = false, onSelect }: SpatialPrimitiveProps) {
   const { position, rotation, scale } = node.transform;
   const material = materialParameters(node);
+
+  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
+    onSelect?.(node.id);
+  }
 
   return (
     <mesh
@@ -70,6 +78,7 @@ export function SpatialPrimitive({ node }: SpatialPrimitiveProps) {
       position={position}
       rotation={rotation}
       scale={scale}
+      onPointerDown={handlePointerDown}
       userData={{
         spatialNodeId: node.id,
         unionGroupId: node.unionGroupId,
@@ -78,6 +87,7 @@ export function SpatialPrimitive({ node }: SpatialPrimitiveProps) {
       }}
     >
       <PrimitiveGeometry geometry={node.geometry} />
+      {isSelected ? <Edges color="#facc15" scale={1.03} /> : null}
       {needsPhysicalMaterial(node) ? (
         <meshPhysicalMaterial {...material} />
       ) : (

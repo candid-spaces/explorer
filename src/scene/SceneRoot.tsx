@@ -11,13 +11,15 @@ import { nodesForRoomSizing } from './roomSizing';
 
 interface SceneRootProps {
   document: SpatialDocument;
+  selectedNodeId?: string;
+  onSelectNode?: (id: string | undefined) => void;
 }
 
-export function SceneRoot({ document }: SceneRootProps) {
+export function SceneRoot({ document, selectedNodeId, onSelectNode }: SceneRootProps) {
   const roomDimensions = dimensionsFromNodes(nodesForRoomSizing(document));
 
   return (
-    <Canvas className="scene-canvas" shadows gl={{ antialias: true }}>
+    <Canvas className="scene-canvas" shadows gl={{ antialias: true }} onPointerMissed={() => onSelectNode?.(undefined)}>
       <color attach="background" args={['#151820']} />
       <PerspectiveCamera makeDefault position={[14, 11, 18]} fov={45} />
       <Lighting />
@@ -26,7 +28,11 @@ export function SceneRoot({ document }: SceneRootProps) {
         <CsgPrimitive key={expression.id} expression={expression} />
       ))}
       {document.renderNodes.map((node) => (
-        node.content?.kind ? <ContentPrimitive key={node.id} node={node} /> : <SpatialPrimitive key={node.id} node={node} />
+        node.content?.kind ? (
+          <ContentPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={onSelectNode} />
+        ) : (
+          <SpatialPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={onSelectNode} />
+        )
       ))}
       <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI / 2.02} />
     </Canvas>

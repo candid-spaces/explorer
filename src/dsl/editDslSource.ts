@@ -1,0 +1,225 @@
+import { parseDslDeclaration } from './parser';
+import type { AxisName } from './types';
+
+const DECLARATION_PATTERN = /^(?<indent>\s*)"(?<path>[^"]+)"(?<middle>\s*:\s*)"(?<properties>[^"]*)"(?<suffix>\s*)$/;
+const AXIS_PATTERN = /^\+(?<offset>\d+(?:c)?)\+(?<size>\d+(?:c)?)$/;
+const MIN_SIZE = 0.01;
+
+interface DeclarationParts {
+  indent: string;
+  path: string;
+  middle: string;
+  properties: string;
+  suffix: string;
+}
+
+interface AxisParts {
+  offset: number;
+  size: number;
+}
+
+function splitLines(source: string): string[] {
+  return source.split('\n');
+}
+
+function declarationParts(line: string): DeclarationParts | undefined {
+  const match = line.match(DECLARATION_PATTERN);
+
+  if (!match?.groups) {
+    return undefined;
+  }
+
+  return {
+    indent: match.groups.indent,
+    path: match.groups.path,
+    middle: match.groups.middle,
+    properties: match.groups.properties,
+    suffix: match.groups.suffix,
+  };
+}
+
+function replaceLine(source: string, lineNumber: number, replacement: string): string {
+  const lines = splitLines(source);
+  const index = lineNumber - 1;
+
+  if (index < 0 || index >= lines.length) {
+    return source;
+  }
+
+  lines[index] = replacement;
+  return lines.join('\n');
+}
+
+function formatDeclaration(parts: DeclarationParts): string {
+  return `${parts.indent}"${parts.path}"${parts.middle}"${parts.properties}"${parts.suffix}`;
+}
+
+function formatPathNumber(value: number): string {
+  const centipaces = Math.max(0, Math.round(value * 100));
+
+  if (centipaces % 100 === 0) {
+    return String(centipaces / 100);
+  }
+
+  return `${centipaces}c`;
+}
+
+function parseAxis(segment: string): AxisParts | undefined {
+  const match = segment.match(AXIS_PATTERN);
+
+  if (!match?.groups) {
+    return undefined;
+  }
+
+  const offset = match.groups.offset.endsWith('c') ? Number(match.groups.offset.slice(0, -1)) / 100 : Number(match.groups.offset);
+  const size = match.groups.size.endsWith('c') ? Number(match.groups.size.slice(0, -1)) / 100 : Number(match.groups.size);
+
+  return { offset, size };
+}
+
+function formatAxis(axis: AxisParts): string {
+  return `+${formatPathNumber(axis.offset)}+${formatPathNumber(Math.max(MIN_SIZE, axis.size))}`;
+}
+
+function updatePathAxes(path: string, updater: (axis: AxisName, value: AxisParts) => AxisParts): string {
+  const segments = path.split('/');
+  const axisStart = segments.findIndex((segment) => AXIS_PATTERN.test(segment));
+
+  if (axisStart < 0 || segments.length - axisStart !== 3) {
+    return path;
+  }
+
+  const axes: AxisName[] = ['x', 'y', 'z'];
+  const nextSegments = [...segments];
+
+  axes.forEach((axis, axisIndex) => {
+    const segmentIndex = axisStart + axisIndex;
+    const parsed = parseAxis(segments[segmentIndex]);
+
+    if (!parsed) {
+      return;
+    }
+
+    nextSegments[segmentIndex] = formatAxis(updater(axis, parsed));
+  });
+
+  return nextSegments.join('/');
+}
+
+function parseProperties(properties: string): Array<{ key: string; value: string }> {
+  return properties
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const separatorIndex = part.indexOf(':');
+
+      if (separatorIndex === -1) {
+        return { key: part, value: '' };
+      }
+
+      return {
+        key: part.slice(0, separatorIndex).trim(),
+        value: part.slice(separatorIndex + 1).trim(),
+      };
+    });
+}
+
+function formatProperties(properties: Array<{ key: string; value: string }>): string {
+  return properties.map(({ key, value }) => `${key}: ${value}`).join('; ');
+}
+
+export function replaceDeclarationPath(source: string, lineNumber: number, nextPath: string): string {
+  const lines = splitLines(source);
+  const line = lines[lineNumber - 1];
+  const parts = line === undefined ? undefined : declarationParts(line);
+
+  if (!parts) {
+    return source;
+  }
+
+  return replaceLine(source, lineNumber, formatDeclaration({ ...parts, path: nextPath }));
+}
+
+export function replaceDeclarationProperties(source: string, lineNumber: number, nextProperties: string): string {
+  const lines = splitLines(source);
+  const line = lines[lineNumber - 1];
+  const parts = line === undefined ? undefined : declarationParts(line);
+
+  if (!parts) {
+    return source;
+  }
+
+  return replaceLine(source, lineNumber, formatDeclaration({ ...parts, properties: nextProperties }));
+}
+
+export function updateDeclarationProperty(source: string, lineNumber: number, key: string, value: string): string {
+  const lines = splitLines(source);
+  const line = lines[lineNumber - 1];
+  const parts = line === undefined ? undefined : declarationParts(line);
+
+  if (!parts) {
+    return source;
+  }
+
+  const properties = parseProperties(parts.properties);
+  const existing = properties.find((property) => property.key === key);
+
+  if (existing) {
+    existing.value = value;
+  } else {
+    properties.push({ key, value });
+  }
+
+  return replaceDeclarationProperties(source, lineNumber, formatProperties(properties));
+}
+
+export function moveDeclarationPath(source: string, lineNumber: number, axis: AxisName, delta: number): string {
+  const line = splitLines(source)[lineNumber - 1];
+  const parts = line === undefined ? undefined : declarationParts(line);
+
+  if (!parts) {
+    return source;
+  }
+
+  return replaceDeclarationPath(
+    source,
+    lineNumber,
+    updatePathAxes(parts.path, (currentAxis, value) =>
+      currentAxis === axis ? { ...value, offset: Math.max(0, value.offset + delta) } : value,
+    ),
+  );
+}
+
+export function resizeDeclarationPath(source: string, lineNumber: number, axis: AxisName, delta: number): string {
+  const line = splitLines(source)[lineNumber - 1];
+  const parts = line === undefined ? undefined : declarationParts(line);
+
+  if (!parts) {
+    return source;
+  }
+
+  return replaceDeclarationPath(
+    source,
+    lineNumber,
+    updatePathAxes(parts.path, (currentAxis, value) =>
+      currentAxis === axis ? { ...value, size: Math.max(MIN_SIZE, value.size + delta) } : value,
+    ),
+  );
+}
+
+export function lineNumberForNodeSource(source: string, nodeSource: string): number | undefined {
+  const index = splitLines(source).findIndex((line) => line === nodeSource);
+
+  return index === -1 ? undefined : index + 1;
+}
+
+export function canEditDeclarationLine(source: string, lineNumber: number): boolean {
+  const line = splitLines(source)[lineNumber - 1];
+
+  if (!line || !declarationParts(line)) {
+    return false;
+  }
+
+  return parseDslDeclaration(line, lineNumber).ok;
+}

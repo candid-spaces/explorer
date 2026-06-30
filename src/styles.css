@@ -621,3 +621,141 @@ button {
 .remote-baseline-reference .dsl-editor {
   margin-top: 0.75rem;
 }
+
+.dsl-editor-status,
+.dsl-editor-selected-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  color: #bfdbfe;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.dsl-editor-selected-line {
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid rgb(250 204 21 / 35%);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  background: rgb(113 63 18 / 42%);
+  color: #fde68a;
+}
+
+.selected-node-inspector {
+  pointer-events: auto;
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 12;
+  display: grid;
+  gap: 0.75rem;
+  width: min(27rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 6rem);
+  overflow: auto;
+  border: 1px solid rgb(250 204 21 / 28%);
+  border-radius: 1.2rem;
+  padding: 1rem;
+  background: rgb(15 23 42 / 86%);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(18px);
+}
+
+.selected-node-inspector h2,
+.selected-node-inspector p {
+  margin: 0;
+}
+
+.selected-node-inspector button,
+.selected-node-inspector input,
+.selected-node-inspector select {
+  font: inherit;
+}
+
+.selected-node-inspector button {
+  border: 1px solid rgb(250 204 21 / 30%);
+  border-radius: 999px;
+  padding: 0.32rem 0.55rem;
+  background: rgb(30 41 59 / 82%);
+  color: #fde68a;
+}
+
+.selected-node-inspector button:disabled,
+.selected-node-inspector input:disabled,
+.selected-node-inspector select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.selected-node-inspector dl {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.76rem;
+}
+
+.selected-node-inspector dl div {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.selected-node-inspector dt {
+  color: #fde68a;
+  font-weight: 700;
+}
+
+.selected-node-inspector dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.inspector-warning {
+  border: 1px solid rgb(251 191 36 / 35%);
+  border-radius: 0.75rem;
+  padding: 0.55rem;
+  background: rgb(113 63 18 / 30%);
+  color: #fde68a;
+  font-size: 0.76rem;
+}
+
+.inspector-grid,
+.inspector-fields {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.inspector-grid strong {
+  color: #f8fafc;
+  font-size: 0.78rem;
+}
+
+.inspector-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.inspector-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.inspector-fields label {
+  display: grid;
+  gap: 0.25rem;
+  color: #dbeafe;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.inspector-fields input,
+.inspector-fields select {
+  width: 100%;
+  border: 1px solid rgb(147 197 253 / 28%);
+  border-radius: 0.55rem;
+  padding: 0.42rem 0.5rem;
+  background: rgb(2 6 23 / 72%);
+  color: #e2e8f0;
+}
