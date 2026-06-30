@@ -40,7 +40,6 @@ interface LineChangeSummary {
   removed: number;
 }
 
-
 function findNodeById(nodes: SpatialNode[], id?: string): SpatialNode | undefined {
   if (!id) {
     return undefined;
@@ -61,7 +60,27 @@ function findNodeById(nodes: SpatialNode[], id?: string): SpatialNode | undefine
   return undefined;
 }
 
-function selectedLineNumber(node: SpatialNode | undefined): number | undefined {
+function findNodeByLineNumber(nodes: SpatialNode[], lineNumber?: number): SpatialNode | undefined {
+  if (lineNumber === undefined) {
+    return undefined;
+  }
+
+  for (const node of nodes) {
+    if ((node.metadata?.lineNumber as number | undefined) === lineNumber) {
+      return node;
+    }
+
+    const child = findNodeByLineNumber(node.children ?? [], lineNumber);
+
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+}
+
+function lineNumberForNode(node: SpatialNode | undefined): number | undefined {
   return node?.metadata?.lineNumber as number | undefined;
 }
 
@@ -100,6 +119,7 @@ export default function App() {
   const latestRemoteBaselineRef = useRef('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
+  const [selectedLineNumber, setSelectedLineNumber] = useState<number | undefined>();
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
     '',
@@ -207,13 +227,28 @@ export default function App() {
     [authoringSource, remoteBaselineAppliedToEditor],
   );
   const document = useMemo(() => createSpatialDocument(authoringSource), [authoringSource]);
-  const selectedNode = useMemo(() => findNodeById(document.nodes, selectedNodeId), [document.nodes, selectedNodeId]);
-  const selectedNodeLineNumber = selectedLineNumber(selectedNode);
+  const selectedNode = useMemo(
+    () => findNodeById(document.nodes, selectedNodeId) ?? findNodeByLineNumber(document.nodes, selectedLineNumber),
+    [document.nodes, selectedLineNumber, selectedNodeId],
+  );
+  const selectedNodeLineNumber = lineNumberForNode(selectedNode) ?? selectedLineNumber;
+  const selectedSceneNodeId = selectedNode?.id ?? selectedNodeId;
   const selectedNodeCanEdit = selectedNodeLineNumber !== undefined && canEditDeclarationLine(authoringSource, selectedNodeLineNumber);
 
   const handleAuthoringSourceChange = useCallback((nextSource: string) => {
     setAuthoringSource(nextSource);
   }, []);
+
+  const handleSelectNode = useCallback((id: string | undefined) => {
+    setSelectedNodeId(id);
+
+    if (id === undefined) {
+      setSelectedLineNumber(undefined);
+      return;
+    }
+
+    setSelectedLineNumber(lineNumberForNode(findNodeById(document.nodes, id)));
+  }, [document.nodes]);
 
   const editSelectedDeclaration = useCallback((edit: (source: string, lineNumber: number) => string) => {
     if (selectedNodeLineNumber === undefined) {
@@ -250,11 +285,11 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <SceneRoot document={document} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+      <SceneRoot document={document} selectedNodeId={selectedSceneNodeId} onSelectNode={handleSelectNode} />
       <SelectedNodeInspector
         canEdit={selectedNodeCanEdit}
         node={selectedNode}
-        onClearSelection={() => setSelectedNodeId(undefined)}
+        onClearSelection={() => handleSelectNode(undefined)}
         onMove={moveSelectedDeclaration}
         onPropertyChange={updateSelectedDeclarationProperty}
         onResize={resizeSelectedDeclaration}
