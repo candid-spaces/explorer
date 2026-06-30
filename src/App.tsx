@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, updateDeclarationProperty } from './dsl/editDslSource';
+import type { AxisName } from './dsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
+import type { SpatialNode } from './model/SpatialNode';
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
@@ -7,6 +10,7 @@ import { transactionsToDslSource } from './transactions/transactionDsl';
 import type { TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
+import { SelectedNodeInspector } from './ui/SelectedNodeInspector';
 import { usePersistentState } from './ui/usePersistentState';
 
 const INITIAL_DSL = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
@@ -34,6 +38,31 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 interface LineChangeSummary {
   added: number;
   removed: number;
+}
+
+
+function findNodeById(nodes: SpatialNode[], id?: string): SpatialNode | undefined {
+  if (!id) {
+    return undefined;
+  }
+
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node;
+    }
+
+    const child = findNodeById(node.children ?? [], id);
+
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+}
+
+function selectedLineNumber(node: SpatialNode | undefined): number | undefined {
+  return node?.metadata?.lineNumber as number | undefined;
 }
 
 function countLines(source: string): Map<string, number> {
@@ -70,6 +99,7 @@ export default function App() {
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
   const latestRemoteBaselineRef = useRef('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
     '',
@@ -177,10 +207,33 @@ export default function App() {
     [authoringSource, remoteBaselineAppliedToEditor],
   );
   const document = useMemo(() => createSpatialDocument(authoringSource), [authoringSource]);
+  const selectedNode = useMemo(() => findNodeById(document.nodes, selectedNodeId), [document.nodes, selectedNodeId]);
+  const selectedNodeLineNumber = selectedLineNumber(selectedNode);
+  const selectedNodeCanEdit = selectedNodeLineNumber !== undefined && canEditDeclarationLine(authoringSource, selectedNodeLineNumber);
 
   const handleAuthoringSourceChange = useCallback((nextSource: string) => {
     setAuthoringSource(nextSource);
   }, []);
+
+  const editSelectedDeclaration = useCallback((edit: (source: string, lineNumber: number) => string) => {
+    if (selectedNodeLineNumber === undefined) {
+      return;
+    }
+
+    setAuthoringSource((source) => edit(source, selectedNodeLineNumber));
+  }, [selectedNodeLineNumber]);
+
+  const moveSelectedDeclaration = useCallback((axis: AxisName, delta: number) => {
+    editSelectedDeclaration((source, lineNumber) => moveDeclarationPath(source, lineNumber, axis, delta));
+  }, [editSelectedDeclaration]);
+
+  const resizeSelectedDeclaration = useCallback((axis: AxisName, delta: number) => {
+    editSelectedDeclaration((source, lineNumber) => resizeDeclarationPath(source, lineNumber, axis, delta));
+  }, [editSelectedDeclaration]);
+
+  const updateSelectedDeclarationProperty = useCallback((key: string, value: string) => {
+    editSelectedDeclaration((source, lineNumber) => updateDeclarationProperty(source, lineNumber, key, value));
+  }, [editSelectedDeclaration]);
 
   const resetAuthoringToRemote = useCallback(() => {
     if (!hasRemoteBaseline) {
@@ -197,11 +250,20 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <SceneRoot document={document} />
+      <SceneRoot document={document} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+      <SelectedNodeInspector
+        canEdit={selectedNodeCanEdit}
+        node={selectedNode}
+        onClearSelection={() => setSelectedNodeId(undefined)}
+        onMove={moveSelectedDeclaration}
+        onPropertyChange={updateSelectedDeclarationProperty}
+        onResize={resizeSelectedDeclaration}
+      />
       <DslDrawer
         document={document}
         isOpen={drawerOpen}
         source={authoringSource}
+        selectedLineNumber={selectedNodeLineNumber}
         transactionPublicKey={transactionPublicKey}
         transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}

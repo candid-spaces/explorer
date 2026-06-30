@@ -1,8 +1,11 @@
-import { Html, Text } from '@react-three/drei';
+import { Edges, Html, Text } from '@react-three/drei';
+import type { ThreeEvent } from '@react-three/fiber';
 import type { SpatialNode } from '../model/SpatialNode';
 
 interface ContentPrimitiveProps {
   node: SpatialNode;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
 const MAX_TEXT_CHARACTERS = 800;
@@ -22,13 +25,18 @@ function contentLabel(node: SpatialNode): string {
   }
 }
 
-export function ContentPrimitive({ node }: ContentPrimitiveProps) {
+export function ContentPrimitive({ node, isSelected = false, onSelect }: ContentPrimitiveProps) {
   if (!node.content?.kind) {
     return null;
   }
 
   const { position, rotation, scale } = node.transform;
   const label = contentLabel(node);
+
+  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
+    onSelect?.(node.id);
+  }
 
   return (
     <group
@@ -41,9 +49,10 @@ export function ContentPrimitive({ node }: ContentPrimitiveProps) {
         label,
       }}
     >
-      <mesh castShadow receiveShadow>
+      <mesh castShadow receiveShadow onPointerDown={handlePointerDown}>
         <boxGeometry args={[1, 1, 0.04]} />
         <meshStandardMaterial color={node.content.kind === 'url' ? '#e7eef8' : '#f4ecd8'} roughness={0.86} metalness={0.02} />
+        {isSelected ? <Edges color="#facc15" scale={1.04} /> : null}
       </mesh>
       {node.content.kind === 'text' ? (
         <Text

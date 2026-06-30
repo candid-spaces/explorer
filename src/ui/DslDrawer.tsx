@@ -74,6 +74,7 @@ interface DslDrawerProps {
   document: SpatialDocument;
   isOpen: boolean;
   source: string;
+  selectedLineNumber?: number;
   transactionPublicKey: string;
   transactionPublicKeyShareUrl?: string;
   transactionRange: TransactionRange;
@@ -103,6 +104,7 @@ export function DslDrawer({
   document,
   isOpen,
   source,
+  selectedLineNumber,
   transactionPublicKey,
   transactionPublicKeyShareUrl,
   transactionRange,
@@ -171,6 +173,7 @@ export function DslDrawer({
               remoteBaselineChanged,
               authoringChangeSummary,
             )}
+            selectedLineNumber={selectedLineNumber}
             value={source}
             onChange={onChange}
           />
