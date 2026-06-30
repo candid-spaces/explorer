@@ -23,7 +23,7 @@ export function DslEditor({ value, description, status, selectedLineNumber, acti
 
     textareaRef.current.focus({ preventScroll: true });
     textareaRef.current.setSelectionRange(characterOffset, characterOffset + (lines[selectedLineNumber - 1]?.length ?? 0));
-  }, [selectedLineNumber, value]);
+  }, [selectedLineNumber]);
 
   function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
     onChange(event.target.value);
