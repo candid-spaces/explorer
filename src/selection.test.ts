@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createSpatialDocument } from './model/createSpatialDocument';
-import { findNodeById, findNodePathById, lineNumberForNode, selectionTargetForNodeId } from './selection';
+import { findNodeById, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
 
 const OUTLET_DSL = `"Outlet/+3+4/+0+2/+1+20c":""
 "Outlet/Plate/+0+2/+0+3/+1+15c" : "color: 0xf2f2ee; roughness: 0.7; box-radius: 0.12"
@@ -24,6 +24,22 @@ describe('selectionTargetForNodeId', () => {
     const plate = document.csgExpressions[0].base;
 
     expect(findNodePathById(document.nodes, plate.id).map((node) => node.namespacePath)).toEqual(['Outlet/', 'Outlet/Plate/']);
+  });
+
+  it('maps promoted container anchors back to a renderable scene highlight', () => {
+    const document = createSpatialDocument(OUTLET_DSL);
+    const plate = document.csgExpressions[0].base;
+    const root = selectionTargetForNodeId(document.nodes, plate.id);
+
+    expect(sceneHighlightIdForNode(document.nodes, root)).toBe(plate.id);
+  });
+
+  it('maps consumed CSG tools back to their rendered CSG base for highlighting', () => {
+    const document = createSpatialDocument(OUTLET_DSL);
+    const plate = document.csgExpressions[0].base;
+    const slot = document.csgExpressions[0].operations[0].tool;
+
+    expect(sceneHighlightIdForNode(document.nodes, slot)).toBe(plate.id);
   });
 
   it('keeps standalone primitives selected when there is no container anchor', () => {

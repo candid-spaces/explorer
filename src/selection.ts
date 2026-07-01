@@ -12,6 +12,42 @@ function isEditableContainerAnchor(node: SpatialNode): boolean {
   return !node.renderable && !isDeclarationOnly(node) && lineNumberForNode(node) !== undefined;
 }
 
+function firstRenderableDescendant(node: SpatialNode): SpatialNode | undefined {
+  for (const child of node.children ?? []) {
+    if (child.renderable && !child.csgConsumed) {
+      return child;
+    }
+
+    const descendant = firstRenderableDescendant(child);
+
+    if (descendant) {
+      return descendant;
+    }
+  }
+
+  return undefined;
+}
+
+function csgBaseForTool(nodes: SpatialNode[], node: SpatialNode): SpatialNode | undefined {
+  if (!node.csgConsumed || !node.csgExpressionId) {
+    return undefined;
+  }
+
+  for (const candidate of nodes) {
+    if (candidate.csgExpressionId === node.csgExpressionId && !candidate.csgConsumed) {
+      return candidate;
+    }
+
+    const child = csgBaseForTool(candidate.children ?? [], node);
+
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+}
+
 export function findNodeById(nodes: SpatialNode[], id?: string): SpatialNode | undefined {
   if (!id) {
     return undefined;
@@ -70,6 +106,18 @@ export function findNodePathById(nodes: SpatialNode[], id?: string): SpatialNode
   }
 
   return [];
+}
+
+export function sceneHighlightIdForNode(nodes: SpatialNode[], node: SpatialNode | undefined): string | undefined {
+  if (!node) {
+    return undefined;
+  }
+
+  if ((node.renderable || node.csgExpressionId) && !node.csgConsumed) {
+    return node.id;
+  }
+
+  return csgBaseForTool(nodes, node)?.id ?? firstRenderableDescendant(node)?.id;
 }
 
 export function selectionTargetForNodeId(nodes: SpatialNode[], id?: string): SpatialNode | undefined {

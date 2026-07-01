@@ -3,7 +3,7 @@ import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rot
 import type { AxisName } from './dsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
-import { findNodeById, findNodeByLineNumber, findNodePathById, lineNumberForNode, selectionTargetForNodeId } from './selection';
+import { findNodeById, findNodeByLineNumber, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
@@ -77,6 +77,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [selectedLeafNodeId, setSelectedLeafNodeId] = useState<string | undefined>();
+  const [selectedSceneHighlightNodeId, setSelectedSceneHighlightNodeId] = useState<string | undefined>();
   const [selectedLineNumber, setSelectedLineNumber] = useState<number | undefined>();
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
     'dsl-transaction-public-key',
@@ -199,7 +200,7 @@ export default function App() {
 
     return selectedNode ? findNodePathById(document.nodes, selectedNode.id) : [];
   }, [document.nodes, selectedLeafNodeId, selectedNode]);
-  const selectedSceneNodeId = selectedLeafNodeId ?? selectedNode?.id ?? selectedNodeId;
+  const selectedSceneNodeId = selectedSceneHighlightNodeId ?? sceneHighlightIdForNode(document.nodes, selectedNode) ?? selectedNodeId;
   const selectedNodeCanEdit = selectedNodeLineNumber !== undefined && canEditDeclarationLine(authoringSource, selectedNodeLineNumber);
 
   const handleAuthoringSourceChange = useCallback((nextSource: string) => {
@@ -210,6 +211,7 @@ export default function App() {
     if (id === undefined) {
       setSelectedNodeId(undefined);
       setSelectedLeafNodeId(undefined);
+      setSelectedSceneHighlightNodeId(undefined);
       setSelectedLineNumber(undefined);
       return;
     }
@@ -217,6 +219,7 @@ export default function App() {
     const targetNode = selectionTargetForNodeId(document.nodes, id);
 
     setSelectedLeafNodeId(id);
+    setSelectedSceneHighlightNodeId(id);
     setSelectedNodeId(targetNode?.id ?? id);
     setSelectedLineNumber(lineNumberForNode(targetNode));
   }, [document.nodes]);
@@ -232,6 +235,7 @@ export default function App() {
     const targetNode = findNodeById(document.nodes, id);
 
     setSelectedLeafNodeId(id);
+    setSelectedSceneHighlightNodeId(sceneHighlightIdForNode(document.nodes, targetNode));
     setSelectedNodeId(targetNode?.id ?? id);
     setSelectedLineNumber(lineNumberForNode(targetNode));
   }, [document.nodes]);
