@@ -25,7 +25,12 @@ export function SceneRoot({ document, selectedNodeId, onSelectNode }: SceneRootP
       <Lighting />
       <CornerRoom {...roomDimensions} />
       {document.csgExpressions.map((expression) => (
-        <CsgPrimitive key={expression.id} expression={expression} />
+        <CsgPrimitive
+          key={expression.id}
+          expression={expression}
+          isSelected={expression.base.id === selectedNodeId}
+          onSelect={onSelectNode}
+        />
       ))}
       {document.renderNodes.map((node) => (
         node.content?.kind ? (
