@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { Edges } from '@react-three/drei';
+import type { ThreeEvent } from '@react-three/fiber';
 import { Brush, Evaluator, INTERSECTION, SUBTRACTION, ADDITION } from 'three-bvh-csg';
 import type { MeshStandardMaterialParameters } from 'three';
 import type { CsgExpression, CsgOperationNode } from '../model/csg';
@@ -8,6 +10,8 @@ import { bufferGeometryForSpatialGeometry } from './primitiveGeometry';
 
 interface CsgPrimitiveProps {
   expression: CsgExpression;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
 function brushFor(node: SpatialNode): Brush {
@@ -37,7 +41,7 @@ function csgOperation({ op }: CsgOperationNode) {
   }
 }
 
-export function CsgPrimitive({ expression }: CsgPrimitiveProps) {
+export function CsgPrimitive({ expression, isSelected = false, onSelect }: CsgPrimitiveProps) {
   const geometry = useMemo(() => {
     const evaluator = new Evaluator();
     evaluator.attributes = ['position', 'normal', 'uv'];
@@ -51,8 +55,20 @@ export function CsgPrimitive({ expression }: CsgPrimitiveProps) {
   }, [expression]);
   const material = materialParameters(expression.base);
 
+  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
+    onSelect?.(expression.base.id);
+  }
+
   return (
-    <mesh castShadow receiveShadow geometry={geometry} userData={{ spatialNodeId: expression.base.id, csgExpressionId: expression.id }}>
+    <mesh
+      castShadow
+      receiveShadow
+      geometry={geometry}
+      onPointerDown={handlePointerDown}
+      userData={{ spatialNodeId: expression.base.id, csgExpressionId: expression.id }}
+    >
+      {isSelected ? <Edges color="#facc15" scale={1.03} /> : null}
       {needsPhysicalMaterial(expression.base) ? (
         <meshPhysicalMaterial {...material} />
       ) : (
