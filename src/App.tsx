@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, updateDeclarationProperty } from './dsl/editDslSource';
+import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rotateDeclarationPath, updateDeclarationProperty } from './dsl/editDslSource';
 import type { AxisName } from './dsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
@@ -266,6 +266,13 @@ export default function App() {
     editSelectedDeclaration((source, lineNumber) => resizeDeclarationPath(source, lineNumber, axis, delta));
   }, [editSelectedDeclaration]);
 
+  const rotateSelectedDeclaration = useCallback((axis: AxisName, deltaDegrees: number) => {
+    const inheritedRotation = selectedNode?.localTransform?.rotation ?? selectedNode?.transform.rotation;
+    const inheritedRotationDegrees = inheritedRotation?.map((radian) => (radian * 180) / Math.PI) as [number, number, number] | undefined;
+
+    editSelectedDeclaration((source, lineNumber) => rotateDeclarationPath(source, lineNumber, axis, deltaDegrees, inheritedRotationDegrees));
+  }, [editSelectedDeclaration, selectedNode]);
+
   const updateSelectedDeclarationProperty = useCallback((key: string, value: string) => {
     editSelectedDeclaration((source, lineNumber) => updateDeclarationProperty(source, lineNumber, key, value));
   }, [editSelectedDeclaration]);
@@ -293,6 +300,7 @@ export default function App() {
         onMove={moveSelectedDeclaration}
         onPropertyChange={updateSelectedDeclarationProperty}
         onResize={resizeSelectedDeclaration}
+        onRotate={rotateSelectedDeclaration}
       />
       <DslDrawer
         document={document}
