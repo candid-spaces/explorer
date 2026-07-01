@@ -267,8 +267,11 @@ export default function App() {
   }, [editSelectedDeclaration]);
 
   const rotateSelectedDeclaration = useCallback((axis: AxisName, deltaDegrees: number) => {
-    editSelectedDeclaration((source, lineNumber) => rotateDeclarationPath(source, lineNumber, axis, deltaDegrees));
-  }, [editSelectedDeclaration]);
+    const inheritedRotation = selectedNode?.localTransform?.rotation ?? selectedNode?.transform.rotation;
+    const inheritedRotationDegrees = inheritedRotation?.map((radian) => (radian * 180) / Math.PI) as [number, number, number] | undefined;
+
+    editSelectedDeclaration((source, lineNumber) => rotateDeclarationPath(source, lineNumber, axis, deltaDegrees, inheritedRotationDegrees));
+  }, [editSelectedDeclaration, selectedNode]);
 
   const updateSelectedDeclarationProperty = useCallback((key: string, value: string) => {
     editSelectedDeclaration((source, lineNumber) => updateDeclarationProperty(source, lineNumber, key, value));

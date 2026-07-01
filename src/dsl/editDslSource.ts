@@ -221,7 +221,13 @@ export function resizeDeclarationPath(source: string, lineNumber: number, axis: 
   );
 }
 
-export function rotateDeclarationPath(source: string, lineNumber: number, axis: AxisName, deltaDegrees: number): string {
+export function rotateDeclarationPath(
+  source: string,
+  lineNumber: number,
+  axis: AxisName,
+  deltaDegrees: number,
+  inheritedRotationDegrees: [number, number, number] = [0, 0, 0],
+): string {
   const line = splitLines(source)[lineNumber - 1];
   const parts = line === undefined ? undefined : declarationParts(line);
 
@@ -232,7 +238,7 @@ export function rotateDeclarationPath(source: string, lineNumber: number, axis: 
   const axisIndex = ['x', 'y', 'z'].indexOf(axis);
   const properties = parseProperties(parts.properties);
   const existing = properties.find((property) => property.key === 'rotation' || property.key === 'rotate');
-  const rotation = existing ? parseRotationDegrees(existing.value) : [0, 0, 0];
+  const rotation: [number, number, number] = existing ? parseRotationDegrees(existing.value) : [...inheritedRotationDegrees];
   rotation[axisIndex] += deltaDegrees;
   const nextValue = rotation.map(formatRotationDegrees).join(', ');
 
