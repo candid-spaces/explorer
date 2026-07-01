@@ -4,6 +4,7 @@ import type { AxisName } from './types';
 const DECLARATION_PATTERN = /^(?<indent>\s*)"(?<path>[^"]+)"(?<middle>\s*:\s*)"(?<properties>[^"]*)"(?<suffix>\s*)$/;
 const AXIS_PATTERN = /^\+(?<offset>\d+(?:c)?)\+(?<size>\d+(?:c)?)$/;
 const MIN_SIZE = 0.01;
+const ROTATION_PRECISION = 1000;
 
 interface DeclarationParts {
   indent: string;
@@ -129,6 +130,18 @@ function formatProperties(properties: Array<{ key: string; value: string }>): st
   return properties.map(({ key, value }) => `${key}: ${value}`).join('; ');
 }
 
+function formatRotationDegrees(value: number): string {
+  const rounded = Math.round(value * ROTATION_PRECISION) / ROTATION_PRECISION;
+
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+function parseRotationDegrees(value: string): [number, number, number] {
+  const parts = value.split(',').map((part) => Number(part.trim()));
+
+  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+}
+
 export function replaceDeclarationPath(source: string, lineNumber: number, nextPath: string): string {
   const lines = splitLines(source);
   const line = lines[lineNumber - 1];
@@ -206,6 +219,24 @@ export function resizeDeclarationPath(source: string, lineNumber: number, axis: 
       currentAxis === axis ? { ...value, size: Math.max(MIN_SIZE, value.size + delta) } : value,
     ),
   );
+}
+
+export function rotateDeclarationPath(source: string, lineNumber: number, axis: AxisName, deltaDegrees: number): string {
+  const line = splitLines(source)[lineNumber - 1];
+  const parts = line === undefined ? undefined : declarationParts(line);
+
+  if (!parts) {
+    return source;
+  }
+
+  const axisIndex = ['x', 'y', 'z'].indexOf(axis);
+  const properties = parseProperties(parts.properties);
+  const existing = properties.find((property) => property.key === 'rotation' || property.key === 'rotate');
+  const rotation = existing ? parseRotationDegrees(existing.value) : [0, 0, 0];
+  rotation[axisIndex] += deltaDegrees;
+  const nextValue = rotation.map(formatRotationDegrees).join(', ');
+
+  return updateDeclarationProperty(source, lineNumber, existing?.key ?? 'rotation', nextValue);
 }
 
 export function lineNumberForNodeSource(source: string, nodeSource: string): number | undefined {

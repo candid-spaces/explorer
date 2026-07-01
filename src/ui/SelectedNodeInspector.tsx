@@ -7,6 +7,7 @@ interface SelectedNodeInspectorProps {
   onClearSelection: () => void;
   onMove: (axis: AxisName, delta: number) => void;
   onResize: (axis: AxisName, delta: number) => void;
+  onRotate: (axis: AxisName, deltaDegrees: number) => void;
   onPropertyChange: (key: string, value: string) => void;
 }
 
@@ -26,6 +27,7 @@ export function SelectedNodeInspector({
   onClearSelection,
   onMove,
   onResize,
+  onRotate,
   onPropertyChange,
 }: SelectedNodeInspectorProps) {
   if (!node) {
@@ -35,12 +37,13 @@ export function SelectedNodeInspector({
   const lineNumber = metadataValue<number>(node, 'lineNumber');
   const step = 1;
   const fineStep = 0.1;
+  const rotationStep = 15;
 
   return (
     <section className="selected-node-inspector" aria-label="Selected scene object editor">
       <div className="section-heading-row">
         <div>
-          <h2>Scene selection</h2>
+          <h2>Object selection</h2>
           <p>{displayName(node)}</p>
         </div>
         <button type="button" onClick={onClearSelection}>
@@ -89,6 +92,21 @@ export function SelectedNodeInspector({
             </button>
             <button type="button" disabled={!canEdit} onClick={() => onResize(axis, step)}>
               +{axis.toUpperCase()} size
+            </button>
+          </span>
+        ))}
+      </div>
+
+
+      <div className="inspector-grid" aria-label="Rotate selected object">
+        <strong>Rotate</strong>
+        {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
+          <span key={`rotate-${axis}`} className="inspector-control-row">
+            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, -rotationStep)}>
+              -{rotationStep}° {axis.toUpperCase()}
+            </button>
+            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, rotationStep)}>
+              +{rotationStep}° {axis.toUpperCase()}
             </button>
           </span>
         ))}
