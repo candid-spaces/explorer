@@ -68,7 +68,7 @@ export function CsgPrimitive({ expression, isSelected = false, onSelect }: CsgPr
       onPointerDown={handlePointerDown}
       userData={{ spatialNodeId: expression.base.id, csgExpressionId: expression.id }}
     >
-      {isSelected ? <Edges color="#facc15" scale={1.03} /> : null}
+      {isSelected ? <Edges color="#facc15" /> : null}
       {needsPhysicalMaterial(expression.base) ? (
         <meshPhysicalMaterial {...material} />
       ) : (
