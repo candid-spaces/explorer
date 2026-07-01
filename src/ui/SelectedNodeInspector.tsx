@@ -1,3 +1,5 @@
+import { useCallback, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent } from 'react';
 import type { AxisName, DslGeometryKind } from '../dsl/types';
 import type { SpatialNode } from '../model/SpatialNode';
 
@@ -21,6 +23,28 @@ function displayName(node: SpatialNode): string {
 
 const GEOMETRY_OPTIONS: DslGeometryKind[] = ['box', 'cylinder', 'cone', 'sphere'];
 
+interface InspectorPosition {
+  x: number;
+  y: number;
+}
+
+interface DragState {
+  pointerId: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+function clampedInspectorPosition(x: number, y: number, width: number, height: number): InspectorPosition {
+  const margin = 16;
+  const maxX = Math.max(margin, window.innerWidth - width - margin);
+  const maxY = Math.max(margin, window.innerHeight - height - margin);
+
+  return {
+    x: Math.min(Math.max(margin, x), maxX),
+    y: Math.min(Math.max(margin, y), maxY),
+  };
+}
+
 export function SelectedNodeInspector({
   node,
   canEdit,
@@ -30,6 +54,59 @@ export function SelectedNodeInspector({
   onRotate,
   onPropertyChange,
 }: SelectedNodeInspectorProps) {
+  const inspectorRef = useRef<HTMLElement>(null);
+  const dragStateRef = useRef<DragState | undefined>(undefined);
+  const [position, setPosition] = useState<InspectorPosition | undefined>();
+
+  const handleDragStart = useCallback((event: PointerEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement).closest('button, input, select, textarea, a')) {
+      return;
+    }
+
+    const inspector = inspectorRef.current;
+
+    if (!inspector) {
+      return;
+    }
+
+    const rect = inspector.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    setPosition(clampedInspectorPosition(rect.left, rect.top, rect.width, rect.height));
+    inspector.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }, []);
+
+  const handleDragMove = useCallback((event: PointerEvent<HTMLElement>) => {
+    const dragState = dragStateRef.current;
+    const inspector = inspectorRef.current;
+
+    if (!dragState || !inspector || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+
+    const rect = inspector.getBoundingClientRect();
+    setPosition(clampedInspectorPosition(event.clientX - dragState.offsetX, event.clientY - dragState.offsetY, rect.width, rect.height));
+  }, []);
+
+  const handleDragEnd = useCallback((event: PointerEvent<HTMLElement>) => {
+    const dragState = dragStateRef.current;
+    const inspector = inspectorRef.current;
+
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+
+    dragStateRef.current = undefined;
+
+    if (inspector?.hasPointerCapture(event.pointerId)) {
+      inspector.releasePointerCapture(event.pointerId);
+    }
+  }, []);
+
   if (!node) {
     return null;
   }
@@ -38,10 +115,25 @@ export function SelectedNodeInspector({
   const step = 1;
   const fineStep = 0.1;
   const rotationStep = 15;
+  const inspectorStyle: CSSProperties | undefined = position
+    ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' }
+    : undefined;
 
   return (
-    <section className="selected-node-inspector" aria-label="Selected scene object editor">
-      <div className="section-heading-row">
+    <section
+      ref={inspectorRef}
+      className="selected-node-inspector"
+      style={inspectorStyle}
+      aria-label="Selected scene object editor"
+      onPointerMove={handleDragMove}
+      onPointerUp={handleDragEnd}
+      onPointerCancel={handleDragEnd}
+    >
+      <div
+        className="section-heading-row inspector-drag-handle"
+        title="Drag to move object selection pane"
+        onPointerDown={handleDragStart}
+      >
         <div>
           <h2>Object selection</h2>
           <p>{displayName(node)}</p>
@@ -96,7 +188,6 @@ export function SelectedNodeInspector({
           </span>
         ))}
       </div>
-
 
       <div className="inspector-grid" aria-label="Rotate selected object">
         <strong>Rotate</strong>

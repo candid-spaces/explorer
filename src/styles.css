@@ -78,6 +78,16 @@ button {
   backdrop-filter: blur(18px);
 }
 
+.inspector-drag-handle {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.inspector-drag-handle:active {
+  cursor: grabbing;
+}
+
 .drawer-panel header {
   margin-bottom: 1rem;
 }
