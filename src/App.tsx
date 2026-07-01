@@ -3,6 +3,7 @@ import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rot
 import type { AxisName } from './dsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
+import { findNodeById, findNodeByLineNumber, lineNumberForNode, selectionTargetForNodeId } from './selection';
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
@@ -38,50 +39,6 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 interface LineChangeSummary {
   added: number;
   removed: number;
-}
-
-function findNodeById(nodes: SpatialNode[], id?: string): SpatialNode | undefined {
-  if (!id) {
-    return undefined;
-  }
-
-  for (const node of nodes) {
-    if (node.id === id) {
-      return node;
-    }
-
-    const child = findNodeById(node.children ?? [], id);
-
-    if (child) {
-      return child;
-    }
-  }
-
-  return undefined;
-}
-
-function findNodeByLineNumber(nodes: SpatialNode[], lineNumber?: number): SpatialNode | undefined {
-  if (lineNumber === undefined) {
-    return undefined;
-  }
-
-  for (const node of nodes) {
-    if ((node.metadata?.lineNumber as number | undefined) === lineNumber) {
-      return node;
-    }
-
-    const child = findNodeByLineNumber(node.children ?? [], lineNumber);
-
-    if (child) {
-      return child;
-    }
-  }
-
-  return undefined;
-}
-
-function lineNumberForNode(node: SpatialNode | undefined): number | undefined {
-  return node?.metadata?.lineNumber as number | undefined;
 }
 
 function countLines(source: string): Map<string, number> {
@@ -240,14 +197,16 @@ export default function App() {
   }, []);
 
   const handleSelectNode = useCallback((id: string | undefined) => {
-    setSelectedNodeId(id);
-
     if (id === undefined) {
+      setSelectedNodeId(undefined);
       setSelectedLineNumber(undefined);
       return;
     }
 
-    setSelectedLineNumber(lineNumberForNode(findNodeById(document.nodes, id)));
+    const targetNode = selectionTargetForNodeId(document.nodes, id);
+
+    setSelectedNodeId(targetNode?.id ?? id);
+    setSelectedLineNumber(lineNumberForNode(targetNode));
   }, [document.nodes]);
 
   const editSelectedDeclaration = useCallback((edit: (source: string, lineNumber: number) => string) => {
