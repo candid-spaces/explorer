@@ -6,11 +6,14 @@ import type { SpatialNode } from '../model/SpatialNode';
 interface SelectedNodeInspectorProps {
   node?: SpatialNode;
   canEdit: boolean;
+  selectionPath?: SpatialNode[];
   onClearSelection: () => void;
   onMove: (axis: AxisName, delta: number) => void;
   onResize: (axis: AxisName, delta: number) => void;
   onRotate: (axis: AxisName, deltaDegrees: number) => void;
+  onPathNodeSelect: (id: string) => void;
   onPropertyChange: (key: string, value: string) => void;
+  onSelectNode: (id: string) => void;
 }
 
 function metadataValue<T>(node: SpatialNode, key: string): T | undefined {
@@ -48,11 +51,14 @@ function clampedInspectorPosition(x: number, y: number, width: number, height: n
 export function SelectedNodeInspector({
   node,
   canEdit,
+  selectionPath = [],
   onClearSelection,
   onMove,
   onResize,
   onRotate,
+  onPathNodeSelect,
   onPropertyChange,
+  onSelectNode,
 }: SelectedNodeInspectorProps) {
   const inspectorRef = useRef<HTMLElement>(null);
   const dragStateRef = useRef<DragState | undefined>(undefined);
@@ -115,6 +121,7 @@ export function SelectedNodeInspector({
   const step = 1;
   const fineStep = 0.1;
   const rotationStep = 15;
+  const childNodes = node.children ?? [];
   const inspectorStyle: CSSProperties | undefined = position
     ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' }
     : undefined;
@@ -155,6 +162,45 @@ export function SelectedNodeInspector({
           </dd>
         </div>
       </dl>
+
+      {selectionPath.length > 1 ? (
+        <nav className="inspector-selection-path" aria-label="Selection hierarchy">
+          <strong>Hierarchy</strong>
+          <ol>
+            {selectionPath.map((pathNode) => (
+              <li key={pathNode.id}>
+                <button
+                  type="button"
+                  aria-current={pathNode.id === node.id ? 'true' : undefined}
+                  onClick={() => onPathNodeSelect(pathNode.id)}
+                >
+                  {displayName(pathNode)}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      ) : null}
+
+      {childNodes.length > 0 ? (
+        <section className="inspector-child-list" aria-label="Child selections">
+          <strong>Child elements</strong>
+          <ul>
+            {childNodes.map((child) => (
+              <li key={child.id}>
+                <button type="button" onClick={() => onSelectNode(child.id)}>
+                  {displayName(child)}
+                </button>
+                <span>
+                  {child.renderable ? child.geometry.kind : 'group'}
+                  {child.geometry.operation ? ` · ${child.geometry.operation}` : ''}
+                  {child.csgConsumed ? ' · csg tool' : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {!canEdit ? <p className="inspector-warning">This selection cannot be rewritten as a single editable DSL declaration.</p> : null}
 

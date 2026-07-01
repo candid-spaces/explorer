@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createSpatialDocument } from './model/createSpatialDocument';
-import { findNodeById, lineNumberForNode, selectionTargetForNodeId } from './selection';
+import { findNodeById, findNodePathById, lineNumberForNode, selectionTargetForNodeId } from './selection';
 
 const OUTLET_DSL = `"Outlet/+3+4/+0+2/+1+20c":""
 "Outlet/Plate/+0+2/+0+3/+1+15c" : "color: 0xf2f2ee; roughness: 0.7; box-radius: 0.12"
@@ -17,6 +17,13 @@ describe('selectionTargetForNodeId', () => {
 
     expect(target?.namespacePath).toBe('Outlet/');
     expect(lineNumberForNode(target)).toBe(1);
+  });
+
+  it('returns the full hierarchy for rendered compound children', () => {
+    const document = createSpatialDocument(OUTLET_DSL);
+    const plate = document.csgExpressions[0].base;
+
+    expect(findNodePathById(document.nodes, plate.id).map((node) => node.namespacePath)).toEqual(['Outlet/', 'Outlet/Plate/']);
   });
 
   it('keeps standalone primitives selected when there is no container anchor', () => {

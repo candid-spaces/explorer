@@ -769,3 +769,54 @@ button {
   background: rgb(2 6 23 / 72%);
   color: #e2e8f0;
 }
+
+.inspector-selection-path,
+.inspector-child-list {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.inspector-selection-path strong,
+.inspector-child-list strong {
+  color: #f8fafc;
+  font-size: 0.78rem;
+}
+
+.inspector-selection-path ol,
+.inspector-child-list ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inspector-selection-path button[aria-current='true'] {
+  border-color: rgb(250 204 21 / 82%);
+  background: rgb(113 63 18 / 62%);
+  color: #fef3c7;
+}
+
+.inspector-child-list ul {
+  display: grid;
+}
+
+.inspector-child-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inspector-child-list button {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-child-list span {
+  color: #cbd5e1;
+  font-size: 0.72rem;
+}
