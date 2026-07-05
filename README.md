@@ -1,6 +1,6 @@
-# Coordinate Object Model
+# Spatial Object Model
 
-A prototype for composing primitive geometry in a XYZ coordinate-space scene with a declarative DSL.
+A prototype for composing primitive geometry and embedded content in an XYZ spatial document model with a declarative Spatial Declaration Language.
 
 ## Run locally
 
@@ -16,15 +16,15 @@ This repository includes a GitHub Actions workflow that builds the Vite app and 
 
 In the repository settings, set **Pages** → **Build and deployment** → **Source** to **GitHub Actions**. The workflow automatically builds with the repository name as the Vite base path so project pages load assets from the correct URL.
 
-## DSL example
+## Spatial declaration example
 
 Each declaration lays out a primitive inside an edge-based X/Y/Z bounding box. The optional `geometry` property defaults to `box` and currently supports `box`, `cylinder`, `cone`, and `sphere`. Boxes can also set `box-radius` in world units to render rounded edges and `puff: 0..5` to make cushion-like boxes use a softer rounded silhouette while keeping the same layout, transform, collision, and union contract.
 
-Declaration keys can be anonymous world-space boxes, named world-space instances, declaration-only namespaces, or child instances inside a named parent namespace. Namespaces use slash-separated identifiers before the final three coordinate segments. Declaration-only namespaces end in `/` and do not render by themselves; they define inherited defaults for matching child instances. The `ref` property copies material, geometry, and transform defaults from a previously declared namespace and applies them to the referencing instance's own box.
+A spatial declaration is one quoted path/property line. Declaration keys can be anonymous world-space boxes, named spatial instances, namespace declarations, or child instances inside a named parent namespace. Namespaces use slash-separated identifiers before the final three coordinate segments. Namespace declarations end in `/` and do not render by themselves; they define inherited defaults for matching child instances. A prototype namespace is a reusable namespace intended for references. A reference instance uses the `ref` property to copy material, geometry, and transform defaults from a previously declared namespace and applies them to the referencing instance's own box.
 
 Path coordinates use bare integers for paces and an optional `c` suffix for centipaces, where `100c = 1` pace. The suffix applies per number, so mixed axis values are valid: `+1+3c` means offset `1` pace and size `0.03` paces. Decimal path notation is intentionally avoided; write `10c` instead of `0.1`.
 
-CSG operations (`operation: union`, `operation: subtraction`, and `operation: intersection`) follow declaration order. A later overlapping operator first targets earlier solids in the same namespace/local scope; if no local scoped target overlaps, it falls back to the earlier overlapping world-space solid. This lets compound objects be authored as local groups, but the group must still have a concrete namespace anchor to materialize its children:
+Boolean composition operations (`operation: union`, `operation: subtraction`, and `operation: intersection`) follow declaration order and are implemented with CSG internally. A later overlapping operator first targets earlier solids in the same namespace/local scope; if no local scoped target overlaps, it falls back to the earlier overlapping world-space solid. This lets compound objects be authored as local groups, but the group must still have a concrete namespace anchor to materialize its children:
 
 ```txt
 "Mug/+0+1/+0+1/+0+1" : "color: 0xf5f3ef"
@@ -34,7 +34,7 @@ CSG operations (`operation: union`, `operation: subtraction`, and `operation: in
 "Mug/HandleHole/+700c+70c/+175c+70c/+155c+90c" : "box-radius: 0.12; operation: subtraction"
 ```
 
-Remote transaction validation may limit each memo/properties field to 100 bytes, but that is a transport constraint rather than a renderer limit. Once declarations are loaded, the renderer consumes the resolved DSL document and does not impose a practical size limit on the inherited property set. Authors targeting the remote format can fit richer scenes into the 100-byte fields by putting shared material, geometry, texture, and deformation properties on declaration-only namespaces, then letting child instances inherit those defaults or add compact overrides across additional declarations.
+Spatial transaction validation may limit each memo/properties field to 100 bytes, but that is a transport constraint rather than a renderer limit. A spatial transaction is a remote transaction whose path and memo/properties payload map into one spatial declaration. Once declarations are loaded, the renderer consumes the resolved spatial document and does not impose a practical size limit on the inherited property set. Authors targeting the remote format can fit richer scenes into the 100-byte fields by putting shared material, geometry, texture, and deformation properties on namespace declarations, then letting child instances inherit those defaults or add compact overrides across additional declarations.
 
 ```txt
 "+2+4/+0+6/+1+3" : "geometry: box; box-radius: 0.15; color: 0x333333; metalness: 0.8; roughness: 0.2"
@@ -51,27 +51,27 @@ Remote transaction validation may limit each memo/properties field to 100 bytes,
 "Table/Leg/+7+1/+0+5/+7+1" : ""
 ```
 
-## Memo content declarations
+## Spatial content cards
 
-Transaction memos can still contain ordinary DSL properties such as `geometry: sphere; color: blue`. If a memo is not valid property DSL, the transaction importer treats it as scene content instead:
+Spatial transaction memos can still contain ordinary declaration properties such as `geometry: sphere; color: blue`. If a memo is not valid property text, the transaction importer treats it as a placed spatial content card instead:
 
 - Plain text becomes a paper/card mesh inscribed with the memo text.
 - Plain `http` or `https` URLs become a 2D HTML card in the 3D scene.
 
-Internally these content memos are normalized to explicit DSL properties:
+Internally these content memos are normalized to explicit spatial declaration properties:
 
 ```txt
 "+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: Hello%20world"
 "+5+4/+0+3/+0+10c" : "content-kind: url; content-url-uri: https%3A%2F%2Fexample.com"
 ```
 
-Manual DSL can use `content-text`/`content-url` for simple values, or the URI-encoded `content-text-uri`/`content-url-uri` properties when values may contain semicolons, quotes, newlines, or other DSL delimiters. URL content is limited to absolute `http` and `https` URLs and is embedded in a sandboxed iframe; some sites may block iframe embedding, in which case the card still shows an external "Open URL" link.
+Manual spatial declarations can use `content-text`/`content-url` for simple values, or the URI-encoded `content-text-uri`/`content-url-uri` properties when values may contain semicolons, quotes, newlines, or other DSL delimiters. URL content is limited to absolute `http` and `https` URLs and is embedded in a sandboxed iframe; some sites may block iframe embedding, in which case the card still shows an external "Open URL" link.
 
 Primitive dimensions are derived from the bounding box. For example, a cone or cylinder uses X/Z as its footprint and Y as its height. Non-square footprints are rendered as scaled elliptical primitives so every primitive fills the declared bounding box. `box-radius` applies only to box geometry; omitted or zero radius renders a sharp box, and the renderer clamps positive radii to half of the smallest box dimension. `puff` is intentionally a geometry modifier, not a material setting, because it changes the rendered cushion shape.
 
-## Texture DSL reference
+## Texture declaration reference
 
-Materials can opt into scalable texture descriptors. `material-preset` expands to ordinary material and texture defaults, and local declarations can override those defaults. Common objects should remain reusable declaration-only namespaces plus `ref` instances rather than renderer-special-cased names, so custom objects and built-in object templates inherit texture descriptors through the same path as color, roughness, and geometry.
+Materials can opt into scalable texture descriptors. `material-preset` expands to ordinary material and texture defaults, and local declarations can override those defaults. Common objects should remain reusable namespace declarations plus `ref` instances rather than renderer-special-cased names, so custom objects and built-in object templates inherit texture descriptors through the same path as color, roughness, and geometry.
 
 ### Material presets
 
@@ -140,7 +140,7 @@ Texture transforms are optional and can be generic or channel-specific:
 
 ### Custom object templates with texture inheritance
 
-Texture descriptors inherit through declaration-only namespaces and `ref`. Referencing instances can override individual descriptor fields, such as changing an inherited preset color map to a custom image while keeping the inherited bump map.
+Texture descriptors inherit through namespace declarations and `ref`. Referencing instances can override individual descriptor fields, such as changing an inherited preset color map to a custom image while keeping the inherited bump map.
 
 ```txt
 "WoodTable/" : "material-preset: wood.oak; texture-repeat: 3 1"

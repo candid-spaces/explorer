@@ -4,7 +4,7 @@ import type { DslTransaction, RejectedTransaction } from './types';
 
 // Remote transaction transport/validation can append slash-prefixed zero/equal
 // filler to the destination path. This filler must not be stored as part of
-// the renderable DSL path. Keep this path-scoped: memo/content values may
+// the renderable spatial declaration path. Keep this path-scoped: memo/content values may
 // legitimately contain "=" and should not use this cleanup rule.
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
@@ -127,7 +127,7 @@ export function transactionsToDslSource(
     rejected.push({
       id,
       memoPreview: previewMemo(`${path}: ${memo}`),
-      reasons: reasons.length > 0 ? reasons : ['Transaction path and memo did not form valid DSL coordinates, namespaces, or declarations.'],
+      reasons: reasons.length > 0 ? reasons : ['Transaction path and memo did not form valid spatial declaration coordinates, namespaces, or properties.'],
     });
   });
 

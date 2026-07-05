@@ -1,14 +1,28 @@
-# Coordinate Object Model Implementation Plan
+# Spatial Object Model Implementation Plan
 
 ## Product goal
 
-The project renders realistic interior spatial compositions from a declarative DSL. The default space is an XYZ corner scene: a floor on the X/Z plane, a back wall at Z = 0, and a side wall at X = 0. Users add fixtures, fittings, furniture, and primitive geometry by composing DSL declarations in the same shared world space.
+The project renders realistic interior spatial compositions from a declarative Spatial Declaration Language. The default space is an XYZ corner scene: a floor on the X/Z plane, a back wall at Z = 0, and a side wall at X = 0. Users add fixtures, fittings, furniture, content cards, and primitive geometry by composing spatial declarations in the same shared world space.
 
-The long-term model is intentionally DOM-like: the DSL compiles into a neutral spatial document model, and the ThreeJS renderer consumes that document. This keeps parsing, layout, collision handling, and rendering independently extensible.
+The long-term model is intentionally DOM-like: spatial declarations compile into a neutral spatial document model, and the ThreeJS renderer consumes that document. This keeps parsing, layout, collision handling, and rendering independently extensible.
+
+
+## Terminology
+
+- **Spatial Declaration Language**: the compact text authoring syntax for spatial paths and object properties. Internal parser modules still use `dsl` names for historical continuity.
+- **Spatial declaration**: one quoted path/property line in the authoring source.
+- **Spatial path**: a slash-delimited namespace plus an optional final X/Y/Z bounding box.
+- **Namespace declaration**: a spatial path ending in `/`; it does not render by itself and exists to provide inherited defaults.
+- **Spatial instance**: a spatial path with a concrete box; it can produce a node in the spatial document.
+- **Prototype namespace**: a reusable namespace intended to be materialized through `ref`.
+- **Reference instance**: a concrete instance that imports defaults or descendants from a prototype namespace.
+- **Spatial transaction**: a remote transaction whose destination path and memo/properties payload map into one spatial declaration.
+- **Spatial document**: the renderer-neutral resolved model made of `SpatialNode` values and boolean composition expressions.
+- **Boolean composition operation**: user-facing term for `union`, `subtraction`, and `intersection`; the implementation uses CSG expressions to render those operations.
 
 ## Unit model
 
-- 1 adult step/pace = 1 bare pace-scale DSL unit.
+- 1 adult step/pace = 1 bare coordinate unit = 1 pace.
 - A bare path integer is measured in paces:
   - `0` = `0` paces
   - `2` = `2` paces
@@ -22,7 +36,7 @@ The long-term model is intentionally DOM-like: the DSL compiles into a neutral s
 - Numeric path values use Base64-safe digits with an optional lowercase `c` suffix. Decimal path markers such as `0p1` are no longer supported; use `10c` instead.
 - Integer values should not include extra leading zeroes. Leading-zero path values such as `004` are rejected so older documents fail loudly instead of changing geometry silently. Use `4` for paces or `4c` for centipaces instead.
 
-## DSL grammar
+## Spatial declaration grammar
 
 A primitive declaration has a quoted coordinate expression followed by a quoted object-property declaration:
 
@@ -30,7 +44,7 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 "+xOffset+width/+yOffset+height/+zOffset+depth" : "geometry: cone; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `c`; the `c` suffix changes only that number from paces to centipaces. Namespace identifiers are parsed separately, so they may still contain the letter `c` as a normal identifier character. Namespace segments may contain only unpadded Base64 characters other than the `/` path delimiter: `A-Z`, `a-z`, `0-9`, and `+`; each namespace segment must start with a letter or number so leading `+` remains reserved for coordinate axis segments. Padding belongs to remote transport validation and is intentionally excluded from renderer DSL namespaces. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
+Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `c`; the `c` suffix changes only that number from paces to centipaces. Namespace identifiers are parsed separately, so they may still contain the letter `c` as a normal identifier character. Namespace segments may contain only unpadded Base64 characters other than the `/` path delimiter: `A-Z`, `a-z`, `0-9`, and `+`; each namespace segment must start with a letter or number so leading `+` remains reserved for coordinate axis segments. Padding belongs to remote transport validation and is intentionally excluded from renderer spatial declaration namespaces. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
 Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
 
@@ -47,21 +61,21 @@ Namespaced declarations extend the quoted coordinate expression with slash-separ
 "Table/Leg/+7+1/+0+5/+7+1" : ""
 ```
 
-A concrete instance path ends with exactly three X/Y/Z axis segments. A declaration-only namespace ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. Nested coordinates are definitions in the local space of their parent namespace until that parent namespace is materialized. In other words, `Sofa/Base/+0+6/+0+40c/+0+3` defines `Base` inside `Sofa`; it does not render in world space unless `Sofa` has an explicit concrete instance such as `Sofa/+10+6/+0+2/+0+3` or another concrete instance references `Sofa/`.
+A spatial instance path ends with exactly three X/Y/Z axis segments. A namespace declaration ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. Nested coordinates are definitions in the local space of their parent namespace until that parent namespace is materialized. In other words, `Sofa/Base/+0+6/+0+40c/+0+3` defines `Base` inside `Sofa`; it does not render in world space unless `Sofa` has an explicit concrete instance such as `Sofa/+10+6/+0+2/+0+3` or another concrete instance references `Sofa/`.
 
-References must point to a namespace that has already been declared or instantiated. A reference to a namespace with local descendants materializes those descendants below the referring instance. By default, the referring instance is an unscaled anchor transform, so referenced templates preserve their authored local dimensions and the referring box establishes only the world-space origin and rotation for the cloned local subtree. Authors can opt into fit-to-box scaling with `ref-scale: true`; in that mode, the referring box scales the referenced local subtree on X/Y/Z so the prototype root dimensions fit the referring box. References to namespaces without local descendants keep the previous primitive-copy behavior: the referring instance renders its own box with the target namespace properties. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults. CSG operation declarations also use declaration order within the nearest concrete namespace scope before falling back to world-space overlap, so a later subtraction or union can refine an earlier local solid and the composed result can then participate with other world-space objects.
+References must point to a namespace that has already been declared or instantiated. A reference to a namespace with local descendants materializes those descendants below the referring instance. By default, the referring instance is an unscaled anchor transform, so referenced templates preserve their authored local dimensions and the referring box establishes only the world-space origin and rotation for the cloned local subtree. Authors can opt into fit-to-box scaling with `ref-scale: true`; in that mode, the referring box scales the referenced local subtree on X/Y/Z so the prototype root dimensions fit the referring box. References to namespaces without local descendants keep the previous primitive-copy behavior: the referring instance renders its own box with the target namespace properties. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults. Boolean composition declarations also use declaration order within the nearest concrete namespace scope before falling back to world-space overlap, so a later subtraction or union can refine an earlier local solid and the composed result can then participate with other world-space objects.
 
-Remote transaction validation can cap each memo/properties payload at 100 bytes, but the parser, document model, and renderer treat that as an upstream transport limit rather than a scene-rendering limit. The renderer consumes the fully resolved declaration graph and has no practical limit on how many inherited properties a node may receive. Remote DSL authors can therefore spread compact declarations across multiple 100-byte fields and use namespace inheritance to amortize verbose shared settings: a parent declaration can carry material or geometry defaults, child namespaces can add texture or deformation defaults, and concrete instances can rely on the accumulated properties while only spending bytes on coordinates or local overrides.
+Spatial transaction validation can cap each memo/properties payload at 100 bytes, but the parser, document model, and renderer treat that as an upstream transport limit rather than a scene-rendering limit. A spatial transaction is a remote transaction whose path and memo/properties payload map into one spatial declaration. The renderer consumes the fully resolved declaration graph and has no practical limit on how many inherited properties a node may receive. Spatial transaction authors can therefore spread compact declarations across multiple 100-byte fields and use namespace inheritance to amortize verbose shared settings: a parent namespace declaration can carry material or geometry defaults, child namespaces can add texture or deformation defaults, and concrete instances can rely on the accumulated properties while only spending bytes on coordinates or local overrides.
 
 ## Coordinate system
 
-The DSL uses edge-based bounding-box placement:
+Spatial declarations use edge-based bounding-box placement:
 
 - X = horizontal distance from the left wall/corner plus bounding-box width.
 - Y = height from the floor plus bounding-box/object height.
 - Z = distance from the back wall plus bounding-box depth.
 
-ThreeJS primitives are center-positioned, so each DSL bounding box is converted to:
+ThreeJS primitives are center-positioned, so each spatial declaration bounding box is converted to:
 
 ```txt
 position.x = x + width / 2
@@ -86,7 +100,7 @@ transform.scale = [width, height, depth]
 transform.pivot = [0, 0, 0]
 ```
 
-The DSL expresses rotation in degrees for readability and the model converts those values to radians for ThreeJS. Axis order is always X, Y, then Z, matching the coordinate segment order. Rotation defaults to `[0, 0, 0]`, uses the object center as the pivot, and is applied to the unit primitive after it has been positioned inside its declared bounding-box contract. The renderer consumes this neutral transform directly, so future exporters or renderers can use the same document model.
+The Spatial Declaration Language expresses rotation in degrees for readability and the model converts those values to radians for ThreeJS. Axis order is always X, Y, then Z, matching the coordinate segment order. Rotation defaults to `[0, 0, 0]`, uses the object center as the pivot, and is applied to the unit primitive after it has been positioned inside its declared bounding-box contract. The renderer consumes this neutral transform directly, so future exporters or renderers can use the same document model.
 
 Example rotated box:
 
@@ -163,11 +177,11 @@ The object-property parser currently supports geometry plus material properties:
 - `ref` (namespace reference target)
 - `ref-scale` (`true`/`false`, defaults to `false`; scales referenced local descendants to fit the referring box when enabled)
 
-Unsupported object properties are ignored with diagnostics so future geometry and material features can be added without changing the scene renderer contract. Compact material and deformation values intentionally use a DSL-level `0..5` perceptual range; renderers should normalize that range to their native values instead of exposing renderer-specific units in the DSL.
+Unsupported object properties are ignored with diagnostics so future geometry and material features can be added without changing the scene renderer contract. Compact material and deformation values intentionally use a declaration-level `0..5` perceptual range; renderers should normalize that range to their native values instead of exposing renderer-specific units in the declaration language.
 
 ## Material and deformation semantics
 
-The DSL separates surface response from geometry changes:
+The Spatial Declaration Language separates surface response from geometry changes:
 
 - `bump` is fake micro-relief. It changes light response through a procedural bump texture but does not alter bounds or collision.
 - `clearcoat` is a subtle glossy top layer. It maps to physical-material clearcoat in the ThreeJS renderer.
@@ -177,7 +191,7 @@ The DSL separates surface response from geometry changes:
 
 Important forward-compatibility rules:
 
-1. Treat `0..5` values as perceptual DSL strengths, not ThreeJS-native values. Exporters and future renderers should normalize them independently.
+1. Treat `0..5` values as perceptual declaration strengths, not ThreeJS-native values. Exporters and future renderers should normalize them independently.
 2. Keep material properties and deformation properties separate so future collision, GLTF export, and non-Three renderers do not have to infer shape changes from material state.
 3. Cache generated texture presets by semantic key (`fabric:3`, `bump:2`, etc.) to avoid GPU memory churn.
 4. Add every new inherited field to the parser, supported-property set, resolver merge logic, model type, renderer mapping, and tests; the resolver intentionally merges fields explicitly so omissions are visible in code review.
@@ -202,7 +216,7 @@ This document model is the extension point for named objects, hierarchy, reusabl
 
 The first implementation uses transformed world-space axis-aligned bounding box collision detection. Colliding components are grouped and assigned a `union-*` identifier. Rendering applies a subtle union highlight to grouped objects.
 
-Full boolean geometry merging is intentionally deferred. The next stage can introduce a ThreeJS-compatible CSG library and replace visual grouping with real union mesh generation while preserving the document model API.
+Full boolean geometry merging is implemented through a ThreeJS-compatible CSG library while preserving the spatial document model API. User-facing docs should call these boolean composition operations; implementation docs and code can still use CSG for the mesh operation layer.
 
 ## Rendering architecture
 
@@ -212,7 +226,7 @@ The renderer uses React Three Fiber and Drei. `SceneRoot` owns the canvas, camer
 
 Content declarations are modeled separately from primitive geometry. Text content renders as a paper/card mesh with Drei text on its front face. URL content renders as a card with a sandboxed Drei `Html` iframe overlay instead of trying to rasterize remote pages into a WebGL texture, which avoids CORS-tainted canvas issues and keeps unsafe URL schemes out of the scene.
 
-The UI is a full-screen 3D canvas with a popup drawer. The drawer allows users to edit declarations, see parse diagnostics, and inspect parsed objects. The scene updates immediately as the DSL source changes.
+The UI is a full-screen 3D canvas with a popup drawer. The drawer allows users to edit declarations, see parse diagnostics, and inspect parsed objects. The scene updates immediately as the spatial declaration source changes.
 
 ## Deferred design notes
 
@@ -226,5 +240,5 @@ The UI is a full-screen 3D canvas with a popup drawer. The drawer allows users t
 4. Add fixture/furniture presets that compile to primitive geometry.
 5. Add wall-mounted anchors and relative positioning.
 6. Add texture presets, bevels, rounded edges, and material libraries.
-7. Add real CSG boolean union for colliding geometry.
+7. Extend boolean composition beyond the current CSG-backed operations for more collision and grouping cases.
 8. Add save/load, shareable URLs, JSON export, and GLTF export.

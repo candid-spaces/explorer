@@ -32,7 +32,7 @@ export function DslEditor({ value, description, status, selectedLineNumber, acti
   return (
     <label className="dsl-editor">
       <span className="dsl-editor-heading">
-        <span>Authoring DSL</span>
+        <span>Spatial declarations</span>
         {actions ? <span className="dsl-editor-actions">{actions}</span> : null}
       </span>
       <small>{description}</small>

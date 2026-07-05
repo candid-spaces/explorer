@@ -17,11 +17,11 @@ describe('bufferGeometryForSpatialGeometry', () => {
     expect(bufferGeometryForSpatialGeometry(boxGeometry())).toBeInstanceOf(BoxGeometry);
   });
 
-  it('preserves box-radius modifiers for generated CSG brush geometry', () => {
+  it('preserves box-radius modifiers for generated boolean brush geometry', () => {
     expect(bufferGeometryForSpatialGeometry(boxGeometry({ 'box-radius': 0.2 }))).toBeInstanceOf(RoundedBoxGeometry);
   });
 
-  it('preserves puff modifiers for generated CSG brush geometry', () => {
+  it('preserves puff modifiers for generated boolean brush geometry', () => {
     expect(bufferGeometryForSpatialGeometry(boxGeometry({ puff: 5 }))).toBeInstanceOf(RoundedBoxGeometry);
   });
 });

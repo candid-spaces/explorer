@@ -85,7 +85,7 @@ describe('parseDslDocument', () => {
     expect(result.value?.[0].transform.rotation).toEqual([0, 0, 0]);
   });
 
-  it('parses namespaced world-space instances and declaration-only namespaces', () => {
+  it('parses namespaced world-space instances and namespace declarations', () => {
     const result = parseDslDocument(`"Sofa/+7+4/+0+3/+0+2" : "color: brown"
 "Table/Leg/" : "geometry: cylinder"
 "Table/Leg/+1+2/+0+7/+0+1" : ""`);
@@ -322,13 +322,13 @@ describe('parseDslDocument', () => {
   });
 
 
-  it('parses CSG geometry operations', () => {
+  it('parses boolean composition geometry operations', () => {
     const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: subtraction"');
 
     expect(result.value?.[0].geometry.operation).toBe('subtraction');
   });
 
-  it('reports unsupported CSG operations', () => {
+  it('reports unsupported boolean composition operations', () => {
     const result = parseDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: drill"');
 
     expect(result.value?.[0].geometry.operation).toBeUndefined();

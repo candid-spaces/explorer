@@ -34,7 +34,7 @@ describe('selectionTargetForNodeId', () => {
     expect(sceneHighlightIdForNode(document.nodes, root)).toBe(plate.id);
   });
 
-  it('maps consumed CSG tools back to their rendered CSG base for highlighting', () => {
+  it('maps consumed boolean tools back to their rendered boolean base for highlighting', () => {
     const document = createSpatialDocument(OUTLET_DSL);
     const plate = document.csgExpressions[0].base;
     const slot = document.csgExpressions[0].operations[0].tool;

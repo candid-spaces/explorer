@@ -272,7 +272,7 @@ export default function App() {
       return;
     }
 
-    if (hasAuthoringEdits && !window.confirm('Discard local DSL edits and reset to the latest remote declarations?')) {
+    if (hasAuthoringEdits && !window.confirm('Discard local spatial declaration edits and reset to the latest remote declarations?')) {
       return;
     }
 

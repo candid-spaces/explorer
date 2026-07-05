@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSpatialDocument } from './createSpatialDocument';
 
-describe('createSpatialDocument namespaced DSL', () => {
+describe('createSpatialDocument namespaced spatial declarations', () => {
   it('resolves namespace inheritance and renders composed children in parent-local space', () => {
     const document =
       createSpatialDocument(`"Table/+3+8/+0+5/+0+8" : "color: 0x333333; metalness: 0.8; roughness: 0.2"
@@ -65,7 +65,7 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.renderNodes[1].transform.position).toEqual([5.5, 1.5, 7.5]);
   });
 
-  it('inherits content through declaration-only namespaces and refs', () => {
+  it('inherits content through namespace declarations and refs', () => {
     const document =
       createSpatialDocument(`"Poster/" : "content-kind: text; content-text-uri: Sale"
 "Poster/+0+4/+0+2/+0+1" : ""
@@ -397,7 +397,7 @@ describe('createSpatialDocument namespaced DSL', () => {
       'Reference target "Sofa/" was not found.',
     );
   });
-  it('builds declaration-order CSG subtraction expressions from overlapping world-space tools', () => {
+  it('builds declaration-order boolean subtraction expressions from overlapping world-space tools', () => {
     const document = createSpatialDocument(`"+0+6/+0+6/+0+6" : "geometry: sphere; color: blue"
 "+2+2/+0+6/+2+2" : "geometry: cylinder; operation: subtraction"`);
 
@@ -409,7 +409,7 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.csgExpressions[0].operations[0].tool.csgConsumed).toBe(true);
   });
 
-  it('applies a CSG tool to the nearest earlier overlapping world-space primitive', () => {
+  it('applies a boolean tool to the nearest earlier overlapping world-space primitive', () => {
     const document = createSpatialDocument(`"+0+4/+0+4/+0+4" : "geometry: box"
 "+1+4/+0+4/+0+4" : "geometry: sphere"
 "+2+1/+0+4/+0+1" : "geometry: cylinder; operation: subtraction"`);
@@ -419,7 +419,7 @@ describe('createSpatialDocument namespaced DSL', () => {
     expect(document.renderNodes.map((node) => node.geometry.kind)).toEqual(['box']);
   });
 
-  it('chains declaration-order CSG operations inside a concrete namespace scope', () => {
+  it('chains declaration-order boolean operations inside a concrete namespace scope', () => {
     const document = createSpatialDocument(`"Mug/+0+1/+0+1/+0+1" : "color: white"
 "Mug/Body/+5+2/+1+2/+1+2" : "geometry: cylinder; color: 0xf5f3ef; roughness: 0.65"
 "Mug/Hollow/+530c+140c/+120c+190c/+130c+140c" : "geometry: cylinder; operation: subtraction"

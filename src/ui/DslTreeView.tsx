@@ -50,7 +50,7 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
   const isCollapsed = collapsedIds.has(node.id);
   const lineNumber = metadataValue<number>(node, 'lineNumber');
   const reference = metadataValue<string>(node, 'reference');
-  const csgLabel = node.csgExpressionId ? (node.csgConsumed ? `csg tool ${node.csgExpressionId}` : node.csgExpressionId) : undefined;
+  const csgLabel = node.csgExpressionId ? (node.csgConsumed ? `boolean tool ${node.csgExpressionId}` : node.csgExpressionId) : undefined;
 
   return (
     <li className="dsl-tree-item">
@@ -83,7 +83,7 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
           ) : null}
         </div>
 
-        <div className="dsl-tree-badges" aria-label="DSL node metadata">
+        <div className="dsl-tree-badges" aria-label="Spatial node metadata">
           {lineNumber ? <em>line {lineNumber}</em> : null}
           {node.renderable ? null : <em>container</em>}
           {reference ? <em>ref {reference}</em> : null}
@@ -132,7 +132,7 @@ export function DslTreeView({ document }: DslTreeViewProps) {
   }
 
   return (
-    <section className="dsl-tree-view" aria-label="DSL declaration tree">
+    <section className="dsl-tree-view" aria-label="Spatial declaration tree">
       <div className="section-heading-row">
         <h2>Definition tree</h2>
         {hasCollapsibleNodes ? (
@@ -152,14 +152,14 @@ export function DslTreeView({ document }: DslTreeViewProps) {
       ) : (
         <>
           {document.csgExpressions.length > 0 ? (
-            <div className="dsl-csg-summary" aria-label="CSG expression summary">
-              <h3>CSG expressions</h3>
+            <div className="dsl-csg-summary" aria-label="Boolean composition summary">
+              <h3>Boolean composition expressions</h3>
               <ul>
                 {document.csgExpressions.map((expression) => (
                   <li key={expression.id}>
                     <strong>{expression.id}</strong>
                     <span>
-                      {expression.base.geometry.kind} with {expression.operations.length} CSG operation
+                      {expression.base.geometry.kind} with {expression.operations.length} boolean operation
                       {expression.operations.length === 1 ? '' : 's'}:{' '}
                       {expression.operations.map((operation) => `${operation.op} ${operation.tool.geometry.kind}`).join(', ')}
                     </span>
