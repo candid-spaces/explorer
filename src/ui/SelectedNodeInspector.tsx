@@ -152,7 +152,7 @@ export function SelectedNodeInspector({
 
       <dl>
         <div>
-          <dt>DSL line</dt>
+          <dt>Declaration line</dt>
           <dd>{lineNumber ?? 'unknown'}</dd>
         </div>
         <div>
@@ -202,7 +202,7 @@ export function SelectedNodeInspector({
         </section>
       ) : null}
 
-      {!canEdit ? <p className="inspector-warning">This selection cannot be rewritten as a single editable DSL declaration.</p> : null}
+      {!canEdit ? <p className="inspector-warning">This selection cannot be rewritten as a single editable spatial declaration.</p> : null}
 
       <div className="inspector-grid" aria-label="Move selected object">
         <strong>Move</strong>

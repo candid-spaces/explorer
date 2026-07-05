@@ -28,7 +28,7 @@ describe('transactionsToDslSource', () => {
     expect(result.rejected).toEqual([]);
   });
 
-  it('accepts namespaces and declaration-only namespaces from transaction paths', () => {
+  it('accepts namespaces and namespace declarations from transaction paths', () => {
     const result = transactionsToDslSource([
       transaction('color: red', 0, 'Room/'),
       transaction('', 1, 'Room/Chair/+0+1/+0+1/+0+1'),
@@ -66,7 +66,7 @@ describe('transactionsToDslSource', () => {
     expect(result.rejected).toEqual([]);
   });
 
-  it('does not accept full DSL declarations embedded directly in memo text', () => {
+  it('does not accept full spatial declarations embedded directly in memo text', () => {
     const result = transactionsToDslSource([
       transaction('"+0+1/+0+1/+0+1" : "geometry: box"', 0, 'not-a-valid-dsl-path'),
     ]);

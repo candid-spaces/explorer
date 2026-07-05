@@ -163,16 +163,16 @@ export function DslTransactionControls({
   }
 
   return (
-    <section className="transaction-controls" aria-label="Remote DSL transaction loader">
+    <section className="transaction-controls" aria-label="Spatial transaction loader">
       <div className="section-heading-row">
-        <h2>Remote DSL transactions</h2>
+        <h2>Spatial transactions</h2>
         <button type="button" disabled={loading || !publicKey.trim()} onClick={onReload}>
           {loading ? 'Loading…' : 'Reload'}
         </button>
       </div>
 
       <details className="transaction-config">
-        <summary>Remote config</summary>
+        <summary>Transaction source</summary>
 
         <label>
           <span>Public key</span>

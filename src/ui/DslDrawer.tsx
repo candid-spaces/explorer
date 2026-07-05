@@ -11,7 +11,7 @@ function describeAuthoringState(
   remoteBaselineChanged: boolean,
 ): string {
   if (!hasRemoteBaseline) {
-    return 'Editing local DSL declarations. Use bare path numbers for paces and a c suffix for centipaces.';
+    return 'Editing local spatial declarations. Use bare path numbers for paces and a c suffix for centipaces.';
   }
 
   if (remoteBaselineChanged && hasAuthoringEdits) {
@@ -132,7 +132,7 @@ export function DslDrawer({
   return (
     <aside className={`dsl-drawer ${isOpen ? 'is-open' : ''}`}>
       <button className="drawer-toggle" type="button" onClick={onToggle}>
-        {isOpen ? 'Close DSL' : 'Edit DSL'}
+        {isOpen ? 'Close declarations' : 'Edit declarations'}
       </button>
 
       {isOpen ? (
@@ -182,7 +182,7 @@ export function DslDrawer({
             <details className="remote-baseline-reference">
               <summary>Original remote declarations</summary>
               <label className="dsl-editor dsl-editor-readonly">
-                <span>Mapped transaction DSL</span>
+                <span>Mapped spatial declarations</span>
                 <small>Current remote baseline used for reset.</small>
                 <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
               </label>
@@ -190,7 +190,7 @@ export function DslDrawer({
           ) : null}
 
           {document.diagnostics.length > 0 ? (
-            <details className="diagnostics" aria-label="DSL parse diagnostics">
+            <details className="diagnostics" aria-label="Spatial declaration diagnostics">
               <summary>Diagnostics</summary>
               <ul>
                 {document.diagnostics.map((diagnostic, index) => (
@@ -203,8 +203,8 @@ export function DslDrawer({
           ) : null}
 
           {rejectedTransactions.length > 0 ? (
-            <details className="diagnostics" aria-label="Remote transaction diagnostics">
-              <summary>Remote transaction diagnostics</summary>
+            <details className="diagnostics" aria-label="Spatial transaction diagnostics">
+              <summary>Spatial transaction diagnostics</summary>
               <ul>
                 {rejectedTransactions.map((rejection) => (
                   <li key={rejection.id}>

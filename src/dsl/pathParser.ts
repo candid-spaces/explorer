@@ -1,7 +1,7 @@
 import type { AxisName, DslAxisSpec, DslBoxSpec, DslPathSpec } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
-const DSL_UNITS_PER_PACE = 100;
+const CENTIPACES_PER_PACE = 100;
 const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:c)?$/;
 const LEGACY_LEADING_ZERO_PATTERN = /^0\d+(?:c)?$/;
 const LEGACY_P_DECIMAL_PATTERN = /^(?<whole>\d+)p(?<fraction>\d+)$/;
@@ -37,7 +37,7 @@ function centipaceMigration(raw: string): string | undefined {
     return undefined;
   }
 
-  const centipaces = whole * DSL_UNITS_PER_PACE + Number(fraction.padEnd(2, '0'));
+  const centipaces = whole * CENTIPACES_PER_PACE + Number(fraction.padEnd(2, '0'));
 
   return `${centipaces}c`;
 }
@@ -64,7 +64,7 @@ export function parsePathNumber(raw: string): number {
   }
 
   if (raw.endsWith('c')) {
-    return Number(raw.slice(0, -1)) / DSL_UNITS_PER_PACE;
+    return Number(raw.slice(0, -1)) / CENTIPACES_PER_PACE;
   }
 
   return Number(raw);

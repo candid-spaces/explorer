@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The current namespaced DSL implementation supports declaration-only namespaces, named concrete instances, property inheritance, and `ref` as a property-default lookup. A line such as:
+The current namespaced Spatial Declaration Language implementation supports namespace declarations, named spatial instances, property inheritance, and `ref` as a property-default lookup. A line such as:
 
 ```txt
 "Table/+3+8/+0+5/+4+8" : "rotation: 0,2,0; color: white; metalness: 0.8; roughness: 0.2"
@@ -47,7 +47,7 @@ These constraints make a model-layer subtree expansion the lowest-risk first imp
 
 ## Recommended implementation strategy
 
-Implement prototype instancing in the DSL resolver first, while leaving the renderer unchanged.
+Implement prototype instancing in the spatial declaration resolver first, while leaving the renderer unchanged.
 
 The resolver should:
 

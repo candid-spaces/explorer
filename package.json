@@ -2,6 +2,7 @@
   "name": "spatial-object-model",
   "private": true,
   "version": "0.1.0",
+  "description": "A spatial object model that compiles spatial declarations into a renderer-neutral spatial document.",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -27,7 +27,7 @@ function documentWithExpression(expression: CsgExpression): SpatialDocument {
 }
 
 describe('nodesForRoomSizing', () => {
-  it('includes CSG union tools because they can extend the generated mesh bounds', () => {
+  it('includes boolean union tools because they can extend the generated mesh bounds', () => {
     const base = node('base');
     const unionTool = node('union-tool');
     const subtractTool = node('subtract-tool');
