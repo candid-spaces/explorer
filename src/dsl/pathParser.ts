@@ -1,7 +1,7 @@
+import { CENTIPACES_PER_PACE } from '../model/units';
 import type { AxisName, DslAxisSpec, DslBoxSpec, DslPathSpec } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
-const CENTIPACES_PER_PACE = 100;
 const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:c)?$/;
 const LEGACY_LEADING_ZERO_PATTERN = /^0\d+(?:c)?$/;
 const LEGACY_P_DECIMAL_PATTERN = /^(?<whole>\d+)p(?<fraction>\d+)$/;

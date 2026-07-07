@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SpatialNode } from './SpatialNode';
 import { DEFAULT_ROOM_DIMENSIONS, ROOM_DIMENSION_MARGIN, dimensionsFromNodes } from './room';
+import type { SpatialNode } from './SpatialNode';
 
 function nodeWithBounds(bounds: Partial<SpatialNode['bounds']>): SpatialNode {
   return {
@@ -31,6 +31,11 @@ function nodeWithBounds(bounds: Partial<SpatialNode['bounds']>): SpatialNode {
 }
 
 describe('dimensionsFromNodes', () => {
+  it('uses a realistic default room in project units', () => {
+    expect(DEFAULT_ROOM_DIMENSIONS).toEqual({ width: 40, depth: 40, height: 28 });
+    expect(ROOM_DIMENSION_MARGIN).toBe(2);
+  });
+
   it('returns the default room dimensions for empty documents', () => {
     expect(dimensionsFromNodes([])).toEqual(DEFAULT_ROOM_DIMENSIONS);
   });
@@ -45,12 +50,12 @@ describe('dimensionsFromNodes', () => {
   });
 
   it('expands dimensions to include nodes beyond the default perimeter with margin', () => {
-    const dimensions = dimensionsFromNodes([nodeWithBounds({ maxX: 31.25, maxY: 20.2, maxZ: 29.01 })]);
+    const dimensions = dimensionsFromNodes([nodeWithBounds({ maxX: 41.2, maxY: 30.4, maxZ: 42.1 })]);
 
     expect(dimensions).toEqual({
-      width: Math.ceil(31.25 + ROOM_DIMENSION_MARGIN),
-      depth: Math.ceil(29.01 + ROOM_DIMENSION_MARGIN),
-      height: Math.ceil(20.2 + ROOM_DIMENSION_MARGIN),
+      width: Math.ceil(41.2 + ROOM_DIMENSION_MARGIN),
+      depth: Math.ceil(42.1 + ROOM_DIMENSION_MARGIN),
+      height: Math.ceil(30.4 + ROOM_DIMENSION_MARGIN),
     });
   });
 });

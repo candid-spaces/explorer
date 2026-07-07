@@ -1,3 +1,4 @@
+import { CENTIPACES_PER_PACE } from '../model/units';
 import { parseDslDeclaration } from './parser';
 import type { AxisName } from './types';
 
@@ -56,10 +57,10 @@ function formatDeclaration(parts: DeclarationParts): string {
 }
 
 function formatPathNumber(value: number): string {
-  const centipaces = Math.max(0, Math.round(value * 100));
+  const centipaces = Math.max(0, Math.round(value * CENTIPACES_PER_PACE));
 
-  if (centipaces % 100 === 0) {
-    return String(centipaces / 100);
+  if (centipaces % CENTIPACES_PER_PACE === 0) {
+    return String(centipaces / CENTIPACES_PER_PACE);
   }
 
   return `${centipaces}c`;
@@ -72,8 +73,8 @@ function parseAxis(segment: string): AxisParts | undefined {
     return undefined;
   }
 
-  const offset = match.groups.offset.endsWith('c') ? Number(match.groups.offset.slice(0, -1)) / 100 : Number(match.groups.offset);
-  const size = match.groups.size.endsWith('c') ? Number(match.groups.size.slice(0, -1)) / 100 : Number(match.groups.size);
+  const offset = match.groups.offset.endsWith('c') ? Number(match.groups.offset.slice(0, -1)) / CENTIPACES_PER_PACE : Number(match.groups.offset);
+  const size = match.groups.size.endsWith('c') ? Number(match.groups.size.slice(0, -1)) / CENTIPACES_PER_PACE : Number(match.groups.size);
 
   return { offset, size };
 }
