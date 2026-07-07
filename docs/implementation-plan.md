@@ -22,17 +22,19 @@ The long-term model is intentionally DOM-like: spatial declarations compile into
 
 ## Unit model
 
-- 1 adult step/pace = 1 bare coordinate unit = 1 pace.
-- A bare path integer is measured in paces:
-  - `0` = `0` paces
-  - `2` = `2` paces
-  - `15` = `15` paces
-- A lowercase `c` suffix switches that individual path number to centipaces. One centipace is `1/100` pace, and `100c` equals `1` pace:
-  - `1c` = `0.01` pace
-  - `10c` = `0.1` pace
-  - `50c` = `0.5` pace
-  - `125c` = `1.25` paces
-- Axis values may mix bare paces and centipaces in the same `+offset+size` segment. For example, `+1+3c` means offset `1` pace and size `0.03` paces.
+- A project **pace** is a compact authoring unit, not a literal adult walking stride.
+- `1` bare coordinate unit = `1` project pace = `0.1 m` = `10 cm`.
+- A bare path integer is measured in project paces:
+  - `0` = `0` paces = `0 m`
+  - `2` = `2` paces = `0.2 m`
+  - `15` = `15` paces = `1.5 m`
+- A lowercase `c` suffix switches that individual path number to centipaces. One centipace is `1/100` pace = `0.001 m` = `1 mm`, and `100c` equals `1` pace:
+  - `1c` = `0.01` pace = `1 mm`
+  - `10c` = `0.1` pace = `1 cm`
+  - `50c` = `0.5` pace = `5 cm`
+  - `125c` = `1.25` paces = `12.5 cm`
+- Axis values may mix bare paces and centipaces in the same `+offset+size` segment. For example, `+1+3c` means offset `1` pace (`10 cm`) and size `0.03` paces (`3 mm`).
+- Path coordinates, object dimensions, `box-radius`, collision bounds, grid spacing, room dimensions, and room margins all share this project-unit scale. Renderer code may pass these numbers directly to ThreeJS, but they remain project units with the metric conversion above.
 - Numeric path values use Base64-safe digits with an optional lowercase `c` suffix. Decimal path markers such as `0p1` are no longer supported; use `10c` instead.
 - Integer values should not include extra leading zeroes. Leading-zero path values such as `004` are rejected so older documents fail loudly instead of changing geometry silently. Use `4` for paces or `4c` for centipaces instead.
 
@@ -44,7 +46,7 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 "+xOffset+width/+yOffset+height/+zOffset+depth" : "geometry: cone; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `c`; the `c` suffix changes only that number from paces to centipaces. Namespace identifiers are parsed separately, so they may still contain the letter `c` as a normal identifier character. Namespace segments may contain only unpadded Base64 characters other than the `/` path delimiter: `A-Z`, `a-z`, `0-9`, and `+`; each namespace segment must start with a letter or number so leading `+` remains reserved for coordinate axis segments. Padding belongs to remote transport validation and is intentionally excluded from renderer spatial declaration namespaces. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in world units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
+Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `c`; the `c` suffix changes only that number from paces to centipaces. Namespace identifiers are parsed separately, so they may still contain the letter `c` as a normal identifier character. Namespace segments may contain only unpadded Base64 characters other than the `/` path delimiter: `A-Z`, `a-z`, `0-9`, and `+`; each namespace segment must start with a letter or number so leading `+` remains reserved for coordinate axis segments. Padding belongs to remote transport validation and is intentionally excluded from renderer spatial declaration namespaces. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in project units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
 Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
 
@@ -118,13 +120,13 @@ Boxes map these values directly to box dimensions. Boxes with `box-radius` set t
 "+2+4/+0+6/+1+3" : "geometry: box; box-radius: 0.15; color: 0x333333; metalness: 0.8; roughness: 0.2"
 ```
 
-This renders a rounded box that is 4 units wide, offset 2 units from the X origin, rests on the floor at Y = 0, is 6 units high, is 1 unit away from the back wall, and is 3 units deep. Its edge radius is 0.15 world units.
+This renders a rounded box that is 4 project units (`40 cm`) wide, offset 2 units (`20 cm`) from the X origin, rests on the floor at Y = 0, is 6 units (`60 cm`) high, is 1 unit (`10 cm`) away from the back wall, and is 3 units (`30 cm`) deep. Its edge radius is 0.15 project units (`1.5 cm`).
 
 ```txt
 "+2+4/+7+6/+0+10c" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
 ```
 
-This renders a cone above the first box with a 4 × 0.1 footprint and a height of 6 units.
+This renders a cone above the first box with a 4 × 0.1 project-unit footprint (`40 cm × 1 cm`) and a height of 6 units (`60 cm`).
 
 ```txt
 "+7+6/+0+15/+0+50c" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"
@@ -164,7 +166,7 @@ The parser is independent from React and ThreeJS. It converts text declarations 
 The object-property parser currently supports geometry plus material properties:
 
 - `geometry` (`box`, `cylinder`, `cone`, `sphere`)
-- `box-radius` (box-only rounded edge radius in world units)
+- `box-radius` (box-only rounded edge radius in project units)
 - `puff` (`0..5` box-only cushion deformation strength)
 - `color`
 - `metalness`

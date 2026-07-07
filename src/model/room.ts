@@ -7,11 +7,12 @@ export interface RoomDimensions {
 }
 
 export const DEFAULT_ROOM_DIMENSIONS: RoomDimensions = {
-  width: 28,
-  depth: 28,
-  height: 18,
+  width: 40,
+  depth: 40,
+  height: 28,
 };
 
+// Keep two project units of clearance around authored geometry (20 cm).
 export const ROOM_DIMENSION_MARGIN = 2;
 
 function expandDimension(current: number, required: number): number {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
+import { UNIT_SCALE_DESCRIPTION } from '../model/units';
 import type { RejectedTransaction, TransactionRange } from '../transactions/types';
 import { DslEditor } from './DslEditor';
 import { DslTransactionControls } from './DslTransactionControls';
@@ -11,7 +12,7 @@ function describeAuthoringState(
   remoteBaselineChanged: boolean,
 ): string {
   if (!hasRemoteBaseline) {
-    return 'Editing local spatial declarations. Use bare path numbers for paces and a c suffix for centipaces.';
+    return `Editing local spatial declarations. Use bare path numbers for paces and a c suffix for centipaces (${UNIT_SCALE_DESCRIPTION}).`;
   }
 
   if (remoteBaselineChanged && hasAuthoringEdits) {
