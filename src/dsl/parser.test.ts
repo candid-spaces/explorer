@@ -6,7 +6,7 @@ const EXAMPLE = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metaln
 "+7+6/+0+15/+0+50c" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"`;
 
 describe('parseCompactNumber', () => {
-  it('parses pace integers and centipace-suffixed values', () => {
+  it('parses unit integers and centiunit-suffixed values', () => {
     expect(parseCompactNumber('0')).toBe(0);
     expect(parseCompactNumber('2')).toBe(2);
     expect(parseCompactNumber('15')).toBe(15);
@@ -16,24 +16,24 @@ describe('parseCompactNumber', () => {
     expect(parseCompactNumber('10')).toBe(10);
   });
 
-  it('rejects legacy p-decimal, leading-zero, and malformed centipace values', () => {
+  it('rejects legacy p-decimal, leading-zero, and malformed centiunit values', () => {
     expect(() => parseCompactNumber('0p04')).toThrow(
       'p-decimal path numbers are no longer supported; use "4c" instead of "0p04".',
     );
     expect(() => parseCompactNumber('0p001')).toThrow(
-      'p-decimal path numbers are no longer supported and "0p001" cannot be represented exactly as centipaces.',
+      'p-decimal path numbers are no longer supported and "0p001" cannot be represented exactly as centiunits.',
     );
     expect(() => parseCompactNumber('004')).toThrow(
       'Leading-zero path numbers are no longer supported; use "4" instead of "004".',
     );
     expect(() => parseCompactNumber('p5')).toThrow(
-      'Expected a path number using digits with an optional centipace suffix, received "p5".',
+      'Expected a path number using digits with an optional centiunit suffix, received "p5".',
     );
     expect(() => parseCompactNumber('5p')).toThrow(
-      'Expected a path number using digits with an optional centipace suffix, received "5p".',
+      'Expected a path number using digits with an optional centiunit suffix, received "5p".',
     );
     expect(() => parseCompactNumber('1cc')).toThrow(
-      'Expected a path number using digits with an optional centipace suffix, received "1cc".',
+      'Expected a path number using digits with an optional centiunit suffix, received "1cc".',
     );
   });
 });
@@ -51,7 +51,7 @@ describe('parseBoxSpec', () => {
     });
   });
 
-  it('allows mixed pace and centipace values in the same axis segment', () => {
+  it('allows mixed unit and centiunit values in the same axis segment', () => {
     expect(parseBoxSpec('+1+3c/+0c+1c/+25c+50c')).toEqual({
       source: '+1+3c/+0c+1c/+25c+50c',
       x: 1,

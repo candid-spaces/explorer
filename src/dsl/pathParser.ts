@@ -1,4 +1,4 @@
-import { CENTIPACES_PER_PACE } from '../model/units';
+import { CENTIUNITS_PER_UNIT } from '../model/units';
 import type { AxisName, DslAxisSpec, DslBoxSpec, DslPathSpec } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
@@ -19,7 +19,7 @@ function isAxisSegment(segment: string): boolean {
   );
 }
 
-function centipaceMigration(raw: string): string | undefined {
+function centiunitMigration(raw: string): string | undefined {
   const match = raw.match(LEGACY_P_DECIMAL_PATTERN);
 
   if (!match?.groups) {
@@ -37,20 +37,20 @@ function centipaceMigration(raw: string): string | undefined {
     return undefined;
   }
 
-  const centipaces = whole * CENTIPACES_PER_PACE + Number(fraction.padEnd(2, '0'));
+  const centiunits = whole * CENTIUNITS_PER_UNIT + Number(fraction.padEnd(2, '0'));
 
-  return `${centipaces}c`;
+  return `${centiunits}c`;
 }
 
 export function parsePathNumber(raw: string): number {
-  const pDecimalMigration = centipaceMigration(raw);
+  const pDecimalMigration = centiunitMigration(raw);
 
   if (pDecimalMigration) {
     throw new Error(`p-decimal path numbers are no longer supported; use "${pDecimalMigration}" instead of "${raw}".`);
   }
 
   if (LEGACY_P_DECIMAL_PATTERN.test(raw)) {
-    throw new Error(`p-decimal path numbers are no longer supported and "${raw}" cannot be represented exactly as centipaces.`);
+    throw new Error(`p-decimal path numbers are no longer supported and "${raw}" cannot be represented exactly as centiunits.`);
   }
 
   if (LEGACY_LEADING_ZERO_PATTERN.test(raw)) {
@@ -60,11 +60,11 @@ export function parsePathNumber(raw: string): number {
   }
 
   if (!PATH_NUMBER_PATTERN.test(raw)) {
-    throw new Error(`Expected a path number using digits with an optional centipace suffix, received "${raw}".`);
+    throw new Error(`Expected a path number using digits with an optional centiunit suffix, received "${raw}".`);
   }
 
   if (raw.endsWith('c')) {
-    return Number(raw.slice(0, -1)) / CENTIPACES_PER_PACE;
+    return Number(raw.slice(0, -1)) / CENTIUNITS_PER_UNIT;
   }
 
   return Number(raw);

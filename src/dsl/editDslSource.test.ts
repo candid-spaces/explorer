@@ -29,7 +29,7 @@ describe('editDslSource', () => {
     expect(updateDeclarationProperty(SOURCE, 2, 'geometry', 'cylinder')).toContain('"geometry: cylinder"');
   });
 
-  it('moves and resizes path axes using pace and centipace notation', () => {
+  it('moves and resizes path axes using unit and centiunit notation', () => {
     expect(moveDeclarationPath(SOURCE, 1, 'x', 1)).toContain('"Table/+19+8/+0+5/+4+8"');
     expect(moveDeclarationPath(SOURCE, 1, 'z', 0.1)).toContain('"Table/+18+8/+0+5/+410c+8"');
     expect(resizeDeclarationPath(SOURCE, 1, 'y', -1)).toContain('"Table/+18+8/+0+4/+4+8"');
