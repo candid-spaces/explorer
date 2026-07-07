@@ -1,5 +1,5 @@
-export const CENTIPACES_PER_PACE = 100;
-export const METERS_PER_PACE = 0.1;
-export const METERS_PER_CENTIPACE = METERS_PER_PACE / CENTIPACES_PER_PACE;
+export const CENTIUNITS_PER_UNIT = 100;
+export const METERS_PER_UNIT = 0.1;
+export const METERS_PER_CENTIUNIT = METERS_PER_UNIT / CENTIUNITS_PER_UNIT;
 
-export const UNIT_SCALE_DESCRIPTION = '1 pace = 10 cm; 1c = 1 mm';
+export const UNIT_SCALE_DESCRIPTION = '1 unit = 10 cm; 1c = 1 mm';

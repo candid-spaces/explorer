@@ -22,21 +22,33 @@ The long-term model is intentionally DOM-like: spatial declarations compile into
 
 ## Unit model
 
-- A project **pace** is a compact authoring unit, not a literal adult walking stride.
-- `1` bare coordinate unit = `1` project pace = `0.1 m` = `10 cm`.
-- A bare path integer is measured in project paces:
-  - `0` = `0` paces = `0 m`
-  - `2` = `2` paces = `0.2 m`
-  - `15` = `15` paces = `1.5 m`
-- A lowercase `c` suffix switches that individual path number to centipaces. One centipace is `1/100` pace = `0.001 m` = `1 mm`, and `100c` equals `1` pace:
-  - `1c` = `0.01` pace = `1 mm`
-  - `10c` = `0.1` pace = `1 cm`
-  - `50c` = `0.5` pace = `5 cm`
-  - `125c` = `1.25` paces = `12.5 cm`
-- Axis values may mix bare paces and centipaces in the same `+offset+size` segment. For example, `+1+3c` means offset `1` pace (`10 cm`) and size `0.03` paces (`3 mm`).
+- A project **unit** is a compact 10 cm authoring grid unit, not a literal adult walking stride.
+- `1` bare coordinate unit = `0.1 m` = `10 cm`.
+- A bare path integer is measured in project units:
+  - `0` = `0` units = `0 m`
+  - `2` = `2` units = `0.2 m`
+  - `15` = `15` units = `1.5 m`
+- A lowercase `c` suffix switches that individual path number to centiunits. One centiunit is `1/100` unit = `0.001 m` = `1 mm`, and `100c` equals `1` bare unit:
+  - `1c` = `0.01` unit = `1 mm`
+  - `10c` = `0.1` unit = `1 cm`
+  - `50c` = `0.5` unit = `5 cm`
+  - `125c` = `1.25` units = `12.5 cm`
+- Axis values may mix bare units and centiunits in the same `+offset+size` segment. For example, `+1+3c` means offset `1` unit (`10 cm`) and size `0.03` units (`3 mm`).
 - Path coordinates, object dimensions, `box-radius`, collision bounds, grid spacing, room dimensions, and room margins all share this project-unit scale. Renderer code may pass these numbers directly to ThreeJS, but they remain project units with the metric conversion above.
 - Numeric path values use Base64-safe digits with an optional lowercase `c` suffix. Decimal path markers such as `0p1` are no longer supported; use `10c` instead.
-- Integer values should not include extra leading zeroes. Leading-zero path values such as `004` are rejected so older documents fail loudly instead of changing geometry silently. Use `4` for paces or `4c` for centipaces instead.
+- Integer values should not include extra leading zeroes. Leading-zero path values such as `004` are rejected so older documents fail loudly instead of changing geometry silently. Use `4` for units or `4c` for centiunits instead.
+
+### Authoring scale references
+
+- `1` = `10 cm`, a compact grid step.
+- `750c` = `7.5` units = `75 cm`, roughly one adult walking pace.
+- `8` = `80 cm`, a useful table-height reference.
+- `20` = `2 m`, a useful doorway or person-height reference.
+- `30` = `3 m`, a useful small-room span reference.
+
+### Unit-scale compatibility
+
+Existing documents rely on bare `1` meaning one 10 cm project unit. Do not silently redefine bare coordinates to mean a real-world pace or any other larger metric distance, because that would rescale authored scenes without warning. Future real-world shorthand should be additive, versioned, or expressed with existing exact centiunit notation such as `750c` for an approximately 0.75 m walking pace.
 
 ## Spatial declaration grammar
 
@@ -46,7 +58,7 @@ A primitive declaration has a quoted coordinate expression followed by a quoted 
 "+xOffset+width/+yOffset+height/+zOffset+depth" : "geometry: cone; color: blue; metalness: 0.1; roughness: 0.2"
 ```
 
-Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `c`; the `c` suffix changes only that number from paces to centipaces. Namespace identifiers are parsed separately, so they may still contain the letter `c` as a normal identifier character. Namespace segments may contain only unpadded Base64 characters other than the `/` path delimiter: `A-Z`, `a-z`, `0-9`, and `+`; each namespace segment must start with a letter or number so leading `+` remains reserved for coordinate axis segments. Padding belongs to remote transport validation and is intentionally excluded from renderer spatial declaration namespaces. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in project units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
+Each axis segment uses `+offset+size` syntax. Axis order is always X, Y, then Z. Axis numeric values use the grammar `digits` or `digits` + `c`; the `c` suffix changes only that number from units to centiunits. Namespace identifiers are parsed separately, so they may still contain the letter `c` as a normal identifier character. Namespace segments may contain only unpadded Base64 characters other than the `/` path delimiter: `A-Z`, `a-z`, `0-9`, and `+`; each namespace segment must start with a letter or number so leading `+` remains reserved for coordinate axis segments. Padding belongs to remote transport validation and is intentionally excluded from renderer spatial declaration namespaces. The optional `geometry` property defaults to `box` and supports `box`, `cylinder`, `cone`, and `sphere`. The optional `box-radius` property applies only to box geometry and rounds box edges in project units when set to a positive value. The optional `puff` property is a compact `0..5` box-geometry deformation control for cushion-like silhouettes; it is intentionally modeled as shape data instead of material data. The optional `rotation` property accepts an X/Y/Z degree triple, for example `rotation: 0,45,0`.
 
 Namespaced declarations extend the quoted coordinate expression with slash-separated identifiers before the coordinate segments:
 
