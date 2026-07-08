@@ -197,10 +197,12 @@ function cloneTextures(textures: TextureMap | undefined): TextureMap | undefined
 
 function mergeMaterial(base: MaterialDefaults, override: MaterialDefaults | undefined): MaterialDefaults {
   if (!override) return { ...base, textures: cloneTextures(base.textures) };
+  const textures = { ...(cloneTextures(base.textures) ?? {}), ...(cloneTextures(override.textures) ?? {}) };
+
   return {
     ...base,
     ...override,
-    textures: { ...(cloneTextures(base.textures) ?? {}), ...(cloneTextures(override.textures) ?? {}) },
+    textures: Object.keys(textures).length > 0 ? textures : undefined,
   };
 }
 

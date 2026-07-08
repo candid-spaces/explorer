@@ -327,6 +327,19 @@ describe('parseDslDocument', () => {
     expect(result.value?.[0].material.textures?.bumpMap?.strength).toBe(4);
   });
 
+  it('preserves generic texture transforms on textureless semantic defaults', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+1/+0+3" : "material-preset: plastic.matte; texture-repeat: 3 1; texture: wood.oak"',
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].material.materialPreset).toBe('plastic.matte');
+    expect(result.value?.[0].material.textures?.map).toEqual({
+      repeat: [3, 1],
+      preset: 'wood.oak',
+    });
+  });
+
   it('supports stone, glass, and leather semantic material families', () => {
     const result = parseDslDocument(
       [
