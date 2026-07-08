@@ -141,6 +141,18 @@ function woodTexture(spec: DslTextureSpec): Texture | undefined {
   });
 }
 
+function linearWoodTexture(spec: DslTextureSpec): Texture | undefined {
+  const strength = Math.max(normalizedTextureStrength(spec.strength), 0.35);
+
+  return createDataTexture(`wood.linear:${strengthLevel(spec.strength)}`, spec, [3, 1], (x, y) => {
+    const line = Math.sin((y / TEXTURE_SIZE) * Math.PI * 18) * 18;
+    const grain = ((x * 5 + y * 13 + x * y) % 23) - 11;
+    const base = 145 + line * strength + grain * strength;
+
+    return [base + 34, base * 0.7, base * 0.36, 255];
+  });
+}
+
 function brushedMetalTexture(spec: DslTextureSpec): Texture | undefined {
   const strength = Math.max(normalizedTextureStrength(spec.strength), 0.3);
 
@@ -152,11 +164,77 @@ function brushedMetalTexture(spec: DslTextureSpec): Texture | undefined {
   });
 }
 
+function noisyTexture(name: string, defaultRepeat: [number, number], base = 128): (spec: DslTextureSpec) => Texture | undefined {
+  return (spec) => {
+    const strength = Math.max(normalizedTextureStrength(spec.strength), 0.25);
+
+    return createDataTexture(`${name}:${strengthLevel(spec.strength)}`, spec, defaultRepeat, (x, y) => {
+      const wave = Math.sin((x / TEXTURE_SIZE) * Math.PI * 8) + Math.cos((y / TEXTURE_SIZE) * Math.PI * 10);
+      const noise = ((x * 31 + y * 17 + x * y * 7) % 43) - 21;
+      const speckle = (x * 19 + y * 23) % 37 === 0 ? 48 : 0;
+
+      return base + wave * 10 * strength + noise * strength + speckle * strength;
+    });
+  };
+}
+
+function ceramicSpeckleTexture(spec: DslTextureSpec): Texture | undefined {
+  const strength = Math.max(normalizedTextureStrength(spec.strength), 0.25);
+
+  return createDataTexture(`ceramic.speckle:${strengthLevel(spec.strength)}`, spec, [4, 4], (x, y) => {
+    const speckle = (x * 13 + y * 29 + x * y) % 41 < 3 ? -46 : 0;
+    const noise = ((x * 7 + y * 11) % 17) - 8;
+    const base = 232 + speckle * strength + noise * strength;
+
+    return [base, base * 0.98, base * 0.92, 255];
+  });
+}
+
+function stoneVeinTexture(spec: DslTextureSpec): Texture | undefined {
+  const strength = Math.max(normalizedTextureStrength(spec.strength), 0.3);
+
+  return createDataTexture(`stone.vein:${strengthLevel(spec.strength)}`, spec, [2, 2], (x, y) => {
+    const vein = Math.abs(Math.sin((x + y * 1.8) / TEXTURE_SIZE * Math.PI * 6 + Math.sin(y / TEXTURE_SIZE * Math.PI * 5)));
+    const noise = ((x * 17 + y * 31 + x * y) % 29) - 14;
+    const base = 190 + noise * strength;
+    const darkVein = vein > 0.88 ? -70 * strength : 0;
+
+    return [base + darkVein, base + darkVein * 0.95, base + darkVein * 0.85, 255];
+  });
+}
+
+function reededTexture(spec: DslTextureSpec): Texture | undefined {
+  const strength = Math.max(normalizedTextureStrength(spec.strength), 0.3);
+
+  return createDataTexture(`glass.reeded:${strengthLevel(spec.strength)}`, spec, [8, 1], (x) => {
+    const rib = Math.sin((x / TEXTURE_SIZE) * Math.PI * 24);
+
+    return 128 + rib * 42 * strength;
+  });
+}
+
 const PRESET_FACTORIES: Record<string, (spec: DslTextureSpec) => Texture | undefined> = {
   'fabric.weave': fabricTexture,
+  'fabric.knit': noisyTexture('fabric.knit', [7, 7], 132),
+  'fabric.corduroy': noisyTexture('fabric.corduroy', [5, 1], 130),
   'bump.noise': bumpTexture,
   'wood.oak': woodTexture,
+  'wood.rings': woodTexture,
+  'wood.linear': linearWoodTexture,
   'metal.brushed': brushedMetalTexture,
+  'metal.cast': noisyTexture('metal.cast', [5, 5], 145),
+  'ceramic.speckle': ceramicSpeckleTexture,
+  'ceramic.clay': noisyTexture('ceramic.clay', [5, 5], 148),
+  'concrete.aggregate': noisyTexture('concrete.aggregate', [4, 4], 142),
+  'concrete.smooth': noisyTexture('concrete.smooth', [3, 3], 136),
+  'stone.vein': stoneVeinTexture,
+  'stone.granite': noisyTexture('stone.granite', [4, 4], 150),
+  'stone.slate': noisyTexture('stone.slate', [3, 1], 96),
+  'glass.frosted': noisyTexture('glass.frosted', [5, 5], 170),
+  'glass.reeded': reededTexture,
+  'leather.grain': noisyTexture('leather.grain', [5, 5], 118),
+  'leather.pebbled': noisyTexture('leather.pebbled', [6, 6], 110),
+  'leather.smooth': noisyTexture('leather.smooth', [4, 4], 120),
 };
 
 function imageTexture(spec: DslTextureSpec, channel: DslTextureChannel): Texture | undefined {

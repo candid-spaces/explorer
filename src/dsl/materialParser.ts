@@ -1,4 +1,5 @@
 import { materialPresetFor, materialPresetNames } from './materialPresets';
+import { resolveSemanticMaterial } from './materialCatalog';
 import type { DslMaterialSpec, DslTextureChannel, DslTextureSpec } from './types';
 import type { DslPropertyDeclaration } from './propertyParser';
 
@@ -72,6 +73,18 @@ const CHANNEL_STRENGTH_ALIASES: Record<string, DslTextureChannel | 'all'> = {
 
 export const SUPPORTED_MATERIAL_KEYS = new Set([
   'material-preset',
+  'material',
+  'variant',
+  'grain',
+  'pattern',
+  'finish',
+  'texture-scale',
+  'bump',
+  'reflectivity',
+  'clearcoat',
+  'opacity',
+  'transmission',
+  'ior',
   'color',
   'metalness',
   'roughness',
@@ -105,6 +118,11 @@ function applyMaterialDefaults(material: DslMaterialSpec, defaults: Omit<DslMate
   material.color = defaults.color;
   material.metalness = defaults.metalness;
   material.roughness = defaults.roughness;
+  material.reflectivity = defaults.reflectivity;
+  material.clearcoat = defaults.clearcoat;
+  material.opacity = defaults.opacity;
+  material.transmission = defaults.transmission;
+  material.ior = defaults.ior;
   material.textures = cloneTextures(defaults.textures);
 }
 
@@ -170,6 +188,11 @@ function textureValue(value: string): DslTextureSpec {
 export function parseMaterialDeclaration(declarations: DslPropertyDeclaration[]): DslMaterialSpec {
   const material: DslMaterialSpec = { diagnostics: [] };
   const presetDeclaration = declarations.find(({ property }) => property === 'material-preset');
+  const semanticMaterial = declarations.find(({ property }) => property === 'material')?.value;
+  const materialVariant = declarations.find(({ property }) => property === 'variant')?.value;
+  const materialPattern = declarations.find(({ property }) => property === 'pattern')?.value;
+  const materialGrain = declarations.find(({ property }) => property === 'grain')?.value;
+  const materialFinish = declarations.find(({ property }) => property === 'finish')?.value;
 
   if (presetDeclaration) {
     const preset = materialPresetFor(presetDeclaration.value);
@@ -184,9 +207,32 @@ export function parseMaterialDeclaration(declarations: DslPropertyDeclaration[])
     }
   }
 
+  if (semanticMaterial) {
+    const { material: semanticDefaults, diagnostics } = resolveSemanticMaterial({
+      material: semanticMaterial,
+      variant: materialVariant,
+      grain: materialGrain,
+      pattern: materialPattern,
+      finish: materialFinish,
+    });
+
+    material.diagnostics.push(...diagnostics);
+    if (semanticDefaults) {
+      material.semanticMaterial = semanticMaterial;
+      material.materialVariant = materialGrain ?? materialVariant;
+      material.materialPattern = materialPattern;
+      material.materialFinish = materialFinish;
+      applyMaterialDefaults(material, semanticDefaults);
+    }
+  }
+
   declarations
     .filter(({ property }) => SUPPORTED_MATERIAL_KEYS.has(property) && property !== 'material-preset')
     .forEach(({ property, value }) => {
+      if (['material', 'variant', 'grain', 'pattern', 'finish'].includes(property)) {
+        return;
+      }
+
       const textureChannel = CHANNEL_PROPERTY_ALIASES[property];
       if (textureChannel) {
         ensureTexture(material, textureChannel);
@@ -266,6 +312,34 @@ export function parseMaterialDeclaration(declarations: DslPropertyDeclaration[])
         return;
       }
 
+      if (property === 'texture-scale') {
+        const { value: repeat, diagnostic } = parseNumberPair(property, value);
+
+        if (diagnostic) {
+          material.diagnostics.push(diagnostic);
+          return;
+        }
+
+        applyToTextureChannels(material, 'all', (texture) => {
+          texture.repeat = repeat;
+        });
+        return;
+      }
+
+      if (property === 'bump') {
+        const { value: strength, diagnostic } = parseNumericMaterialProperty(property, value);
+
+        if (diagnostic) {
+          material.diagnostics.push(diagnostic);
+          return;
+        }
+
+        applyToTextureChannels(material, 'bumpMap', (texture) => {
+          texture.strength = strength;
+        });
+        return;
+      }
+
       if (property === 'color') {
         material.color = value.startsWith('0x') ? Number(value) : value;
         return;
@@ -286,6 +360,30 @@ export function parseMaterialDeclaration(declarations: DslPropertyDeclaration[])
       if (property === 'roughness') {
         material.roughness = numericValue;
         return;
+      }
+
+      if (property === 'reflectivity') {
+        material.reflectivity = numericValue;
+        return;
+      }
+
+      if (property === 'clearcoat') {
+        material.clearcoat = numericValue;
+        return;
+      }
+
+      if (property === 'opacity') {
+        material.opacity = numericValue;
+        return;
+      }
+
+      if (property === 'transmission') {
+        material.transmission = numericValue;
+        return;
+      }
+
+      if (property === 'ior') {
+        material.ior = numericValue;
       }
 
     });

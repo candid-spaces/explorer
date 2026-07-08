@@ -52,6 +52,12 @@ export function materialParameters(node: SpatialNode): MeshPhysicalMaterialParam
     color: node.material.color ?? defaultBoxMaterial.color,
     metalness: node.material.metalness ?? defaultBoxMaterial.metalness,
     roughness: node.material.roughness ?? defaultBoxMaterial.roughness,
+    reflectivity: node.material.reflectivity,
+    clearcoat: node.material.clearcoat,
+    opacity: node.material.opacity,
+    transmission: node.material.transmission,
+    ior: node.material.ior,
+    transparent: node.material.opacity !== undefined && node.material.opacity < 1,
     ...textureParameters,
     ...(textureParameters.bumpMap && bumpScale !== undefined ? { bumpScale } : {}),
     ...(node.unionGroupId ? unionHighlightMaterial : {}),
@@ -59,7 +65,13 @@ export function materialParameters(node: SpatialNode): MeshPhysicalMaterialParam
 }
 
 export function needsPhysicalMaterial(node: SpatialNode): boolean {
-  return Boolean(node.material.textures?.normalMap);
+  return Boolean(
+    node.material.textures?.normalMap ||
+      node.material.reflectivity !== undefined ||
+      node.material.clearcoat !== undefined ||
+      node.material.transmission !== undefined ||
+      node.material.ior !== undefined,
+  );
 }
 
 export function SpatialPrimitive({ node, isSelected = false, onSelect }: SpatialPrimitiveProps) {
