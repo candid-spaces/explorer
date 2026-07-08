@@ -1,40 +1,30 @@
+import { MATERIAL_PRESET_ALIASES, resolveSemanticMaterial } from './materialCatalog';
 import type { DslMaterialSpec } from './types';
 
-export type MaterialPresetName = keyof typeof MATERIAL_PRESETS;
+export type MaterialPresetName = keyof typeof MATERIAL_PRESET_ALIASES;
 
-export const MATERIAL_PRESETS = {
-  'upholstery.fabric': {
-    roughness: 0.88,
-    textures: {
-      roughnessMap: { preset: 'fabric.weave', repeat: [6, 6], strength: 3 },
-      bumpMap: { preset: 'fabric.weave', repeat: [6, 6], strength: 2 },
-    },
-  },
-  'wood.oak': {
-    color: '#9a6a3a',
-    roughness: 0.62,
-    textures: {
-      map: { preset: 'wood.oak', repeat: [2, 1], strength: 3 },
-      bumpMap: { preset: 'wood.oak', repeat: [2, 1], strength: 1 },
-    },
-  },
-  'metal.brushed': {
-    color: '#b8bcc4',
-    metalness: 0.82,
-    roughness: 0.36,
-    textures: {
-      roughnessMap: { preset: 'metal.brushed', repeat: [8, 1], strength: 2 },
-    },
-  },
-  'plastic.matte': {
-    color: '#64748b',
-    metalness: 0,
-    roughness: 0.7,
-  },
-} satisfies Record<string, Omit<DslMaterialSpec, 'diagnostics' | 'materialPreset'>>;
+export const MATERIAL_PRESETS = Object.fromEntries(
+  Object.keys(MATERIAL_PRESET_ALIASES).map((name) => {
+    const declarations = Object.fromEntries(
+      MATERIAL_PRESET_ALIASES[name].split(';').map((part) => {
+        const [property, ...rest] = part.split(':');
+        return [property.trim(), rest.join(':').trim()];
+      }),
+    );
+    const { material } = resolveSemanticMaterial({
+      material: declarations.material,
+      variant: declarations.variant,
+      grain: declarations.grain,
+      pattern: declarations.pattern,
+      finish: declarations.finish,
+    });
+
+    return [name, material ?? {}];
+  }),
+) as Record<string, Omit<DslMaterialSpec, 'diagnostics' | 'materialPreset'>>;
 
 export function materialPresetNames(): string[] {
-  return Object.keys(MATERIAL_PRESETS);
+  return Object.keys(MATERIAL_PRESET_ALIASES);
 }
 
 export function materialPresetFor(name: string): Omit<DslMaterialSpec, 'diagnostics' | 'materialPreset'> | undefined {

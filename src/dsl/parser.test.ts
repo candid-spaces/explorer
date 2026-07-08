@@ -308,6 +308,64 @@ describe('parseDslDocument', () => {
     });
   });
 
+  it('parses semantic material declarations into renderer defaults', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+1/+0+3" : "material: wood; grain: walnut; pattern: linear; finish: glossy; texture-scale: 3 1; bump: 4; reflectivity: 0.6"',
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].material.semanticMaterial).toBe('wood');
+    expect(result.value?.[0].material.materialVariant).toBe('walnut');
+    expect(result.value?.[0].material.materialPattern).toBe('linear');
+    expect(result.value?.[0].material.materialFinish).toBe('glossy');
+    expect(result.value?.[0].material.color).toBe('#5b341f');
+    expect(result.value?.[0].material.roughness).toBe(0.18);
+    expect(result.value?.[0].material.reflectivity).toBe(0.6);
+    expect(result.value?.[0].material.clearcoat).toBe(0.35);
+    expect(result.value?.[0].material.textures?.map?.preset).toBe('wood.linear');
+    expect(result.value?.[0].material.textures?.map?.repeat).toEqual([3, 1]);
+    expect(result.value?.[0].material.textures?.bumpMap?.strength).toBe(4);
+  });
+
+  it('preserves generic texture transforms on textureless semantic defaults', () => {
+    const result = parseDslDocument(
+      '"+0+4/+0+1/+0+3" : "material-preset: plastic.matte; texture-repeat: 3 1; texture: wood.oak"',
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].material.materialPreset).toBe('plastic.matte');
+    expect(result.value?.[0].material.textures?.map).toEqual({
+      repeat: [3, 1],
+      preset: 'wood.oak',
+    });
+  });
+
+  it('supports stone, glass, and leather semantic material families', () => {
+    const result = parseDslDocument(
+      [
+        '"+0+4/+0+1/+0+3" : "material: stone; variant: marble; pattern: vein; finish: polished"',
+        '"+5+4/+0+1/+0+3" : "material: glass; variant: frosted; pattern: reeded"',
+        '"+10+4/+0+1/+0+3" : "material: leather; variant: tan; pattern: pebbled; finish: satin"',
+      ].join('\n'),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].material.semanticMaterial).toBe('stone');
+    expect(result.value?.[0].material.color).toBe('#d8d3c8');
+    expect(result.value?.[0].material.textures?.map?.preset).toBe('stone.vein');
+    expect(result.value?.[0].material.clearcoat).toBe(0.35);
+
+    expect(result.value?.[1].material.semanticMaterial).toBe('glass');
+    expect(result.value?.[1].material.opacity).toBe(0.46);
+    expect(result.value?.[1].material.transmission).toBe(0.45);
+    expect(result.value?.[1].material.textures?.bumpMap?.preset).toBe('glass.reeded');
+
+    expect(result.value?.[2].material.semanticMaterial).toBe('leather');
+    expect(result.value?.[2].material.color).toBe('#b77945');
+    expect(result.value?.[2].material.textures?.roughnessMap?.preset).toBe('leather.pebbled');
+    expect(result.value?.[2].material.roughness).toBe(0.48);
+  });
+
   it('parses custom image texture sources separately from preset textures', () => {
     const result = parseDslDocument(
       '"+0+4/+0+1/+0+3" : "texture-src: /textures/custom.png; normal-texture-src: /textures/custom-normal.png; normal-texture-repeat: 1 2"',

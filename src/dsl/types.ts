@@ -51,10 +51,19 @@ export interface DslTextureSpec {
 
 export interface DslMaterialSpec {
   materialPreset?: string;
+  semanticMaterial?: string;
+  materialVariant?: string;
+  materialPattern?: string;
+  materialFinish?: string;
   textures?: Partial<Record<DslTextureChannel, DslTextureSpec>>;
   color?: string | number;
   metalness?: number;
   roughness?: number;
+  reflectivity?: number;
+  clearcoat?: number;
+  opacity?: number;
+  transmission?: number;
+  ior?: number;
   diagnostics: string[];
 }
 

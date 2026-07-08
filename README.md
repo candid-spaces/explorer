@@ -69,43 +69,61 @@ Manual spatial declarations can use `content-text`/`content-url` for simple valu
 
 Primitive dimensions are derived from the bounding box and use the same project-unit scale as paths (`1` = `10 cm`, `1c` = `1 mm`). For example, a cone or cylinder uses X/Z as its footprint and Y as its height. Non-square footprints are rendered as scaled elliptical primitives so every primitive fills the declared bounding box. `box-radius` applies only to box geometry and is measured in project units; omitted or zero radius renders a sharp box, and the renderer clamps positive radii to half of the smallest box dimension. `puff` is intentionally a geometry modifier, not a material setting, because it changes the rendered cushion shape.
 
-## Texture declaration reference
+## Material and texture declaration reference
 
-Materials can opt into scalable texture descriptors. `material-preset` expands to ordinary material and texture defaults, and local declarations can override those defaults. Common objects should remain reusable namespace declarations plus `ref` instances rather than renderer-special-cased names, so custom objects and built-in object templates inherit texture descriptors through the same path as color, roughness, and geometry.
-
-### Material presets
-
-Supported material presets are:
-
-- `upholstery.fabric` — rough upholstery with fabric weave roughness and bump maps.
-- `wood.oak` — warm oak color map and matching bump map.
-- `metal.brushed` — metallic material with a brushed roughness map.
-- `plastic.matte` — non-textured matte plastic defaults.
+Materials now support semantic authoring first, with low-level texture channels still available as advanced overrides. Prefer author-facing material families such as `wood`, `metal`, `ceramic`, `plastic`, `fabric`, `concrete`, `stone`, `glass`, and `leather` instead of hand-selecting every texture map.
 
 ```txt
-"FabricCushion/+0+4/+0+1/+0+3" : "material-preset: upholstery.fabric; color: 0xf5f3ef; puff: 5"
-"OakTable/+5+8/+0+4/+0+8" : "material-preset: wood.oak; texture-repeat: 3 1"
-"BrushedHandle/+0+4/+5+1/+0+1" : "material-preset: metal.brushed; roughness-texture-strength: 4"
-"PlasticBin/+10+3/+0+2/+0+3" : "material-preset: plastic.matte; color: teal"
+"OakTable/+0+8/+0+4/+0+8" : "material: wood; grain: oak; finish: satin; texture-scale: 3 1"
+"SteelHandle/+0+4/+5+1/+0+1" : "material: metal; pattern: brushed; finish: semi-gloss; reflectivity: 0.8"
+"SpeckledMug/+0+2/+0+3/+0+2" : "material: ceramic; pattern: speckled; finish: glazed"
+"FabricCushion/+0+4/+0+1/+0+3" : "material: fabric; pattern: weave; color: 0xf5f3ef; bump: 3; puff: 5"
+"PolishedCounter/+0+8/+0+1/+0+3" : "material: concrete; pattern: aggregate; finish: polished"
+"MarbleTop/+0+8/+0+1/+0+3" : "material: stone; variant: marble; pattern: vein; finish: polished"
+"GlassDoor/+0+4/+0+8/+0+1" : "material: glass; variant: frosted; pattern: reeded"
+"LeatherSeat/+0+4/+0+1/+0+4" : "material: leather; variant: tan; pattern: pebbled; finish: satin"
 ```
 
-### Texture sources
+### Semantic material properties
 
-Every texture channel can come from a built-in procedural preset or a custom image source. Generic `texture`/`texture-src` targets the color map channel. The value prefixes `preset:` and `src:` are optional shortcuts when you want to make the source kind explicit inline.
+| Property | Purpose | Examples |
+| --- | --- | --- |
+| `material` | Material family | `wood`, `metal`, `ceramic`, `plastic`, `fabric`, `concrete`, `stone`, `glass`, `leather` |
+| `grain` / `variant` | Family variant, mostly for wood color/grain choices | `oak`, `walnut`, `pine`, `maple`, `marble`, `clear`, `tan` |
+| `pattern` | Procedural visual/texture pattern | `linear`, `grain`, `brushed`, `speckled`, `weave`, `aggregate`, `vein`, `reeded`, `pebbled` |
+| `finish` | Surface response preset | `raw`, `matte`, `satin`, `semi-gloss`, `glossy`, `polished`, `mirror`, `glazed` |
+| `texture-scale` | Repeat all active procedural/image channels | `3 1`, `6 6` |
+| `bump` | Simple 0..5 bump strength override | `2`, `4` |
+| `reflectivity` | Direct reflectivity override | `0.6` |
+| `clearcoat` | Direct clearcoat override for physical materials | `0.4` |
+| `opacity` | Transparency override, useful for glass | `0.3` |
+| `transmission` | Physical glass-like light transmission | `0.75` |
+| `ior` | Index of refraction for physical materials | `1.45` |
+
+Semantic declarations compile to the same renderer-neutral material fields used by the old system: color, metalness, roughness, reflectivity, clearcoat, opacity, transmission, index of refraction, and texture descriptors. Explicit low-level properties such as `roughness`, `metalness`, `texture-src`, or `normal-texture-src` override semantic defaults.
+
+### Compatibility material presets
+
+The older `material-preset` property is still supported as a compatibility alias, but new scenes should prefer semantic materials.
+
+| Old syntax | Preferred syntax |
+| --- | --- |
+| `material-preset: upholstery.fabric` | `material: fabric; pattern: weave; finish: matte` |
+| `material-preset: wood.oak` | `material: wood; grain: oak; pattern: grain; finish: satin` |
+| `material-preset: metal.brushed` | `material: metal; pattern: brushed; finish: semi-gloss` |
+| `material-preset: plastic.matte` | `material: plastic; finish: matte` |
+
+### Advanced texture sources
+
+Every texture channel can still come from a built-in procedural preset or a custom image source. Generic `texture`/`texture-src` targets the color map channel. The value prefixes `preset:` and `src:` are optional shortcuts when you want to make the source kind explicit inline.
 
 ```txt
-"PresetColor/+0+4/+0+1/+0+3" : "texture: wood.oak"
-"PresetColorExplicit/+5+4/+0+1/+0+3" : "texture: preset:wood.oak"
+"PresetColor/+0+4/+0+1/+0+3" : "texture: wood.rings"
 "ImageColor/+10+4/+0+1/+0+3" : "texture-src: /textures/albedo.png"
 "ImageColorInline/+15+4/+0+1/+0+3" : "texture: src:/textures/albedo.png"
 ```
 
-Built-in procedural texture presets are:
-
-- `fabric.weave`
-- `bump.noise`
-- `wood.oak`
-- `metal.brushed`
+Built-in procedural texture presets include `fabric.weave`, `fabric.knit`, `fabric.corduroy`, `bump.noise`, `wood.rings`, `wood.linear`, `wood.oak`, `metal.brushed`, `metal.cast`, `ceramic.speckle`, `ceramic.clay`, `concrete.aggregate`, `concrete.smooth`, `stone.vein`, `stone.granite`, `stone.slate`, `glass.frosted`, `glass.reeded`, `leather.grain`, `leather.pebbled`, and `leather.smooth`.
 
 ### Texture channels
 
@@ -121,20 +139,15 @@ Supported texture channels map directly to ThreeJS material map slots:
 | Alpha map | `alpha-texture` | `alpha-texture-src` | `alpha-repeat`, `alpha-texture-repeat` | `texture-offset`, `alpha-texture-offset` | `texture-rotation`, `alpha-texture-rotation` | `texture-strength`, `alpha-texture-strength` |
 
 ```txt
-"AllTextureChannels/+0+6/+0+2/+0+3" : "texture: wood.oak; roughness-texture: fabric.weave; normal-texture-src: /textures/panel-normal.png; bump-texture: bump.noise; metalness-texture: metal.brushed; alpha-texture-src: /textures/panel-alpha.png"
+"AllTextureChannels/+0+6/+0+2/+0+3" : "texture: wood.rings; roughness-texture: fabric.weave; normal-texture-src: /textures/panel-normal.png; bump-texture: bump.noise; metalness-texture: metal.brushed; alpha-texture-src: /textures/panel-alpha.png"
 ```
 
 ### Texture transforms and strength
 
-Texture transforms are optional and can be generic or channel-specific:
-
-- `texture-repeat: x y` applies to all currently declared texture channels, or creates a color map transform when no texture channel exists yet.
-- `texture-offset: x y` and `texture-rotation: radians` follow the same generic behavior.
-- Channel-specific forms include `normal-texture-repeat`, `bump-texture-offset`, `metalness-texture-rotation`, and `roughness-texture-strength`.
-- Strength is a `0..5` authoring scale used by procedural presets; image textures can carry it in the descriptor, but the current renderer only uses strength for procedural generation and bump scale.
+Texture transforms are optional and can be generic or channel-specific. `texture-repeat`, `texture-scale`, `texture-offset`, and `texture-rotation` apply to all currently declared texture channels, or create a color map transform when no texture channel exists yet. Strength is a `0..5` authoring scale used by procedural presets; image textures can carry it in the descriptor, but the current renderer only uses strength for procedural generation and bump scale.
 
 ```txt
-"RepeatedWood/+0+6/+0+1/+0+3" : "texture: wood.oak; texture-repeat: 4 1; texture-offset: 0.25 0; texture-rotation: 1.5708"
+"RepeatedWood/+0+6/+0+1/+0+3" : "material: wood; grain: oak; texture-scale: 4 1"
 "ChannelTransforms/+0+6/+2+1/+0+3" : "roughness-texture: fabric.weave; roughness-texture-repeat: 8 8; bump-texture: bump.noise; bump-texture-strength: 4; bump-texture-offset: 0.1 0.2; metalness-texture: metal.brushed; metalness-texture-rotation: 1.5708"
 ```
 
