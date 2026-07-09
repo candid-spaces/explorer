@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { DoubleSide } from 'three';
 import { floorMaterial, wallMaterial } from './materials';
 
 const GRID_OFFSET = 0.015;
@@ -76,17 +75,17 @@ export function CornerRoom({ width, depth, height }: CornerRoomProps) {
     <group>
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, 0, depth / 2]}>
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial {...floorMaterial} side={DoubleSide} />
+        <meshStandardMaterial {...floorMaterial} />
       </mesh>
 
       <mesh receiveShadow position={[width / 2, height / 2, 0]}>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial {...wallMaterial} side={DoubleSide} />
+        <meshStandardMaterial {...wallMaterial} />
       </mesh>
 
       <mesh receiveShadow rotation={[0, Math.PI / 2, 0]} position={[0, height / 2, depth / 2]}>
         <planeGeometry args={[depth, height]} />
-        <meshStandardMaterial {...wallMaterial} color="#cfc8bc" side={DoubleSide} />
+        <meshStandardMaterial {...wallMaterial} color="#cfc8bc" />
       </mesh>
 
       <UnitGrid plane="floor" width={width} depth={depth} height={height} />
