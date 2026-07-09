@@ -74,6 +74,7 @@ export default function App() {
   const [authoringSource, setAuthoringSource] = useState(INITIAL_DSL);
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
   const latestRemoteBaselineRef = useRef('');
+  const [appMode, setAppMode] = useState<'viewer' | 'editor'>('viewer');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [selectedLeafNodeId, setSelectedLeafNodeId] = useState<string | undefined>();
@@ -144,6 +145,12 @@ export default function App() {
   }, []);
 
   useEffect(() => loadTipHeight(), [loadTipHeight]);
+
+  useEffect(() => {
+    if (appMode === 'viewer') {
+      setDrawerOpen(false);
+    }
+  }, [appMode]);
 
   const transactionDsl = useMemo(
     () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey }),
@@ -281,21 +288,24 @@ export default function App() {
   }, [hasAuthoringEdits, hasRemoteBaseline, remoteBaselineSource]);
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell app-shell--${appMode}`}>
       <SceneRoot document={document} selectedNodeId={selectedSceneNodeId} onSelectNode={handleSelectNode} />
-      <SelectedNodeInspector
-        canEdit={selectedNodeCanEdit}
-        node={selectedNode}
-        selectionPath={selectedHierarchyPath}
-        onClearSelection={() => handleSelectNode(undefined)}
-        onMove={moveSelectedDeclaration}
-        onPathNodeSelect={handleSelectHierarchyNode}
-        onPropertyChange={updateSelectedDeclarationProperty}
-        onResize={resizeSelectedDeclaration}
-        onSelectNode={handleSelectExactNode}
-        onRotate={rotateSelectedDeclaration}
-      />
+      {appMode === 'editor' ? (
+        <SelectedNodeInspector
+          canEdit={selectedNodeCanEdit}
+          node={selectedNode}
+          selectionPath={selectedHierarchyPath}
+          onClearSelection={() => handleSelectNode(undefined)}
+          onMove={moveSelectedDeclaration}
+          onPathNodeSelect={handleSelectHierarchyNode}
+          onPropertyChange={updateSelectedDeclarationProperty}
+          onResize={resizeSelectedDeclaration}
+          onSelectNode={handleSelectExactNode}
+          onRotate={rotateSelectedDeclaration}
+        />
+      ) : null}
       <DslDrawer
+        appMode={appMode}
         document={document}
         isOpen={drawerOpen}
         source={authoringSource}
@@ -317,6 +327,7 @@ export default function App() {
         remoteBaselineChanged={remoteBaselineChanged}
         authoringChangeSummary={authoringChangeSummary}
         onChange={handleAuthoringSourceChange}
+        onModeChange={setAppMode}
         onResetToRemote={resetAuthoringToRemote}
         onToggle={() => setDrawerOpen((isOpen) => !isOpen)}
         onTransactionPublicKeyChange={setTransactionPublicKey}
