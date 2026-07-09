@@ -47,16 +47,26 @@ button {
   padding: 1rem;
 }
 
+.mode-controls,
 .drawer-toggle,
+.mode-toggle,
 .drawer-panel {
   pointer-events: auto;
 }
 
-.drawer-toggle {
+.mode-controls {
   position: fixed;
   top: 1rem;
   right: 1rem;
   z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.drawer-toggle,
+.mode-toggle {
   border: 1px solid rgb(255 255 255 / 22%);
   border-radius: 999px;
   padding: 0.7rem 1rem;
@@ -64,6 +74,14 @@ button {
   color: #f8fafc;
   box-shadow: 0 14px 45px rgb(0 0 0 / 24%);
   backdrop-filter: blur(14px);
+}
+
+.mode-toggle {
+  background: rgb(37 99 235 / 78%);
+}
+
+.mode-toggle[aria-pressed='true'] {
+  background: rgb(13 17 23 / 76%);
 }
 
 .drawer-panel {
@@ -672,6 +690,12 @@ button {
   backdrop-filter: blur(18px);
 }
 
+.app-shell--viewer .selected-node-inspector,
+.dsl-drawer--viewer .drawer-panel,
+.dsl-drawer--viewer .drawer-toggle {
+  display: none;
+}
+
 .selected-node-inspector h2,
 .selected-node-inspector p {
   margin: 0;
@@ -819,4 +843,44 @@ button {
 .inspector-child-list span {
   color: #cbd5e1;
   font-size: 0.72rem;
+}
+
+@media (max-width: 640px) {
+  .dsl-drawer {
+    padding: 0.65rem;
+  }
+
+  .mode-controls {
+    top: 0.65rem;
+    right: 0.65rem;
+    left: 0.65rem;
+  }
+
+  .app-shell--viewer .mode-controls {
+    left: auto;
+  }
+
+  .drawer-toggle,
+  .mode-toggle {
+    padding: 0.58rem 0.78rem;
+    font-size: 0.85rem;
+  }
+
+  .drawer-panel {
+    width: calc(100vw - 1.3rem);
+    max-height: calc(100vh - 5.2rem);
+    margin-top: 3.9rem;
+    padding: 0.95rem;
+  }
+
+  .app-shell--viewer .mode-toggle {
+    box-shadow: 0 10px 28px rgb(0 0 0 / 22%);
+  }
+
+  .selected-node-inspector {
+    right: 0.65rem;
+    bottom: 0.65rem;
+    width: calc(100vw - 1.3rem);
+    max-height: calc(100vh - 5.2rem);
+  }
 }

@@ -72,6 +72,7 @@ function renderAuthoringStatus(
 }
 
 interface DslDrawerProps {
+  appMode: 'viewer' | 'editor';
   document: SpatialDocument;
   isOpen: boolean;
   source: string;
@@ -93,6 +94,7 @@ interface DslDrawerProps {
   remoteBaselineChanged: boolean;
   authoringChangeSummary: { added: number; removed: number };
   onChange: (source: string) => void;
+  onModeChange: (mode: 'viewer' | 'editor') => void;
   onResetToRemote: () => void;
   onToggle: () => void;
   onTransactionPublicKeyChange: (publicKey: string) => void;
@@ -102,6 +104,7 @@ interface DslDrawerProps {
 }
 
 export function DslDrawer({
+  appMode,
   document,
   isOpen,
   source,
@@ -123,6 +126,7 @@ export function DslDrawer({
   remoteBaselineChanged,
   authoringChangeSummary,
   onChange,
+  onModeChange,
   onResetToRemote,
   onToggle,
   onTransactionPublicKeyChange,
@@ -130,13 +134,28 @@ export function DslDrawer({
   onReloadTransactions,
   onUseTransactionTip,
 }: DslDrawerProps) {
-  return (
-    <aside className={`dsl-drawer ${isOpen ? 'is-open' : ''}`}>
-      <button className="drawer-toggle" type="button" onClick={onToggle}>
-        {isOpen ? 'Close declarations' : 'Edit declarations'}
-      </button>
+  const isEditorMode = appMode === 'editor';
 
-      {isOpen ? (
+  return (
+    <aside className={`dsl-drawer dsl-drawer--${appMode} ${isOpen ? 'is-open' : ''}`}>
+      <div className="mode-controls" aria-label="Application mode">
+        <button
+          className="mode-toggle"
+          type="button"
+          aria-pressed={isEditorMode}
+          onClick={() => onModeChange(isEditorMode ? 'viewer' : 'editor')}
+        >
+          {isEditorMode ? 'Viewer mode' : 'Editor mode'}
+        </button>
+
+        {isEditorMode ? (
+          <button className="drawer-toggle" type="button" onClick={onToggle}>
+            {isOpen ? 'Close declarations' : 'Edit declarations'}
+          </button>
+        ) : null}
+      </div>
+
+      {isEditorMode && isOpen ? (
         <div className="drawer-panel">
           <header>
             <p className="eyebrow">Coordinate Spaces</p>
