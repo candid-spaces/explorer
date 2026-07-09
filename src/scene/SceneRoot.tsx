@@ -39,7 +39,7 @@ export function SceneRoot({ document, selectedNodeId, onSelectNode }: SceneRootP
           <SpatialPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={onSelectNode} />
         )
       ))}
-      <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI / 2.02} />
+      <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI} />
     </Canvas>
   );
 }
