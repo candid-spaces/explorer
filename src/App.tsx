@@ -75,6 +75,7 @@ export default function App() {
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
   const latestRemoteBaselineRef = useRef('');
   const [appMode, setAppMode] = useState<'viewer' | 'editor'>('viewer');
+  const [navigationMode, setNavigationMode] = useState<'orbit' | 'first-person'>('orbit');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [selectedLeafNodeId, setSelectedLeafNodeId] = useState<string | undefined>();
@@ -289,7 +290,35 @@ export default function App() {
 
   return (
     <main className={`app-shell app-shell--${appMode}`}>
-      <SceneRoot document={document} selectedNodeId={selectedSceneNodeId} onSelectNode={handleSelectNode} />
+      <SceneRoot
+        document={document}
+        navigationMode={navigationMode}
+        selectedNodeId={selectedSceneNodeId}
+        onSelectNode={handleSelectNode}
+      />
+      <div className="navigation-overlay" aria-label="Scene navigation controls">
+        <div className="navigation-toggle-group">
+          <button
+            className="navigation-toggle"
+            type="button"
+            aria-pressed={navigationMode === 'first-person'}
+            onClick={() => setNavigationMode('first-person')}
+          >
+            First Person
+          </button>
+          <button
+            className="navigation-toggle"
+            type="button"
+            aria-pressed={navigationMode === 'orbit'}
+            onClick={() => setNavigationMode('orbit')}
+          >
+            Orbit
+          </button>
+        </div>
+        {navigationMode === 'first-person' ? (
+          <p>Click scene to capture mouse. Press Esc to release. Use W/A/S/D, Space, Control, and Shift.</p>
+        ) : null}
+      </div>
       {appMode === 'editor' ? (
         <SelectedNodeInspector
           canEdit={selectedNodeCanEdit}
