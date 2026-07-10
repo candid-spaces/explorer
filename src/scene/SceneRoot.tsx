@@ -1,4 +1,4 @@
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { FirstPersonControls, OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { dimensionsFromNodes } from '../model/room';
@@ -9,13 +9,17 @@ import { CsgPrimitive } from './CsgPrimitive';
 import { SpatialPrimitive } from './SpatialPrimitive';
 import { nodesForRoomSizing } from './roomSizing';
 
+export type NavigationMode = 'orbit' | 'firstPerson';
+
 interface SceneRootProps {
   document: SpatialDocument;
+  navigationMode: NavigationMode;
+  orbitZoomEnabled: boolean;
   selectedNodeId?: string;
   onSelectNode?: (id: string | undefined) => void;
 }
 
-export function SceneRoot({ document, selectedNodeId, onSelectNode }: SceneRootProps) {
+export function SceneRoot({ document, navigationMode, orbitZoomEnabled, selectedNodeId, onSelectNode }: SceneRootProps) {
   const roomDimensions = dimensionsFromNodes(nodesForRoomSizing(document));
 
   return (
@@ -39,7 +43,11 @@ export function SceneRoot({ document, selectedNodeId, onSelectNode }: SceneRootP
           <SpatialPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={onSelectNode} />
         )
       ))}
-      <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI} />
+      {navigationMode === 'orbit' ? (
+        <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI} enableZoom={orbitZoomEnabled} />
+      ) : (
+        <FirstPersonControls movementSpeed={8} lookSpeed={0.08} lookVertical />
+      )}
     </Canvas>
   );
 }

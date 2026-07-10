@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
+import type { NavigationMode } from '../scene/SceneRoot';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
 import type { RejectedTransaction, TransactionRange } from '../transactions/types';
 import { DslEditor } from './DslEditor';
@@ -75,6 +76,8 @@ interface DslDrawerProps {
   appMode: 'viewer' | 'editor';
   document: SpatialDocument;
   isOpen: boolean;
+  navigationMode: NavigationMode;
+  orbitZoomEnabled: boolean;
   source: string;
   selectedLineNumber?: number;
   transactionPublicKey: string;
@@ -95,6 +98,8 @@ interface DslDrawerProps {
   authoringChangeSummary: { added: number; removed: number };
   onChange: (source: string) => void;
   onModeChange: (mode: 'viewer' | 'editor') => void;
+  onNavigationModeChange: (mode: NavigationMode) => void;
+  onOrbitZoomEnabledChange: (enabled: boolean) => void;
   onResetToRemote: () => void;
   onToggle: () => void;
   onTransactionPublicKeyChange: (publicKey: string) => void;
@@ -107,6 +112,8 @@ export function DslDrawer({
   appMode,
   document,
   isOpen,
+  navigationMode,
+  orbitZoomEnabled,
   source,
   selectedLineNumber,
   transactionPublicKey,
@@ -127,6 +134,8 @@ export function DslDrawer({
   authoringChangeSummary,
   onChange,
   onModeChange,
+  onNavigationModeChange,
+  onOrbitZoomEnabledChange,
   onResetToRemote,
   onToggle,
   onTransactionPublicKeyChange,
@@ -148,11 +157,40 @@ export function DslDrawer({
           {isEditorMode ? 'Viewer mode' : 'Editor mode'}
         </button>
 
+        <button
+          className="drawer-toggle"
+          type="button"
+          aria-pressed={navigationMode === 'firstPerson'}
+          onClick={() => onNavigationModeChange(navigationMode === 'orbit' ? 'firstPerson' : 'orbit')}
+        >
+          {navigationMode === 'orbit' ? 'First-person' : 'Orbit camera'}
+        </button>
+
+        {navigationMode === 'orbit' ? (
+          <button
+            className="drawer-toggle"
+            type="button"
+            aria-pressed={!orbitZoomEnabled}
+            onClick={() => onOrbitZoomEnabledChange(!orbitZoomEnabled)}
+          >
+            {orbitZoomEnabled ? 'Disable zoom' : 'Enable zoom'}
+          </button>
+        ) : null}
+
         {isEditorMode ? (
           <button className="drawer-toggle" type="button" onClick={onToggle}>
             {isOpen ? 'Close declarations' : 'Edit declarations'}
           </button>
         ) : null}
+      </div>
+
+      <div className="navigation-help" aria-label="Navigation controls">
+        <strong>{navigationMode === 'orbit' ? 'Orbit navigation' : 'First-person navigation'}</strong>
+        {navigationMode === 'orbit' ? (
+          <span>Drag to orbit, right-drag to pan, and {orbitZoomEnabled ? 'scroll to zoom.' : 'zoom is disabled.'}</span>
+        ) : (
+          <span>Use the keyboard to move and drag to look around the room.</span>
+        )}
       </div>
 
       {isEditorMode && isOpen ? (

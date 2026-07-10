@@ -48,6 +48,7 @@ button {
 }
 
 .mode-controls,
+.navigation-help,
 .drawer-toggle,
 .mode-toggle,
 .drawer-panel {
@@ -82,6 +83,34 @@ button {
 
 .mode-toggle[aria-pressed='true'] {
   background: rgb(13 17 23 / 76%);
+}
+
+
+.navigation-help {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 20;
+  display: grid;
+  gap: 0.25rem;
+  width: min(22rem, calc(100vw - 2rem));
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 1rem;
+  padding: 0.8rem 1rem;
+  background: rgb(13 17 23 / 76%);
+  color: #dbeafe;
+  box-shadow: 0 14px 45px rgb(0 0 0 / 24%);
+  backdrop-filter: blur(14px);
+}
+
+.navigation-help strong {
+  color: #f8fafc;
+  font-size: 0.88rem;
+}
+
+.navigation-help span {
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .drawer-panel {
@@ -854,6 +883,12 @@ button {
     top: 0.65rem;
     right: 0.65rem;
     left: 0.65rem;
+  }
+
+  .navigation-help {
+    right: 0.65rem;
+    bottom: 0.65rem;
+    width: calc(100vw - 1.3rem);
   }
 
   .app-shell--viewer .mode-controls {

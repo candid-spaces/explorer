@@ -4,7 +4,7 @@ import type { AxisName } from './dsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
 import { findNodeById, findNodeByLineNumber, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
-import { SceneRoot } from './scene/SceneRoot';
+import { SceneRoot, type NavigationMode } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { transactionsToDslSource } from './transactions/transactionDsl';
@@ -76,6 +76,8 @@ export default function App() {
   const latestRemoteBaselineRef = useRef('');
   const [appMode, setAppMode] = useState<'viewer' | 'editor'>('viewer');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [navigationMode, setNavigationMode] = useState<NavigationMode>('orbit');
+  const [orbitZoomEnabled, setOrbitZoomEnabled] = useState(true);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [selectedLeafNodeId, setSelectedLeafNodeId] = useState<string | undefined>();
   const [selectedSceneHighlightNodeId, setSelectedSceneHighlightNodeId] = useState<string | undefined>();
@@ -289,7 +291,13 @@ export default function App() {
 
   return (
     <main className={`app-shell app-shell--${appMode}`}>
-      <SceneRoot document={document} selectedNodeId={selectedSceneNodeId} onSelectNode={handleSelectNode} />
+      <SceneRoot
+        document={document}
+        navigationMode={navigationMode}
+        orbitZoomEnabled={orbitZoomEnabled}
+        selectedNodeId={selectedSceneNodeId}
+        onSelectNode={handleSelectNode}
+      />
       {appMode === 'editor' ? (
         <SelectedNodeInspector
           canEdit={selectedNodeCanEdit}
@@ -308,6 +316,8 @@ export default function App() {
         appMode={appMode}
         document={document}
         isOpen={drawerOpen}
+        navigationMode={navigationMode}
+        orbitZoomEnabled={orbitZoomEnabled}
         source={authoringSource}
         selectedLineNumber={selectedNodeLineNumber}
         transactionPublicKey={transactionPublicKey}
@@ -328,6 +338,8 @@ export default function App() {
         authoringChangeSummary={authoringChangeSummary}
         onChange={handleAuthoringSourceChange}
         onModeChange={setAppMode}
+        onNavigationModeChange={setNavigationMode}
+        onOrbitZoomEnabledChange={setOrbitZoomEnabled}
         onResetToRemote={resetAuthoringToRemote}
         onToggle={() => setDrawerOpen((isOpen) => !isOpen)}
         onTransactionPublicKeyChange={setTransactionPublicKey}
