@@ -12,6 +12,7 @@ type MovementKey = 'forward' | 'backward' | 'left' | 'right' | 'up' | 'down' | '
 
 const BASE_SPEED_UNITS_PER_SECOND = 5.5;
 const FAST_SPEED_MULTIPLIER = 2.2;
+const POINTER_LOCK_SELECTOR = '.scene-canvas';
 
 function movementKeyForEvent(event: KeyboardEvent): MovementKey | undefined {
   switch (event.code) {
@@ -131,6 +132,7 @@ export function FirstPersonNavigation({ enabled, onPointerLockChange }: FirstPer
 
   return (
     <PointerLockControls
+      selector={POINTER_LOCK_SELECTOR}
       onLock={() => {
         isLocked.current = true;
         onPointerLockChange?.(true);
