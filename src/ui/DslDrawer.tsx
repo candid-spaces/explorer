@@ -158,7 +158,7 @@ export function DslDrawer({
       {isEditorMode && isOpen ? (
         <div className="drawer-panel">
           <header>
-            <p className="eyebrow">Coordinate Spaces</p>
+            <p className="eyebrow">Candid Spaces</p>
             <p>Compose primitive geometry in a shared coordinate space.</p>
           </header>
 
