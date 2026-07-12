@@ -31,8 +31,12 @@ describe('editDslSource', () => {
 
   it('moves and resizes path axes using unit and centiunit notation', () => {
     expect(moveDeclarationPath(SOURCE, 1, 'x', 1)).toContain('"Table/+19+8/+0+5/+4+8"');
-    expect(moveDeclarationPath(SOURCE, 1, 'z', 0.1)).toContain('"Table/+18+8/+0+5/+410c+8"');
+    expect(moveDeclarationPath(SOURCE, 1, 'x', -0.01)).toContain('"Table/+1799c+8/+0+5/+4+8"');
+    expect(moveDeclarationPath(SOURCE, 1, 'z', 0.01)).toContain('"Table/+18+8/+0+5/+401c+8"');
     expect(resizeDeclarationPath(SOURCE, 1, 'y', -1)).toContain('"Table/+18+8/+0+4/+4+8"');
+    expect(resizeDeclarationPath(SOURCE, 1, 'y', 0.01)).toContain('"Table/+18+8/+0+501c/+4+8"');
+    expect(resizeDeclarationPath(SOURCE, 1, 'y', -0.01)).toContain('"Table/+18+8/+0+499c/+4+8"');
+    expect(resizeDeclarationPath(SOURCE, 2, 'y', -2)).toContain('"Table/Top/+0+8/+4+1c/+0+8"');
   });
 
   it('adds and updates rotation properties by axis in degrees', () => {
