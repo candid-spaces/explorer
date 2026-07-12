@@ -122,7 +122,6 @@ export function SelectedNodeInspector({
   const centiunitStep = 0.01;
   const rotationCoarseStep = 15;
   const rotationFineStep = 1;
-  const rotationCentiStep = 0.01;
   const childNodes = node.children ?? [];
   const inspectorStyle: CSSProperties | undefined = position
     ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' }
@@ -261,12 +260,6 @@ export function SelectedNodeInspector({
             </button>
             <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, rotationFineStep)}>
               +{rotationFineStep}° {axis.toUpperCase()}
-            </button>
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, -rotationCentiStep)}>
-              -0.01° {axis.toUpperCase()}
-            </button>
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, rotationCentiStep)}>
-              +0.01° {axis.toUpperCase()}
             </button>
           </span>
         ))}
