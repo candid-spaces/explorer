@@ -118,9 +118,16 @@ export function SelectedNodeInspector({
   }
 
   const lineNumber = metadataValue<number>(node, 'lineNumber');
-  const step = 1;
-  const fineStep = 0.1;
-  const rotationStep = 15;
+  const unitStep = 1;
+  const centiunitStep = 0.01;
+  const movementSteps = [
+    { label: '1u', value: unitStep },
+    { label: '1c', value: centiunitStep },
+  ];
+  const rotationSteps = [
+    { label: '1°', value: unitStep },
+    { label: '0.01°', value: centiunitStep },
+  ];
   const childNodes = node.children ?? [];
   const inspectorStyle: CSSProperties | undefined = position
     ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' }
@@ -208,15 +215,16 @@ export function SelectedNodeInspector({
         <strong>Move</strong>
         {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
           <span key={`move-${axis}`} className="inspector-control-row">
-            <button type="button" disabled={!canEdit} onClick={() => onMove(axis, -step)}>
-              -{axis.toUpperCase()}
-            </button>
-            <button type="button" disabled={!canEdit} onClick={() => onMove(axis, step)}>
-              +{axis.toUpperCase()}
-            </button>
-            <button type="button" disabled={!canEdit} onClick={() => onMove(axis, fineStep)}>
-              +{fineStep} {axis.toUpperCase()}
-            </button>
+            {movementSteps.map(({ label, value }) => (
+              <button key={`move-${axis}-minus-${label}`} type="button" disabled={!canEdit} onClick={() => onMove(axis, -value)}>
+                -{label} {axis.toUpperCase()}
+              </button>
+            ))}
+            {movementSteps.map(({ label, value }) => (
+              <button key={`move-${axis}-plus-${label}`} type="button" disabled={!canEdit} onClick={() => onMove(axis, value)}>
+                +{label} {axis.toUpperCase()}
+              </button>
+            ))}
           </span>
         ))}
       </div>
@@ -225,12 +233,16 @@ export function SelectedNodeInspector({
         <strong>Resize</strong>
         {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
           <span key={`resize-${axis}`} className="inspector-control-row">
-            <button type="button" disabled={!canEdit} onClick={() => onResize(axis, -step)}>
-              -{axis.toUpperCase()} size
-            </button>
-            <button type="button" disabled={!canEdit} onClick={() => onResize(axis, step)}>
-              +{axis.toUpperCase()} size
-            </button>
+            {movementSteps.map(({ label, value }) => (
+              <button key={`resize-${axis}-minus-${label}`} type="button" disabled={!canEdit} onClick={() => onResize(axis, -value)}>
+                -{label} {axis.toUpperCase()} size
+              </button>
+            ))}
+            {movementSteps.map(({ label, value }) => (
+              <button key={`resize-${axis}-plus-${label}`} type="button" disabled={!canEdit} onClick={() => onResize(axis, value)}>
+                +{label} {axis.toUpperCase()} size
+              </button>
+            ))}
           </span>
         ))}
       </div>
@@ -239,12 +251,16 @@ export function SelectedNodeInspector({
         <strong>Rotate</strong>
         {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
           <span key={`rotate-${axis}`} className="inspector-control-row">
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, -rotationStep)}>
-              -{rotationStep}° {axis.toUpperCase()}
-            </button>
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, rotationStep)}>
-              +{rotationStep}° {axis.toUpperCase()}
-            </button>
+            {rotationSteps.map(({ label, value }) => (
+              <button key={`rotate-${axis}-minus-${label}`} type="button" disabled={!canEdit} onClick={() => onRotate(axis, -value)}>
+                -{label} {axis.toUpperCase()}
+              </button>
+            ))}
+            {rotationSteps.map(({ label, value }) => (
+              <button key={`rotate-${axis}-plus-${label}`} type="button" disabled={!canEdit} onClick={() => onRotate(axis, value)}>
+                +{label} {axis.toUpperCase()}
+              </button>
+            ))}
           </span>
         ))}
       </div>
