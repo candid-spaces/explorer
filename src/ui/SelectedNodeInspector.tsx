@@ -209,17 +209,18 @@ export function SelectedNodeInspector({
         <strong>Move</strong>
         {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
           <span key={`move-${axis}`} className="inspector-control-row">
-            <button type="button" disabled={!canEdit} onClick={() => onMove(axis, -unitStep)}>
-              -1 {axis.toUpperCase()}
+            <span className="inspector-axis-label">{axis.toUpperCase()}</span>
+            <button type="button" disabled={!canEdit} aria-label={`Move ${axis.toUpperCase()} -1 unit`} onClick={() => onMove(axis, -unitStep)}>
+              -1
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onMove(axis, unitStep)}>
-              +1 {axis.toUpperCase()}
+            <button type="button" disabled={!canEdit} aria-label={`Move ${axis.toUpperCase()} +1 unit`} onClick={() => onMove(axis, unitStep)}>
+              +1
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onMove(axis, -centiunitStep)}>
-              -1c {axis.toUpperCase()}
+            <button type="button" disabled={!canEdit} aria-label={`Move ${axis.toUpperCase()} -1 centiunit`} onClick={() => onMove(axis, -centiunitStep)}>
+              -1c
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onMove(axis, centiunitStep)}>
-              +1c {axis.toUpperCase()}
+            <button type="button" disabled={!canEdit} aria-label={`Move ${axis.toUpperCase()} +1 centiunit`} onClick={() => onMove(axis, centiunitStep)}>
+              +1c
             </button>
           </span>
         ))}
@@ -229,17 +230,18 @@ export function SelectedNodeInspector({
         <strong>Resize</strong>
         {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
           <span key={`resize-${axis}`} className="inspector-control-row">
-            <button type="button" disabled={!canEdit} onClick={() => onResize(axis, -unitStep)}>
-              -1 {axis.toUpperCase()} size
+            <span className="inspector-axis-label">{axis.toUpperCase()}</span>
+            <button type="button" disabled={!canEdit} aria-label={`Resize ${axis.toUpperCase()} -1 unit`} onClick={() => onResize(axis, -unitStep)}>
+              -1
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onResize(axis, unitStep)}>
-              +1 {axis.toUpperCase()} size
+            <button type="button" disabled={!canEdit} aria-label={`Resize ${axis.toUpperCase()} +1 unit`} onClick={() => onResize(axis, unitStep)}>
+              +1
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onResize(axis, -centiunitStep)}>
-              -1c {axis.toUpperCase()} size
+            <button type="button" disabled={!canEdit} aria-label={`Resize ${axis.toUpperCase()} -1 centiunit`} onClick={() => onResize(axis, -centiunitStep)}>
+              -1c
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onResize(axis, centiunitStep)}>
-              +1c {axis.toUpperCase()} size
+            <button type="button" disabled={!canEdit} aria-label={`Resize ${axis.toUpperCase()} +1 centiunit`} onClick={() => onResize(axis, centiunitStep)}>
+              +1c
             </button>
           </span>
         ))}
@@ -249,17 +251,18 @@ export function SelectedNodeInspector({
         <strong>Rotate</strong>
         {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
           <span key={`rotate-${axis}`} className="inspector-control-row">
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, -rotationCoarseStep)}>
-              -{rotationCoarseStep}° {axis.toUpperCase()}
+            <span className="inspector-axis-label">{axis.toUpperCase()}</span>
+            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} -${rotationCoarseStep} degrees`} onClick={() => onRotate(axis, -rotationCoarseStep)}>
+              -{rotationCoarseStep}°
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, rotationCoarseStep)}>
-              +{rotationCoarseStep}° {axis.toUpperCase()}
+            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} +${rotationCoarseStep} degrees`} onClick={() => onRotate(axis, rotationCoarseStep)}>
+              +{rotationCoarseStep}°
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, -rotationFineStep)}>
-              -{rotationFineStep}° {axis.toUpperCase()}
+            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} -${rotationFineStep} degree`} onClick={() => onRotate(axis, -rotationFineStep)}>
+              -{rotationFineStep}°
             </button>
-            <button type="button" disabled={!canEdit} onClick={() => onRotate(axis, rotationFineStep)}>
-              +{rotationFineStep}° {axis.toUpperCase()}
+            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} +${rotationFineStep} degree`} onClick={() => onRotate(axis, rotationFineStep)}>
+              +{rotationFineStep}°
             </button>
           </span>
         ))}

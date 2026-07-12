@@ -769,7 +769,15 @@ button {
 .inspector-control-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.35rem;
+}
+
+.inspector-axis-label {
+  min-width: 1rem;
+  color: #dbeafe;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .inspector-fields {
