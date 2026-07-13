@@ -766,6 +766,13 @@ button {
   font-size: 0.78rem;
 }
 
+.inspector-help {
+  margin: 0;
+  color: #bfdbfe;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .inspector-control-row {
   display: flex;
   flex-wrap: wrap;
