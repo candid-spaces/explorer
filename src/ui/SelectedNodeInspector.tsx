@@ -26,6 +26,12 @@ function displayName(node: SpatialNode): string {
 
 const GEOMETRY_OPTIONS: DslGeometryKind[] = ['box', 'cylinder', 'cone', 'sphere'];
 
+const ROTATION_AXIS_DESCRIPTIONS: Record<AxisName, string> = {
+  x: 'Rotates around the left-right X axis, pitching the object forward or backward.',
+  y: 'Rotates around the vertical Y axis, yawing the object left or right.',
+  z: 'Rotates around the depth Z axis, rolling the object clockwise or counterclockwise.',
+};
+
 interface InspectorPosition {
   x: number;
   y: number;
@@ -249,19 +255,44 @@ export function SelectedNodeInspector({
 
       <div className="inspector-grid" aria-label="Rotate selected object">
         <strong>Rotate</strong>
+        <p className="inspector-help">Rotations happen around the named axis: X pitches forward/back, Y yaws left/right, and Z rolls clockwise/counterclockwise.</p>
         {(['x', 'y', 'z'] as AxisName[]).map((axis) => (
           <span key={`rotate-${axis}`} className="inspector-control-row">
-            <span className="inspector-axis-label">{axis.toUpperCase()}</span>
-            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} -${rotationCoarseStep} degrees`} onClick={() => onRotate(axis, -rotationCoarseStep)}>
+            <span className="inspector-axis-label" title={ROTATION_AXIS_DESCRIPTIONS[axis]}>{axis.toUpperCase()}</span>
+            <button
+              type="button"
+              disabled={!canEdit}
+              aria-label={`Rotate ${axis.toUpperCase()} -${rotationCoarseStep} degrees`}
+              title={ROTATION_AXIS_DESCRIPTIONS[axis]}
+              onClick={() => onRotate(axis, -rotationCoarseStep)}
+            >
               -{rotationCoarseStep}°
             </button>
-            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} +${rotationCoarseStep} degrees`} onClick={() => onRotate(axis, rotationCoarseStep)}>
+            <button
+              type="button"
+              disabled={!canEdit}
+              aria-label={`Rotate ${axis.toUpperCase()} +${rotationCoarseStep} degrees`}
+              title={ROTATION_AXIS_DESCRIPTIONS[axis]}
+              onClick={() => onRotate(axis, rotationCoarseStep)}
+            >
               +{rotationCoarseStep}°
             </button>
-            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} -${rotationFineStep} degree`} onClick={() => onRotate(axis, -rotationFineStep)}>
+            <button
+              type="button"
+              disabled={!canEdit}
+              aria-label={`Rotate ${axis.toUpperCase()} -${rotationFineStep} degree`}
+              title={ROTATION_AXIS_DESCRIPTIONS[axis]}
+              onClick={() => onRotate(axis, -rotationFineStep)}
+            >
               -{rotationFineStep}°
             </button>
-            <button type="button" disabled={!canEdit} aria-label={`Rotate ${axis.toUpperCase()} +${rotationFineStep} degree`} onClick={() => onRotate(axis, rotationFineStep)}>
+            <button
+              type="button"
+              disabled={!canEdit}
+              aria-label={`Rotate ${axis.toUpperCase()} +${rotationFineStep} degree`}
+              title={ROTATION_AXIS_DESCRIPTIONS[axis]}
+              onClick={() => onRotate(axis, rotationFineStep)}
+            >
               +{rotationFineStep}°
             </button>
           </span>
