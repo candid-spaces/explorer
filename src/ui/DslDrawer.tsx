@@ -152,15 +152,14 @@ export function DslDrawer({
           {isEditorMode ? 'Viewer mode' : 'Editor mode'}
         </button>
 
-        {isEditorMode && isOpen ? (
-          <button className="drawer-toggle" type="button" onClick={onToggle}>
-            Close declarations
-          </button>
-        ) : null}
       </div>
 
       {isEditorMode && isOpen ? (
         <div className="drawer-panel">
+          <button className="drawer-close-button" type="button" aria-label="Close declarations" onClick={onToggle}>
+            ×
+          </button>
+
           <header>
             <p className="eyebrow">Candid Spaces</p>
             <p>Compose primitive geometry in a shared coordinate space.</p>

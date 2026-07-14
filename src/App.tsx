@@ -7,7 +7,6 @@ import {
   findNodeById,
   findNodeByLineNumber,
   findNodePathById,
-  firstSelectableNode,
   lineNumberForNode,
   sceneHighlightIdForNode,
   selectionTargetForNodeId,
@@ -247,25 +246,6 @@ export default function App() {
     setSelectedNodeId(targetNode?.id ?? id);
     setSelectedLineNumber(lineNumberForNode(targetNode));
   }, [document.nodes]);
-
-  useEffect(() => {
-    if (appMode !== 'editor' || selectedNode !== undefined) {
-      return;
-    }
-
-    const firstNode = firstSelectableNode(document.nodes);
-
-    if (!firstNode) {
-      return;
-    }
-
-    const targetNode = selectionTargetForNodeId(document.nodes, firstNode.id);
-
-    setSelectedLeafNodeId(firstNode.id);
-    setSelectedSceneHighlightNodeId(sceneHighlightIdForNode(document.nodes, firstNode));
-    setSelectedNodeId(targetNode?.id ?? firstNode.id);
-    setSelectedLineNumber(lineNumberForNode(targetNode));
-  }, [appMode, document.nodes, selectedNode]);
 
   const handleSelectHierarchyNode = useCallback((id: string) => {
     const targetNode = findNodeById(document.nodes, id);

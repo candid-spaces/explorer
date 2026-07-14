@@ -3,7 +3,6 @@ import { createSpatialDocument } from './model/createSpatialDocument';
 import {
   findNodeById,
   findNodePathById,
-  firstSelectableNode,
   lineNumberForNode,
   sceneHighlightIdForNode,
   selectionTargetForNodeId,
@@ -58,17 +57,4 @@ describe('selectionTargetForNodeId', () => {
     expect(findNodeById(document.nodes, primitive.id)).toBe(target);
   });
 
-  it('finds the first selectable renderable node in declaration order', () => {
-    const document = createSpatialDocument(OUTLET_DSL);
-    const first = firstSelectableNode(document.nodes);
-
-    expect(first?.namespacePath).toBe('Outlet/Plate/');
-    expect(first?.renderable).toBe(true);
-  });
-
-  it('returns undefined when the document has no selectable objects', () => {
-    const document = createSpatialDocument('');
-
-    expect(firstSelectableNode(document.nodes)).toBeUndefined();
-  });
 });
