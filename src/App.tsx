@@ -5,6 +5,7 @@ import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
 import { findNodeById, findNodeByLineNumber, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
 import { SceneRoot } from './scene/SceneRoot';
+import type { NavigationMode } from './scene/navigationMode';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { transactionsToDslSource } from './transactions/transactionDsl';
@@ -75,7 +76,7 @@ export default function App() {
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
   const latestRemoteBaselineRef = useRef('');
   const [appMode, setAppMode] = useState<'viewer' | 'editor'>('viewer');
-  const [navigationMode, setNavigationMode] = useState<'orbit' | 'first-person'>('orbit');
+  const [navigationMode, setNavigationMode] = useState<NavigationMode>('orbit');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [selectedLeafNodeId, setSelectedLeafNodeId] = useState<string | undefined>();
@@ -294,6 +295,7 @@ export default function App() {
       <SceneRoot
         document={document}
         navigationMode={navigationMode}
+        selectedPovNode={selectedNode}
         selectedNodeId={selectedSceneNodeId}
         onSelectNode={handleSelectNode}
       />
@@ -318,9 +320,21 @@ export default function App() {
           >
             Orbit
           </button>
+          <button
+            className="navigation-toggle"
+            type="button"
+            aria-pressed={navigationMode === 'selected-pov'}
+            disabled={!selectedNode}
+            onClick={() => setNavigationMode('selected-pov')}
+          >
+            Selected POV
+          </button>
         </div>
         {navigationMode === 'first-person' ? (
           <p>Click scene to capture mouse. Press Esc to release. Use W/A/S/D, Space, Control, and Shift.</p>
+        ) : null}
+        {navigationMode === 'selected-pov' ? (
+          <p>{selectedNode ? 'Showing the scene from the selected object perspective.' : 'Select an object to use Selected POV.'}</p>
         ) : null}
       </div>
       {appMode === 'editor' ? (

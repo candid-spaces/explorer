@@ -10,19 +10,24 @@ import { CsgPrimitive } from './CsgPrimitive';
 import { SpatialPrimitive } from './SpatialPrimitive';
 import { nodesForRoomSizing } from './roomSizing';
 import { FirstPersonNavigation } from './FirstPersonNavigation';
+import { SelectedObjectPovCamera } from './SelectedObjectPovCamera';
+import type { NavigationMode } from './navigationMode';
+import type { SpatialNode } from '../model/SpatialNode';
 
 interface SceneRootProps {
   document: SpatialDocument;
   selectedNodeId?: string;
+  selectedPovNode?: SpatialNode;
   onSelectNode?: (id: string | undefined) => void;
-  navigationMode?: 'orbit' | 'first-person';
+  navigationMode?: NavigationMode;
 }
 
-export function SceneRoot({ document: spatialDocument, selectedNodeId, onSelectNode, navigationMode = 'orbit' }: SceneRootProps) {
+export function SceneRoot({ document: spatialDocument, selectedNodeId, selectedPovNode, onSelectNode, navigationMode = 'orbit' }: SceneRootProps) {
   const roomDimensions = dimensionsFromNodes(nodesForRoomSizing(spatialDocument));
   const [isPointerLocked, setIsPointerLocked] = useState(false);
 
   const isFirstPerson = navigationMode === 'first-person';
+  const isSelectedPov = navigationMode === 'selected-pov';
   const selectionEnabled = !isFirstPerson || isPointerLocked;
 
   return (
@@ -55,7 +60,9 @@ export function SceneRoot({ document: spatialDocument, selectedNodeId, onSelectN
           <SpatialPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={selectionEnabled ? onSelectNode : undefined} />
         )
       ))}
-      {isFirstPerson ? <FirstPersonNavigation enabled onPointerLockChange={setIsPointerLocked} /> : <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI} />}
+      {isFirstPerson ? <FirstPersonNavigation enabled onPointerLockChange={setIsPointerLocked} /> : null}
+      {isSelectedPov ? <SelectedObjectPovCamera selectedNode={selectedPovNode} /> : null}
+      {!isFirstPerson && !isSelectedPov ? <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI} /> : null}
     </Canvas>
   );
 }
