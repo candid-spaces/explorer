@@ -96,7 +96,6 @@ interface DslDrawerProps {
   onChange: (source: string) => void;
   onModeChange: (mode: 'viewer' | 'editor') => void;
   onResetToRemote: () => void;
-  onToggle: () => void;
   onTransactionPublicKeyChange: (publicKey: string) => void;
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
@@ -130,7 +129,6 @@ export function DslDrawer({
   onChange,
   onModeChange,
   onResetToRemote,
-  onToggle,
   onTransactionPublicKeyChange,
   onTransactionRangeChange,
   onReloadTransactions,
@@ -156,7 +154,7 @@ export function DslDrawer({
 
       {isEditorMode && isOpen ? (
         <div className="drawer-panel">
-          <button className="drawer-close-button" type="button" aria-label="Close declarations" onClick={onToggle}>
+          <button className="drawer-close-button" type="button" aria-label="Close declarations and return to viewer mode" onClick={() => onModeChange('viewer')}>
             ×
           </button>
 

@@ -355,7 +355,6 @@ export default function App() {
         onChange={handleAuthoringSourceChange}
         onModeChange={handleModeChange}
         onResetToRemote={resetAuthoringToRemote}
-        onToggle={() => setDrawerOpen((isOpen) => !isOpen)}
         onTransactionPublicKeyChange={setTransactionPublicKey}
         onTransactionRangeChange={setTransactionRange}
         onReloadTransactions={reloadTransactions}
