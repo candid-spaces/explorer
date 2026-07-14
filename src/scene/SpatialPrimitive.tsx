@@ -78,7 +78,7 @@ export function SpatialPrimitive({ node, isSelected = false, onSelect }: Spatial
   const { position, rotation, scale } = node.transform;
   const material = materialParameters(node);
 
-  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+  function handleClick(event: ThreeEvent<MouseEvent>) {
     event.stopPropagation();
     onSelect?.(node.id);
   }
@@ -90,7 +90,7 @@ export function SpatialPrimitive({ node, isSelected = false, onSelect }: Spatial
       position={position}
       rotation={rotation}
       scale={scale}
-      onPointerDown={handlePointerDown}
+      onClick={handleClick}
       userData={{
         spatialNodeId: node.id,
         unionGroupId: node.unionGroupId,

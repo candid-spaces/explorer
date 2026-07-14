@@ -55,7 +55,7 @@ export function CsgPrimitive({ expression, isSelected = false, onSelect }: CsgPr
   }, [expression]);
   const material = materialParameters(expression.base);
 
-  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+  function handleClick(event: ThreeEvent<MouseEvent>) {
     event.stopPropagation();
     onSelect?.(expression.base.id);
   }
@@ -65,7 +65,7 @@ export function CsgPrimitive({ expression, isSelected = false, onSelect }: CsgPr
       castShadow
       receiveShadow
       geometry={geometry}
-      onPointerDown={handlePointerDown}
+      onClick={handleClick}
       userData={{ spatialNodeId: expression.base.id, csgExpressionId: expression.id }}
     >
       {isSelected ? <Edges color="#facc15" /> : null}
