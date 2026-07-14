@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createSpatialDocument } from './model/createSpatialDocument';
-import { findNodeById, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
+import {
+  findNodeById,
+  findNodePathById,
+  firstSelectableNode,
+  lineNumberForNode,
+  sceneHighlightIdForNode,
+  selectionTargetForNodeId,
+} from './selection';
 
 const OUTLET_DSL = `"Outlet/+3+4/+0+2/+1+20c":""
 "Outlet/Plate/+0+2/+0+3/+1+15c" : "color: 0xf2f2ee; roughness: 0.7; box-radius: 0.12"
@@ -49,5 +56,19 @@ describe('selectionTargetForNodeId', () => {
 
     expect(target?.id).toBe(primitive.id);
     expect(findNodeById(document.nodes, primitive.id)).toBe(target);
+  });
+
+  it('finds the first selectable renderable node in declaration order', () => {
+    const document = createSpatialDocument(OUTLET_DSL);
+    const first = firstSelectableNode(document.nodes);
+
+    expect(first?.namespacePath).toBe('Outlet/Plate/');
+    expect(first?.renderable).toBe(true);
+  });
+
+  it('returns undefined when the document has no selectable objects', () => {
+    const document = createSpatialDocument('');
+
+    expect(firstSelectableNode(document.nodes)).toBeUndefined();
   });
 });

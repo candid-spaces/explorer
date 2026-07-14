@@ -101,6 +101,8 @@ interface DslDrawerProps {
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
   onUseTransactionTip: () => void;
+  selectedNodeId?: string;
+  onSelectNode?: (id: string) => void;
 }
 
 export function DslDrawer({
@@ -133,6 +135,8 @@ export function DslDrawer({
   onTransactionRangeChange,
   onReloadTransactions,
   onUseTransactionTip,
+  selectedNodeId,
+  onSelectNode,
 }: DslDrawerProps) {
   const isEditorMode = appMode === 'editor';
 
@@ -148,9 +152,9 @@ export function DslDrawer({
           {isEditorMode ? 'Viewer mode' : 'Editor mode'}
         </button>
 
-        {isEditorMode ? (
+        {isEditorMode && isOpen ? (
           <button className="drawer-toggle" type="button" onClick={onToggle}>
-            {isOpen ? 'Close declarations' : 'Edit declarations'}
+            Close declarations
           </button>
         ) : null}
       </div>
@@ -240,7 +244,7 @@ export function DslDrawer({
             </details>
           ) : null}
 
-          <DslTreeView document={document} />
+          <DslTreeView document={document} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
         </div>
       ) : null}
     </aside>

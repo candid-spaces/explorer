@@ -28,6 +28,22 @@ function firstRenderableDescendant(node: SpatialNode): SpatialNode | undefined {
   return undefined;
 }
 
+export function firstSelectableNode(nodes: SpatialNode[]): SpatialNode | undefined {
+  for (const node of nodes) {
+    if ((node.renderable || node.csgExpressionId) && !node.csgConsumed) {
+      return node;
+    }
+
+    const child = firstSelectableNode(node.children ?? []);
+
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+}
+
 function csgBaseForTool(nodes: SpatialNode[], node: SpatialNode): SpatialNode | undefined {
   if (!node.csgConsumed || !node.csgExpressionId) {
     return undefined;

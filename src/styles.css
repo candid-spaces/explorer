@@ -269,6 +269,12 @@ button {
   background: rgb(2 6 23 / 36%);
 }
 
+.dsl-tree-row.is-selected {
+  outline: 1px solid rgb(96 165 250 / 78%);
+  background: rgb(37 99 235 / 22%);
+  box-shadow: inset 0 0 0 1px rgb(191 219 254 / 12%);
+}
+
 .dsl-tree-toggle,
 .dsl-tree-spacer {
   width: 1.45rem;
@@ -289,10 +295,20 @@ button {
 .dsl-tree-node-summary {
   display: grid;
   min-width: 0;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
   gap: 0.18rem;
   color: #cbd5e1;
   font-size: 0.8rem;
   line-height: 1.35;
+  text-align: left;
+}
+
+.dsl-tree-node-summary:hover strong,
+.dsl-tree-node-summary[aria-current='true'] strong {
+  color: #bfdbfe;
 }
 
 .dsl-tree-node-summary strong {

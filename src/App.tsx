@@ -3,7 +3,15 @@ import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rot
 import type { AxisName } from './dsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
-import { findNodeById, findNodeByLineNumber, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
+import {
+  findNodeById,
+  findNodeByLineNumber,
+  findNodePathById,
+  firstSelectableNode,
+  lineNumberForNode,
+  sceneHighlightIdForNode,
+  selectionTargetForNodeId,
+} from './selection';
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
@@ -215,6 +223,14 @@ export default function App() {
     setAuthoringSource(nextSource);
   }, []);
 
+  const handleModeChange = useCallback((mode: 'viewer' | 'editor') => {
+    setAppMode(mode);
+
+    if (mode === 'editor') {
+      setDrawerOpen(true);
+    }
+  }, []);
+
   const handleSelectNode = useCallback((id: string | undefined) => {
     if (id === undefined) {
       setSelectedNodeId(undefined);
@@ -231,6 +247,25 @@ export default function App() {
     setSelectedNodeId(targetNode?.id ?? id);
     setSelectedLineNumber(lineNumberForNode(targetNode));
   }, [document.nodes]);
+
+  useEffect(() => {
+    if (appMode !== 'editor' || selectedNode !== undefined) {
+      return;
+    }
+
+    const firstNode = firstSelectableNode(document.nodes);
+
+    if (!firstNode) {
+      return;
+    }
+
+    const targetNode = selectionTargetForNodeId(document.nodes, firstNode.id);
+
+    setSelectedLeafNodeId(firstNode.id);
+    setSelectedSceneHighlightNodeId(sceneHighlightIdForNode(document.nodes, firstNode));
+    setSelectedNodeId(targetNode?.id ?? firstNode.id);
+    setSelectedLineNumber(lineNumberForNode(targetNode));
+  }, [appMode, document.nodes, selectedNode]);
 
   const handleSelectHierarchyNode = useCallback((id: string) => {
     const targetNode = findNodeById(document.nodes, id);
@@ -338,13 +373,15 @@ export default function App() {
         remoteBaselineChanged={remoteBaselineChanged}
         authoringChangeSummary={authoringChangeSummary}
         onChange={handleAuthoringSourceChange}
-        onModeChange={setAppMode}
+        onModeChange={handleModeChange}
         onResetToRemote={resetAuthoringToRemote}
         onToggle={() => setDrawerOpen((isOpen) => !isOpen)}
         onTransactionPublicKeyChange={setTransactionPublicKey}
         onTransactionRangeChange={setTransactionRange}
         onReloadTransactions={reloadTransactions}
         onUseTransactionTip={loadTipHeight}
+        selectedNodeId={selectedNode?.id}
+        onSelectNode={handleSelectExactNode}
       />
     </main>
   );
