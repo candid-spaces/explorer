@@ -56,10 +56,13 @@ function memoToContentProperties(memo: string): string {
   return `content-kind: text; content-text-uri: ${encodeDslContentValue(memo)}`;
 }
 
-function isSecondaryPublicKeyCandidate(value: string): boolean {
+function secondaryPublicKeyCandidate(value: string): string | undefined {
   const trimmed = value.trim();
 
-  return /^[A-Za-z0-9+/]{43}=$/.test(trimmed) || /^[A-Fa-f0-9]{64}$/.test(trimmed);
+  const isBase64PublicKey = /^[A-Za-z0-9+/]{43}=$/.test(trimmed);
+  const isHexPublicKey = /^[A-Fa-f0-9]{64}$/.test(trimmed);
+
+  return isBase64PublicKey || isHexPublicKey ? trimmed : undefined;
 }
 
 function memoWithoutNodeProperty(memo: string): string {
@@ -74,7 +77,7 @@ function publicKeyFromMemo(memo: string): string | undefined {
     .split(/[;\s]+/)
     .find(Boolean);
 
-  return keyText && isSecondaryPublicKeyCandidate(keyText) ? keyText : undefined;
+  return keyText ? secondaryPublicKeyCandidate(keyText) : undefined;
 }
 
 function endpointFromNodeMemoProperty(memo: string): string | undefined {
@@ -94,8 +97,11 @@ function secondaryKeyReferenceFromInvalidDeclaration(
   memo: string,
   transactionId: string,
   primaryEndpoint = '',
+  rawDestination = path,
 ): SecondaryKeyReference | undefined {
-  const publicKey = isSecondaryPublicKeyCandidate(path) ? path : publicKeyFromMemo(memo);
+  const publicKey = secondaryPublicKeyCandidate(rawDestination)
+    ?? secondaryPublicKeyCandidate(path)
+    ?? publicKeyFromMemo(memo);
 
   if (!publicKey) {
     return undefined;
@@ -105,7 +111,7 @@ function secondaryKeyReferenceFromInvalidDeclaration(
     publicKey,
     endpoint: endpointFromNodeMemoProperty(memo) ?? primaryEndpoint,
     sourceTransactionId: transactionId,
-    memoPreview: previewMemo(`${path}: ${memo}`),
+    memoPreview: previewMemo(`${publicKey}: ${memo}`),
   };
 }
 
@@ -164,7 +170,14 @@ export function transactionsToDslSource(
     }
 
     const memo = trimTransactionMemoFiller(transaction.memo ?? '');
-    const path = trimTransactionPathFiller(transaction.to ?? '');
+    const rawDestination = transaction.to ?? '';
+    const rawDestinationPublicKey = secondaryPublicKeyCandidate(rawDestination);
+    // A Base64 public key can end with a path-filler-looking suffix like /0=.
+    // Keep that raw destination intact for secondary-key references that carry
+    // the distinctive node: endpoint memo property.
+    const path = rawDestinationPublicKey && memo.includes('node:')
+      ? rawDestinationPublicKey
+      : trimTransactionPathFiller(rawDestination);
     const id = transactionFallbackId(transaction, index);
 
     if (!path) {
@@ -180,7 +193,13 @@ export function transactionsToDslSource(
       return;
     }
 
-    const secondaryKey = secondaryKeyReferenceFromInvalidDeclaration(path, memo, id, endpoint);
+    const secondaryKey = secondaryKeyReferenceFromInvalidDeclaration(
+      path,
+      memo,
+      id,
+      endpoint,
+      rawDestination,
+    );
 
     if (secondaryKey) {
       secondaryKeys.push(secondaryKey);

@@ -205,6 +205,22 @@ describe('transactionsToDslSource', () => {
     ]);
   });
 
+  it('extracts secondary public keys from untrimmed destinations before path filler cleanup', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0=';
+    const result = transactionsToDslSource([
+      transaction('node: wss://secondary.example/ws', 6, secondaryPublicKey),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: 'wss://secondary.example/ws',
+      }),
+    ]);
+  });
+
   it('keeps content fallback for valid spatial paths with secondary-looking memo text', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
     const result = transactionsToDslSource([
