@@ -923,31 +923,6 @@ button {
   justify-items: start;
 }
 
-.navigation-toggle-group {
-  pointer-events: auto;
-  display: flex;
-  gap: 0.45rem;
-  border: 1px solid rgb(255 255 255 / 16%);
-  border-radius: 999px;
-  padding: 0.3rem;
-  background: rgb(13 17 23 / 72%);
-  box-shadow: 0 14px 45px rgb(0 0 0 / 24%);
-  backdrop-filter: blur(14px);
-}
-
-.navigation-toggle {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.55rem 0.85rem;
-  background: transparent;
-  color: #cbd5e1;
-}
-
-.navigation-toggle[aria-pressed='true'] {
-  background: rgb(37 99 235 / 82%);
-  color: #f8fafc;
-}
-
 .navigation-overlay p {
   margin: 0;
   border: 1px solid rgb(147 197 253 / 22%);
