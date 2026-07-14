@@ -75,7 +75,7 @@ export default function App() {
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
   const latestRemoteBaselineRef = useRef('');
   const [appMode, setAppMode] = useState<'viewer' | 'editor'>('viewer');
-  const [navigationMode, setNavigationMode] = useState<'orbit' | 'first-person'>('orbit');
+  const [navigationMode, setNavigationMode] = useState<'orbit' | 'object-pov'>('orbit');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [selectedLeafNodeId, setSelectedLeafNodeId] = useState<string | undefined>();
@@ -212,6 +212,12 @@ export default function App() {
   const selectedNodeCanEdit = selectedNodeLineNumber !== undefined && canEditDeclarationLine(authoringSource, selectedNodeLineNumber);
   const isInspectorVisible = appMode === 'editor' && selectedNode !== undefined;
 
+  useEffect(() => {
+    if (navigationMode === 'object-pov' && selectedNode === undefined) {
+      setNavigationMode('orbit');
+    }
+  }, [navigationMode, selectedNode]);
+
   const handleAuthoringSourceChange = useCallback((nextSource: string) => {
     setAuthoringSource(nextSource);
   }, []);
@@ -295,6 +301,7 @@ export default function App() {
         document={document}
         navigationMode={navigationMode}
         selectedNodeId={selectedSceneNodeId}
+        selectedNode={selectedNode}
         onSelectNode={handleSelectNode}
       />
       <div
@@ -305,10 +312,11 @@ export default function App() {
           <button
             className="navigation-toggle"
             type="button"
-            aria-pressed={navigationMode === 'first-person'}
-            onClick={() => setNavigationMode('first-person')}
+            aria-pressed={navigationMode === 'object-pov'}
+            disabled={selectedNode === undefined}
+            onClick={() => setNavigationMode('object-pov')}
           >
-            First Person
+            Object POV
           </button>
           <button
             className="navigation-toggle"
@@ -319,8 +327,10 @@ export default function App() {
             Orbit
           </button>
         </div>
-        {navigationMode === 'first-person' ? (
-          <p>Click scene to capture mouse. Press Esc to release. Use W/A/S/D, Space, Control, and Shift.</p>
+        {navigationMode === 'object-pov' ? (
+          <p>Viewing from selected object. Drag the scene to tilt; zoom and movement are disabled.</p>
+        ) : selectedNode === undefined ? (
+          <p>Select an object to view from its perspective.</p>
         ) : null}
       </div>
       {appMode === 'editor' ? (

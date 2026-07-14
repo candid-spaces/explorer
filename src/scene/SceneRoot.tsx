@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import type { SpatialDocument } from '../model/SpatialDocument';
@@ -9,21 +8,20 @@ import { ContentPrimitive } from './ContentPrimitive';
 import { CsgPrimitive } from './CsgPrimitive';
 import { SpatialPrimitive } from './SpatialPrimitive';
 import { nodesForRoomSizing } from './roomSizing';
-import { FirstPersonNavigation } from './FirstPersonNavigation';
+import { ObjectPovCamera } from './ObjectPovCamera';
+import type { SpatialNode } from '../model/SpatialNode';
 
 interface SceneRootProps {
   document: SpatialDocument;
   selectedNodeId?: string;
   onSelectNode?: (id: string | undefined) => void;
-  navigationMode?: 'orbit' | 'first-person';
+  navigationMode?: 'orbit' | 'object-pov';
+  selectedNode?: SpatialNode;
 }
 
-export function SceneRoot({ document: spatialDocument, selectedNodeId, onSelectNode, navigationMode = 'orbit' }: SceneRootProps) {
+export function SceneRoot({ document: spatialDocument, selectedNodeId, selectedNode, onSelectNode, navigationMode = 'orbit' }: SceneRootProps) {
   const roomDimensions = dimensionsFromNodes(nodesForRoomSizing(spatialDocument));
-  const [isPointerLocked, setIsPointerLocked] = useState(false);
-
-  const isFirstPerson = navigationMode === 'first-person';
-  const selectionEnabled = !isFirstPerson || isPointerLocked;
+  const isObjectPov = navigationMode === 'object-pov' && selectedNode !== undefined;
 
   return (
     <Canvas
@@ -31,9 +29,7 @@ export function SceneRoot({ document: spatialDocument, selectedNodeId, onSelectN
       shadows
       gl={{ antialias: true }}
       onPointerMissed={() => {
-        if (selectionEnabled) {
-          onSelectNode?.(undefined);
-        }
+        onSelectNode?.(undefined);
       }}
     >
       <color attach="background" args={['#151820']} />
@@ -45,17 +41,17 @@ export function SceneRoot({ document: spatialDocument, selectedNodeId, onSelectN
           key={expression.id}
           expression={expression}
           isSelected={expression.base.id === selectedNodeId}
-          onSelect={selectionEnabled ? onSelectNode : undefined}
+          onSelect={onSelectNode}
         />
       ))}
       {spatialDocument.renderNodes.map((node) => (
         node.content?.kind ? (
-          <ContentPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={selectionEnabled ? onSelectNode : undefined} />
+          <ContentPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={onSelectNode} />
         ) : (
-          <SpatialPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={selectionEnabled ? onSelectNode : undefined} />
+          <SpatialPrimitive key={node.id} isSelected={node.id === selectedNodeId} node={node} onSelect={onSelectNode} />
         )
       ))}
-      {isFirstPerson ? <FirstPersonNavigation enabled onPointerLockChange={setIsPointerLocked} /> : <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI} />}
+      {isObjectPov ? <ObjectPovCamera node={selectedNode} /> : <OrbitControls target={[6, 5, 4]} maxPolarAngle={Math.PI} />}
     </Canvas>
   );
 }
