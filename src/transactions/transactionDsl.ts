@@ -1,6 +1,6 @@
 import { parseDslDocument } from '../dsl/parser';
 import type { ParseDiagnostic } from '../dsl/types';
-import type { DslTransaction, RejectedTransaction } from './types';
+import type { DslTransaction, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append slash-prefixed zero/equal
 // filler to the destination path. This filler must not be stored as part of
@@ -56,6 +56,65 @@ function memoToContentProperties(memo: string): string {
   return `content-kind: text; content-text-uri: ${encodeDslContentValue(memo)}`;
 }
 
+function secondaryPublicKeyCandidate(value: string): string | undefined {
+  const trimmed = value.trim();
+
+  const isBase64PublicKey = /^[A-Za-z0-9+/]{43}=$/.test(trimmed);
+  const isHexPublicKey = /^[A-Fa-f0-9]{64}$/.test(trimmed);
+
+  return isBase64PublicKey || isHexPublicKey ? trimmed : undefined;
+}
+
+function memoWithoutNodeProperty(memo: string): string {
+  const nodeIndex = memo.indexOf('node:');
+
+  return (nodeIndex >= 0 ? memo.slice(0, nodeIndex) : memo).trim();
+}
+
+function publicKeyFromMemo(memo: string): string | undefined {
+  const keyText = memoWithoutNodeProperty(memo)
+    .replace(/^public[- ]?key\s*:\s*/i, '')
+    .split(/[;\s]+/)
+    .find(Boolean);
+
+  return keyText ? secondaryPublicKeyCandidate(keyText) : undefined;
+}
+
+function endpointFromNodeMemoProperty(memo: string): string | undefined {
+  const nodeIndex = memo.indexOf('node:');
+
+  if (nodeIndex < 0) {
+    return undefined;
+  }
+
+  const endpoint = memo.slice(nodeIndex + 'node:'.length).trim().split(';')[0]?.trim();
+
+  return endpoint || undefined;
+}
+
+function secondaryKeyReferenceFromInvalidDeclaration(
+  path: string,
+  memo: string,
+  transactionId: string,
+  primaryEndpoint = '',
+  rawDestination = path,
+): SecondaryKeyReference | undefined {
+  const publicKey = secondaryPublicKeyCandidate(rawDestination)
+    ?? secondaryPublicKeyCandidate(path)
+    ?? publicKeyFromMemo(memo);
+
+  if (!publicKey) {
+    return undefined;
+  }
+
+  return {
+    publicKey,
+    endpoint: endpointFromNodeMemoProperty(memo) ?? primaryEndpoint,
+    sourceTransactionId: transactionId,
+    memoPreview: previewMemo(`${publicKey}: ${memo}`),
+  };
+}
+
 function memoToDslProperties(path: string, memo: string): string {
   if (!memo) {
     return memo;
@@ -88,6 +147,7 @@ function parseValidDsl(source: string) {
 
 interface TransactionsToDslSourceOptions {
   publicKey?: string;
+  endpoint?: string;
 }
 
 export function transactionsToDslSource(
@@ -96,10 +156,13 @@ export function transactionsToDslSource(
 ): {
   source: string;
   rejected: RejectedTransaction[];
+  secondaryKeys: SecondaryKeyReference[];
 } {
   const accepted: string[] = [];
   const rejected: RejectedTransaction[] = [];
+  const secondaryKeys: SecondaryKeyReference[] = [];
   const publicKey = options.publicKey?.trim();
+  const endpoint = options.endpoint?.trim() ?? '';
 
   transactions.forEach((transaction, index) => {
     if (publicKey && transaction.from !== publicKey) {
@@ -107,7 +170,14 @@ export function transactionsToDslSource(
     }
 
     const memo = trimTransactionMemoFiller(transaction.memo ?? '');
-    const path = trimTransactionPathFiller(transaction.to ?? '');
+    const rawDestination = transaction.to ?? '';
+    const rawDestinationPublicKey = secondaryPublicKeyCandidate(rawDestination);
+    // A Base64 public key can end with a path-filler-looking suffix like /0=.
+    // Keep that raw destination intact for secondary-key references that carry
+    // the distinctive node: endpoint memo property.
+    const path = rawDestinationPublicKey && memo.includes('node:')
+      ? rawDestinationPublicKey
+      : trimTransactionPathFiller(rawDestination);
     const id = transactionFallbackId(transaction, index);
 
     if (!path) {
@@ -123,6 +193,19 @@ export function transactionsToDslSource(
       return;
     }
 
+    const secondaryKey = secondaryKeyReferenceFromInvalidDeclaration(
+      path,
+      memo,
+      id,
+      endpoint,
+      rawDestination,
+    );
+
+    if (secondaryKey) {
+      secondaryKeys.push(secondaryKey);
+      return;
+    }
+
     const reasons = diagnosticsToReasons(parsed.diagnostics);
     rejected.push({
       id,
@@ -134,5 +217,6 @@ export function transactionsToDslSource(
   return {
     source: accepted.join('\n'),
     rejected,
+    secondaryKeys,
   };
 }

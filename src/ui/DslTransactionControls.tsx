@@ -13,6 +13,7 @@ interface DslTransactionControlsProps {
   transactionCount: number;
   acceptedCount: number;
   rejectedCount: number;
+  secondaryKeyCount: number;
   onPublicKeyChange: (publicKey: string) => void;
   onRangeChange: (range: TransactionRange) => void;
   onReload: () => void;
@@ -40,6 +41,7 @@ export function DslTransactionControls({
   transactionCount,
   acceptedCount,
   rejectedCount,
+  secondaryKeyCount,
   onPublicKeyChange,
   onRangeChange,
   onReload,
@@ -276,7 +278,7 @@ export function DslTransactionControls({
       </details>
 
       <p className="transaction-status">
-        {transactionCount} fetched · {acceptedCount} mapped · {rejectedCount} rejected
+        {transactionCount} fetched · {acceptedCount} mapped · {secondaryKeyCount} secondary · {rejectedCount} rejected
       </p>
       {error ? <p className="transaction-error">{error}</p> : null}
       {tipError ? <p className="transaction-error">{tipError}</p> : null}

@@ -21,3 +21,10 @@ export interface RejectedTransaction {
   memoPreview: string;
   reasons: string[];
 }
+
+export interface SecondaryKeyReference {
+  publicKey: string;
+  endpoint: string;
+  sourceTransactionId: string;
+  memoPreview: string;
+}
