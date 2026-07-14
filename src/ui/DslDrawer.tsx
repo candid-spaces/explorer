@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
-import type { RejectedTransaction, TransactionRange } from '../transactions/types';
+import type { RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
 import { DslEditor } from './DslEditor';
 import { DslTransactionControls } from './DslTransactionControls';
 import { DslTreeView } from './DslTreeView';
@@ -89,6 +89,7 @@ interface DslDrawerProps {
   acceptedTransactionCount: number;
   mappedTransactionSource: string;
   rejectedTransactions: RejectedTransaction[];
+  secondaryKeyReferences: SecondaryKeyReference[];
   hasRemoteBaseline: boolean;
   hasAuthoringEdits: boolean;
   remoteBaselineChanged: boolean;
@@ -122,6 +123,7 @@ export function DslDrawer({
   acceptedTransactionCount,
   mappedTransactionSource,
   rejectedTransactions,
+  secondaryKeyReferences,
   hasRemoteBaseline,
   hasAuthoringEdits,
   remoteBaselineChanged,
@@ -175,6 +177,7 @@ export function DslDrawer({
             transactionCount={transactionCount}
             acceptedCount={acceptedTransactionCount}
             rejectedCount={rejectedTransactions.length}
+            secondaryKeyCount={secondaryKeyReferences.length}
             onPublicKeyChange={onTransactionPublicKeyChange}
             onRangeChange={onTransactionRangeChange}
             onReload={onReloadTransactions}
@@ -207,6 +210,33 @@ export function DslDrawer({
                 <small>Current remote baseline used for reset.</small>
                 <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
               </label>
+            </details>
+          ) : null}
+
+          {secondaryKeyReferences.length > 0 ? (
+            <details className="secondary-key-references" aria-label="Secondary key transaction references" open>
+              <summary>Secondary key references ({secondaryKeyReferences.length})</summary>
+              <ul>
+                {secondaryKeyReferences.map((reference) => (
+                  <li key={reference.sourceTransactionId}>
+                    <strong>{reference.publicKey}</strong>
+                    <dl>
+                      <div>
+                        <dt>Endpoint</dt>
+                        <dd>{reference.endpoint || '(none)'}</dd>
+                      </div>
+                      <div>
+                        <dt>Source transaction</dt>
+                        <dd>{reference.sourceTransactionId}</dd>
+                      </div>
+                      <div>
+                        <dt>Memo</dt>
+                        <dd>{reference.memoPreview || '(empty memo)'}</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
             </details>
           ) : null}
 

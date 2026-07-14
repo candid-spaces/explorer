@@ -160,7 +160,7 @@ export default function App() {
   }, [appMode]);
 
   const transactionDsl = useMemo(
-    () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey }),
+    () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey, endpoint: DEFAULT_TRANSACTION_ENDPOINT }),
     [transactions, transactionPublicKey],
   );
   const remoteBaselineSource = transactionDsl.source;
@@ -348,6 +348,7 @@ export default function App() {
         acceptedTransactionCount={transactionDsl.source ? transactionDsl.source.split('\n').filter(Boolean).length : 0}
         mappedTransactionSource={remoteBaselineSource}
         rejectedTransactions={transactionDsl.rejected}
+        secondaryKeyReferences={transactionDsl.secondaryKeys}
         hasRemoteBaseline={hasRemoteBaseline}
         hasAuthoringEdits={hasAuthoringEdits}
         remoteBaselineChanged={remoteBaselineChanged}
