@@ -1,6 +1,6 @@
 import { parseDslDocument } from '../dsl/parser';
 import type { ParseDiagnostic } from '../dsl/types';
-import type { DslTransaction, RejectedTransaction } from './types';
+import type { DslTransaction, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append slash-prefixed zero/equal
 // filler to the destination path. This filler must not be stored as part of
@@ -56,6 +56,59 @@ function memoToContentProperties(memo: string): string {
   return `content-kind: text; content-text-uri: ${encodeDslContentValue(memo)}`;
 }
 
+function isSecondaryPublicKeyCandidate(value: string): boolean {
+  const trimmed = value.trim();
+
+  return /^[A-Za-z0-9+/]{43}=$/.test(trimmed) || /^[A-Fa-f0-9]{64}$/.test(trimmed);
+}
+
+function memoWithoutNodeProperty(memo: string): string {
+  const nodeIndex = memo.indexOf('node:');
+
+  return (nodeIndex >= 0 ? memo.slice(0, nodeIndex) : memo).trim();
+}
+
+function publicKeyFromMemo(memo: string): string | undefined {
+  const keyText = memoWithoutNodeProperty(memo)
+    .replace(/^public[- ]?key\s*:\s*/i, '')
+    .split(/[;\s]+/)
+    .find(Boolean);
+
+  return keyText && isSecondaryPublicKeyCandidate(keyText) ? keyText : undefined;
+}
+
+function endpointFromNodeMemoProperty(memo: string): string | undefined {
+  const nodeIndex = memo.indexOf('node:');
+
+  if (nodeIndex < 0) {
+    return undefined;
+  }
+
+  const endpoint = memo.slice(nodeIndex + 'node:'.length).trim().split(';')[0]?.trim();
+
+  return endpoint || undefined;
+}
+
+function secondaryKeyReferenceFromInvalidDeclaration(
+  path: string,
+  memo: string,
+  transactionId: string,
+  primaryEndpoint = '',
+): SecondaryKeyReference | undefined {
+  const publicKey = isSecondaryPublicKeyCandidate(path) ? path : publicKeyFromMemo(memo);
+
+  if (!publicKey) {
+    return undefined;
+  }
+
+  return {
+    publicKey,
+    endpoint: endpointFromNodeMemoProperty(memo) ?? primaryEndpoint,
+    sourceTransactionId: transactionId,
+    memoPreview: previewMemo(`${path}: ${memo}`),
+  };
+}
+
 function memoToDslProperties(path: string, memo: string): string {
   if (!memo) {
     return memo;
@@ -88,6 +141,7 @@ function parseValidDsl(source: string) {
 
 interface TransactionsToDslSourceOptions {
   publicKey?: string;
+  endpoint?: string;
 }
 
 export function transactionsToDslSource(
@@ -96,10 +150,13 @@ export function transactionsToDslSource(
 ): {
   source: string;
   rejected: RejectedTransaction[];
+  secondaryKeys: SecondaryKeyReference[];
 } {
   const accepted: string[] = [];
   const rejected: RejectedTransaction[] = [];
+  const secondaryKeys: SecondaryKeyReference[] = [];
   const publicKey = options.publicKey?.trim();
+  const endpoint = options.endpoint?.trim() ?? '';
 
   transactions.forEach((transaction, index) => {
     if (publicKey && transaction.from !== publicKey) {
@@ -123,6 +180,13 @@ export function transactionsToDslSource(
       return;
     }
 
+    const secondaryKey = secondaryKeyReferenceFromInvalidDeclaration(path, memo, id, endpoint);
+
+    if (secondaryKey) {
+      secondaryKeys.push(secondaryKey);
+      return;
+    }
+
     const reasons = diagnosticsToReasons(parsed.diagnostics);
     rejected.push({
       id,
@@ -134,5 +198,6 @@ export function transactionsToDslSource(
   return {
     source: accepted.join('\n'),
     rejected,
+    secondaryKeys,
   };
 }

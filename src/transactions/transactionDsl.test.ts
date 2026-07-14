@@ -171,6 +171,51 @@ describe('transactionsToDslSource', () => {
     expect(result.rejected).toEqual([]);
   });
 
+  it('returns secondary-key references from invalid paths with node memo properties', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+    const result = transactionsToDslSource([
+      transaction(`node: wss://secondary.example/ws`, 3, secondaryPublicKey),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([
+      {
+        publicKey: secondaryPublicKey,
+        endpoint: 'wss://secondary.example/ws',
+        sourceTransactionId: `103:${secondaryPublicKey}:none:0`,
+        memoPreview: `${secondaryPublicKey}: node: wss://secondary.example/ws`,
+      },
+    ]);
+  });
+
+  it('uses the primary endpoint fallback for secondary-key references without a node memo property', () => {
+    const secondaryPublicKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    const result = transactionsToDslSource([
+      transaction(secondaryPublicKey, 4, 'secondary-key-reference'),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: 'wss://primary.example/ws',
+      }),
+    ]);
+  });
+
+  it('keeps content fallback for valid spatial paths with secondary-looking memo text', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+    const result = transactionsToDslSource([
+      transaction(secondaryPublicKey, 5, '+0+4/+0+2/+0+1'),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA%3D"');
+    expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([]);
+  });
+
   it('preserves transaction order for accepted transactions', () => {
     const result = transactionsToDslSource([
       transaction('color: red', 1, '+0+1/+0+1/+0+1'),
