@@ -3,7 +3,14 @@ import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rot
 import type { AxisName } from './dsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
-import { findNodeById, findNodeByLineNumber, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
+import {
+  findNodeById,
+  findNodeByLineNumber,
+  findNodePathById,
+  lineNumberForNode,
+  sceneHighlightIdForNode,
+  selectionTargetForNodeId,
+} from './selection';
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
@@ -215,6 +222,14 @@ export default function App() {
     setAuthoringSource(nextSource);
   }, []);
 
+  const handleModeChange = useCallback((mode: 'viewer' | 'editor') => {
+    setAppMode(mode);
+
+    if (mode === 'editor') {
+      setDrawerOpen(true);
+    }
+  }, []);
+
   const handleSelectNode = useCallback((id: string | undefined) => {
     if (id === undefined) {
       setSelectedNodeId(undefined);
@@ -338,13 +353,14 @@ export default function App() {
         remoteBaselineChanged={remoteBaselineChanged}
         authoringChangeSummary={authoringChangeSummary}
         onChange={handleAuthoringSourceChange}
-        onModeChange={setAppMode}
+        onModeChange={handleModeChange}
         onResetToRemote={resetAuthoringToRemote}
-        onToggle={() => setDrawerOpen((isOpen) => !isOpen)}
         onTransactionPublicKeyChange={setTransactionPublicKey}
         onTransactionRangeChange={setTransactionRange}
         onReloadTransactions={reloadTransactions}
         onUseTransactionTip={loadTipHeight}
+        selectedNodeId={selectedNode?.id}
+        onSelectNode={handleSelectExactNode}
       />
     </main>
   );

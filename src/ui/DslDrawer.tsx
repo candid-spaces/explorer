@@ -96,11 +96,12 @@ interface DslDrawerProps {
   onChange: (source: string) => void;
   onModeChange: (mode: 'viewer' | 'editor') => void;
   onResetToRemote: () => void;
-  onToggle: () => void;
   onTransactionPublicKeyChange: (publicKey: string) => void;
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
   onUseTransactionTip: () => void;
+  selectedNodeId?: string;
+  onSelectNode?: (id: string) => void;
 }
 
 export function DslDrawer({
@@ -128,11 +129,12 @@ export function DslDrawer({
   onChange,
   onModeChange,
   onResetToRemote,
-  onToggle,
   onTransactionPublicKeyChange,
   onTransactionRangeChange,
   onReloadTransactions,
   onUseTransactionTip,
+  selectedNodeId,
+  onSelectNode,
 }: DslDrawerProps) {
   const isEditorMode = appMode === 'editor';
 
@@ -148,15 +150,14 @@ export function DslDrawer({
           {isEditorMode ? 'Viewer mode' : 'Editor mode'}
         </button>
 
-        {isEditorMode ? (
-          <button className="drawer-toggle" type="button" onClick={onToggle}>
-            {isOpen ? 'Close declarations' : 'Edit declarations'}
-          </button>
-        ) : null}
       </div>
 
       {isEditorMode && isOpen ? (
         <div className="drawer-panel">
+          <button className="drawer-close-button" type="button" aria-label="Close declarations and return to viewer mode" onClick={() => onModeChange('viewer')}>
+            ×
+          </button>
+
           <header>
             <p className="eyebrow">Candid Spaces</p>
             <p>Compose primitive geometry in a shared coordinate space.</p>
@@ -240,7 +241,7 @@ export function DslDrawer({
             </details>
           ) : null}
 
-          <DslTreeView document={document} />
+          <DslTreeView document={document} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
         </div>
       ) : null}
     </aside>

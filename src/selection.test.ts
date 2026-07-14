@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createSpatialDocument } from './model/createSpatialDocument';
-import { findNodeById, findNodePathById, lineNumberForNode, sceneHighlightIdForNode, selectionTargetForNodeId } from './selection';
+import {
+  findNodeById,
+  findNodePathById,
+  lineNumberForNode,
+  sceneHighlightIdForNode,
+  selectionTargetForNodeId,
+} from './selection';
 
 const OUTLET_DSL = `"Outlet/+3+4/+0+2/+1+20c":""
 "Outlet/Plate/+0+2/+0+3/+1+15c" : "color: 0xf2f2ee; roughness: 0.7; box-radius: 0.12"
@@ -50,4 +56,5 @@ describe('selectionTargetForNodeId', () => {
     expect(target?.id).toBe(primitive.id);
     expect(findNodeById(document.nodes, primitive.id)).toBe(target);
   });
+
 });

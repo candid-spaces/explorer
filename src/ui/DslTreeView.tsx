@@ -4,6 +4,8 @@ import type { SpatialNode } from '../model/SpatialNode';
 
 interface DslTreeViewProps {
   document: SpatialDocument;
+  selectedNodeId?: string;
+  onSelectNode?: (id: string) => void;
 }
 
 function displayName(node: SpatialNode): string {
@@ -44,17 +46,30 @@ function geometryLabel(node: SpatialNode): string {
   return parts.join(' · ');
 }
 
-function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collapsedIds: Set<string>; onToggle: (id: string) => void }) {
+function TreeItem({
+  node,
+  collapsedIds,
+  selectedNodeId,
+  onSelectNode,
+  onToggle,
+}: {
+  node: SpatialNode;
+  collapsedIds: Set<string>;
+  selectedNodeId?: string;
+  onSelectNode?: (id: string) => void;
+  onToggle: (id: string) => void;
+}) {
   const children = node.children ?? [];
   const hasChildren = children.length > 0;
   const isCollapsed = collapsedIds.has(node.id);
+  const isSelected = selectedNodeId === node.id;
   const lineNumber = metadataValue<number>(node, 'lineNumber');
   const reference = metadataValue<string>(node, 'reference');
   const csgLabel = node.csgExpressionId ? (node.csgConsumed ? `boolean tool ${node.csgExpressionId}` : node.csgExpressionId) : undefined;
 
   return (
     <li className="dsl-tree-item">
-      <div className="dsl-tree-row">
+      <div className={`dsl-tree-row${isSelected ? ' is-selected' : ''}`}>
         {hasChildren ? (
           <button
             aria-expanded={!isCollapsed}
@@ -69,7 +84,12 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
           <span className="dsl-tree-spacer" aria-hidden="true" />
         )}
 
-        <div className="dsl-tree-node-summary">
+        <button
+          className="dsl-tree-node-summary"
+          type="button"
+          aria-current={isSelected ? 'true' : undefined}
+          onClick={() => onSelectNode?.(node.id)}
+        >
           <strong>{displayName(node)}</strong>
           <span>
             {node.renderable ? node.geometry.kind : 'group'} · {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x},{' '}
@@ -81,7 +101,7 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
               {node.box.z}); rotation: {rotationDegrees(node)}°
             </span>
           ) : null}
-        </div>
+        </button>
 
         <div className="dsl-tree-badges" aria-label="Spatial node metadata">
           {lineNumber ? <em>line {lineNumber}</em> : null}
@@ -96,7 +116,14 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
       {hasChildren && !isCollapsed ? (
         <ul className="dsl-tree-children">
           {children.map((child) => (
-            <TreeItem key={child.id} node={child} collapsedIds={collapsedIds} onToggle={onToggle} />
+            <TreeItem
+              key={child.id}
+              node={child}
+              collapsedIds={collapsedIds}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={onSelectNode}
+              onToggle={onToggle}
+            />
           ))}
         </ul>
       ) : null}
@@ -104,7 +131,7 @@ function TreeItem({ node, collapsedIds, onToggle }: { node: SpatialNode; collaps
   );
 }
 
-export function DslTreeView({ document }: DslTreeViewProps) {
+export function DslTreeView({ document, selectedNodeId, onSelectNode }: DslTreeViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const nodeIds = useMemo(() => sortedTreeIds(document.nodes), [document.nodes]);
   const hasCollapsibleNodes = useMemo(() => hasNestedNodes(document.nodes), [document.nodes]);
@@ -172,7 +199,14 @@ export function DslTreeView({ document }: DslTreeViewProps) {
 
           <ul className="dsl-tree-root">
             {document.nodes.map((node) => (
-              <TreeItem key={node.id} node={node} collapsedIds={collapsedIds} onToggle={toggleNode} />
+              <TreeItem
+                key={node.id}
+                node={node}
+                collapsedIds={collapsedIds}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={onSelectNode}
+                onToggle={toggleNode}
+              />
             ))}
           </ul>
         </>
