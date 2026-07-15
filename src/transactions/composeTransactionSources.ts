@@ -1,7 +1,7 @@
 import { parseDslDeclaration, parseDslDocument } from '../dsl/parser';
 import { canonicalNamespacePath } from '../dsl/pathParser';
 
-export type TransactionSourceNamespacePolicy = 'append' | 'namespace-conflicts' | 'always-namespace';
+export type TransactionSourceNamespacePolicy = 'append' | 'namespace-conflicts' | 'namespace-declarations' | 'always-namespace';
 
 export interface SecondaryTransactionSourceDeclaration {
   source: string;
@@ -49,7 +49,7 @@ function primaryDeclarationNamespaces(primaryDslSource: string): Set<string> {
   return namespaces;
 }
 
-function lineNamespacePath(line: string): string | undefined {
+function declarationOnlyNamespacePath(line: string): string | undefined {
   const parsed = parseDslDeclaration(line);
 
   if (!parsed.ok || !parsed.value?.declarationOnly || parsed.value.namespace.length === 0) {
@@ -73,8 +73,13 @@ function shouldNamespaceStream(
   }
 
   return lines.some((line) => {
-    const namespace = lineNamespacePath(line);
-    return namespace !== undefined && primaryNamespaces.has(namespace);
+    const namespace = declarationOnlyNamespacePath(line);
+
+    if (namespace === undefined) {
+      return false;
+    }
+
+    return policy === 'namespace-declarations' || primaryNamespaces.has(namespace);
   });
 }
 
@@ -108,7 +113,7 @@ export function composeTransactionSources(
     const cursor = clampCursor(stream.playbackCursor ?? options.playbackCursor, lines.length);
     const visibleLines = lines.slice(0, cursor);
     const namespace = stableOverlayNamespace(streamIndex);
-    const namespaced = shouldNamespaceStream(visibleLines, primaryNamespaces, options.namespacePolicy ?? 'namespace-conflicts');
+    const namespaced = shouldNamespaceStream(visibleLines, primaryNamespaces, options.namespacePolicy ?? 'namespace-declarations');
 
     return namespaced ? visibleLines.map((line) => namespaceDeclarationLine(line, namespace)) : visibleLines;
   });

@@ -12,7 +12,7 @@ describe('composeTransactionSources', () => {
     expect(result).toBe(`${primary}\n"+1+1/+0+1/+0+1" : "ref: Table/"`);
   });
 
-  it('namespaces conflicting secondary namespace declarations by deterministic stream order', () => {
+  it('namespaces secondary namespace declarations by deterministic stream order', () => {
     const result = composeTransactionSources(primary, [
       { declarations: '"Table/" : "color: red"\n"Table/Leaf/+0+1/+0+1/+0+1" : ""' },
       { declarations: '"Table/" : "color: blue"' },
@@ -24,6 +24,27 @@ describe('composeTransactionSources', () => {
       '"Overlay01/Table/Leaf/+0+1/+0+1/+0+1" : ""',
       '"Overlay02/Table/" : "color: blue"',
     ].join('\n'));
+  });
+
+
+  it('does not let secondary streams define new namespaces in the primary environment', () => {
+    const result = composeTransactionSources(primary, [
+      { declarations: '"Lamp/" : "color: yellow"\n"Lamp/+0+1/+0+1/+0+1" : ""' },
+    ]);
+
+    expect(result).toBe([
+      primary,
+      '"Overlay01/Lamp/" : "color: yellow"',
+      '"Overlay01/Lamp/+0+1/+0+1/+0+1" : ""',
+    ].join('\n'));
+  });
+
+  it('keeps non-declaration secondary lines in the primary namespace environment as consumers', () => {
+    const result = composeTransactionSources(primary, [
+      { declarations: '"Table/Leaf/+0+1/+0+1/+0+1" : "color: green"' },
+    ]);
+
+    expect(result).toBe(`${primary}\n"Table/Leaf/+0+1/+0+1/+0+1" : "color: green"`);
   });
 
   it('supports playback cursors per secondary stream', () => {

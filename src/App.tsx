@@ -389,7 +389,7 @@ export default function App() {
     [authoringSource, remoteBaselineAppliedToEditor],
   );
   const renderedSource = useMemo(() => composeTransactionSources(authoringSource, secondaryTransactionOverlayStreams, {
-    namespacePolicy: 'namespace-conflicts',
+    namespacePolicy: 'namespace-declarations',
   }), [authoringSource, secondaryTransactionOverlayStreams]);
   const document = useMemo(() => createSpatialDocument(renderedSource), [renderedSource]);
   const selectedNode = useMemo(
