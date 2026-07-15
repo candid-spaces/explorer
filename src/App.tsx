@@ -88,10 +88,6 @@ function uniqueSecondaryReferences(references: readonly SecondaryKeyReference[])
   return [...uniqueReferences.values()];
 }
 
-function transactionKey(transaction: DslTransaction): string {
-  return [transaction.time, transaction.series ?? 'none', transaction.nonce ?? 'none', transaction.from ?? '', transaction.to, transaction.memo].join(':');
-}
-
 function normalizeActiveSecondaryStream(
   stream: ActiveSecondaryTransactions | undefined,
   reference: SecondaryKeyReference,
@@ -121,11 +117,10 @@ function mergeStreamTransactions(
   currentTransactions: readonly DslTransaction[],
   nextTransactions: readonly DslTransaction[],
 ): DslTransaction[] {
-  const merged = new Map(currentTransactions.map((transaction) => [transactionKey(transaction), transaction]));
-
-  nextTransactions.forEach((transaction) => merged.set(transactionKey(transaction), transaction));
-
-  return [...merged.values()].sort((a, b) => a.time - b.time);
+  return [...currentTransactions, ...nextTransactions]
+    .map((transaction, arrivalIndex) => ({ transaction, arrivalIndex }))
+    .sort((a, b) => (a.transaction.time - b.transaction.time) || (a.arrivalIndex - b.arrivalIndex))
+    .map(({ transaction }) => transaction);
 }
 
 function summarizeLineChanges(originalSource: string, nextSource: string): LineChangeSummary {
@@ -350,6 +345,7 @@ export default function App() {
         publicKey,
         endpoint,
       }).source,
+      transactions: secondaryTransactions.slice(0, playbackIndex),
     })), [secondaryTransactionStreams]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;

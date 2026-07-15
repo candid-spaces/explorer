@@ -46,4 +46,23 @@ export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEn
   historyLoading?: boolean;
 }
 
+export type Vector3Tuple = [number, number, number];
+
+export interface SecondaryAnimationEvent {
+  kind: 'secondary-animation';
+  targetPath: string;
+  targetObjectId?: string;
+  position?: Vector3Tuple;
+  size?: Vector3Tuple;
+  rotation?: Vector3Tuple;
+  timestamp: number;
+  sourceTransactionId: string;
+  transactionIndex: number;
+}
+
+export interface SecondarySceneReplayCursor {
+  timestamp?: number;
+  transactionIndex?: number;
+}
+
 export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;

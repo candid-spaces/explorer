@@ -1,5 +1,7 @@
 import { parseDslDeclaration, parseDslDocument } from '../dsl/parser';
 import { canonicalNamespacePath } from '../dsl/pathParser';
+import { applySecondaryTransactionsToSceneSource } from './secondaryTransactionDsl';
+import type { DslTransaction, SecondarySceneReplayCursor } from './types';
 
 export type TransactionSourceNamespacePolicy = 'append' | 'consume-primary-namespaces';
 
@@ -11,10 +13,13 @@ export interface ComposeTransactionSecondaryStream {
   declarations: readonly SecondaryTransactionSourceDeclaration[] | string;
   id?: string;
   playbackCursor?: number;
+  transactions?: readonly DslTransaction[];
+  replayCursor?: SecondarySceneReplayCursor;
 }
 
 export interface ComposeTransactionSourcesOptions {
   playbackCursor?: number;
+  replayCursor?: SecondarySceneReplayCursor;
   namespacePolicy?: TransactionSourceNamespacePolicy;
 }
 
@@ -73,8 +78,11 @@ export function composeTransactionSources(
   secondaryStreams: readonly ComposeTransactionSecondaryStream[],
   options: ComposeTransactionSourcesOptions = {},
 ): string {
-  const primary = primaryDslSource;
-  const primaryNamespaces = primaryDeclarationNamespaces(primaryDslSource);
+  const animationTransactions = secondaryStreams.flatMap((stream) => stream.transactions ?? []);
+  const primary = animationTransactions.length > 0
+    ? applySecondaryTransactionsToSceneSource(primaryDslSource, animationTransactions, options.replayCursor)
+    : primaryDslSource;
+  const primaryNamespaces = primaryDeclarationNamespaces(primary);
   const policy = options.namespacePolicy ?? 'consume-primary-namespaces';
   const composedSecondarySources = secondaryStreams.flatMap((stream) => {
     const lines = declarationSources(stream.declarations);
