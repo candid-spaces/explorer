@@ -14,8 +14,9 @@ import {
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
+import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import type { TransactionRange } from './transactions/types';
+import type { DslTransaction, SecondaryKeyReference, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
 import { SelectedNodeInspector } from './ui/SelectedNodeInspector';
@@ -43,6 +44,11 @@ const DEFAULT_TRANSACTION_RANGE: TransactionRange = {
 
 const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 
+interface ActiveSecondaryTransactions {
+  reference: SecondaryKeyReference;
+  transactions: DslTransaction[];
+}
+
 interface LineChangeSummary {
   added: number;
   removed: number;
@@ -58,6 +64,24 @@ function countLines(source: string): Map<string, number> {
     .forEach((line) => counts.set(line, (counts.get(line) ?? 0) + 1));
 
   return counts;
+}
+
+function streamKeyForSecondaryReference(reference: Pick<SecondaryKeyReference, 'publicKey' | 'endpoint'>): string {
+  return `${reference.publicKey}@@${reference.endpoint}`;
+}
+
+function uniqueSecondaryReferences(references: readonly SecondaryKeyReference[]): SecondaryKeyReference[] {
+  const uniqueReferences = new Map<string, SecondaryKeyReference>();
+
+  references.forEach((reference) => {
+    const key = streamKeyForSecondaryReference(reference);
+
+    if (!uniqueReferences.has(key)) {
+      uniqueReferences.set(key, reference);
+    }
+  });
+
+  return [...uniqueReferences.values()];
 }
 
 function summarizeLineChanges(originalSource: string, nextSource: string): LineChangeSummary {
@@ -96,6 +120,8 @@ export default function App() {
   const [tipHeight, setTipHeight] = useState<number | undefined>();
   const [tipLoading, setTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | undefined>();
+  const [activeSecondaryTransactions, setActiveSecondaryTransactions] = useState<Record<string, ActiveSecondaryTransactions>>({});
+  const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
   const transactionPublicKeyShareUrl = useMemo(() => {
     if (typeof window === 'undefined') {
       return undefined;
@@ -163,7 +189,73 @@ export default function App() {
     () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey, endpoint: DEFAULT_TRANSACTION_ENDPOINT }),
     [transactions, transactionPublicKey],
   );
-  const remoteBaselineSource = transactionDsl.source;
+  const primaryRemoteBaselineSource = transactionDsl.source;
+  const secondaryKeyReferences = useMemo(
+    () => uniqueSecondaryReferences(transactionDsl.secondaryKeys),
+    [transactionDsl.secondaryKeys],
+  );
+
+  useEffect(() => {
+    setSecondaryTransactionError(undefined);
+
+    if (secondaryKeyReferences.length === 0) {
+      setActiveSecondaryTransactions({});
+      return undefined;
+    }
+
+    const controllers = secondaryKeyReferences.map((reference) => {
+      const streamKey = streamKeyForSecondaryReference(reference);
+      const controller = new AbortController();
+
+      setActiveSecondaryTransactions((streams) => ({
+        ...streams,
+        [streamKey]: streams[streamKey] ?? { reference, transactions: [] },
+      }));
+
+      const subscription = subscribePublicKeyTransactions({
+        endpoint: reference.endpoint,
+        publicKey: reference.publicKey,
+        signal: controller.signal,
+        onTransaction: (transaction) => {
+          setActiveSecondaryTransactions((streams) => {
+            const current = streams[streamKey] ?? { reference, transactions: [] };
+
+            return {
+              ...streams,
+              [streamKey]: {
+                reference,
+                transactions: [...current.transactions, transaction],
+              },
+            };
+          });
+        },
+        onError: (error) => setSecondaryTransactionError(error.message),
+      });
+
+      return { controller, subscription };
+    });
+
+    setActiveSecondaryTransactions((streams) => {
+      const activeStreamKeys = new Set(secondaryKeyReferences.map(streamKeyForSecondaryReference));
+      return Object.fromEntries(Object.entries(streams).filter(([key]) => activeStreamKeys.has(key)));
+    });
+
+    return () => {
+      controllers.forEach(({ controller, subscription }) => {
+        controller.abort();
+        subscription.close();
+      });
+    };
+  }, [secondaryKeyReferences]);
+
+  const secondaryRealtimeSource = useMemo(() => Object.values(activeSecondaryTransactions)
+    .map(({ reference, transactions: secondaryTransactions }) => transactionsToDslSource(secondaryTransactions, {
+      publicKey: reference.publicKey,
+      endpoint: reference.endpoint,
+    }).source)
+    .filter(Boolean)
+    .join('\n'), [activeSecondaryTransactions]);
+  const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
     ? authoringSource !== remoteBaselineAppliedToEditor
@@ -199,7 +291,8 @@ export default function App() {
     () => summarizeLineChanges(remoteBaselineAppliedToEditor, authoringSource),
     [authoringSource, remoteBaselineAppliedToEditor],
   );
-  const document = useMemo(() => createSpatialDocument(authoringSource), [authoringSource]);
+  const renderedSource = useMemo(() => [authoringSource, secondaryRealtimeSource].filter((source) => source.trim().length > 0).join('\n'), [authoringSource, secondaryRealtimeSource]);
+  const document = useMemo(() => createSpatialDocument(renderedSource), [renderedSource]);
   const selectedNode = useMemo(
     () => findNodeById(document.nodes, selectedNodeId) ?? findNodeByLineNumber(document.nodes, selectedLineNumber),
     [document.nodes, selectedLineNumber, selectedNodeId],
@@ -340,7 +433,7 @@ export default function App() {
         transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}
         transactionsLoading={transactionsLoading}
-        transactionError={transactionError}
+        transactionError={transactionError ?? secondaryTransactionError}
         tipHeight={tipHeight}
         tipLoading={tipLoading}
         tipError={tipError}
@@ -348,7 +441,7 @@ export default function App() {
         acceptedTransactionCount={transactionDsl.source ? transactionDsl.source.split('\n').filter(Boolean).length : 0}
         mappedTransactionSource={remoteBaselineSource}
         rejectedTransactions={transactionDsl.rejected}
-        secondaryKeyReferences={transactionDsl.secondaryKeys}
+        secondaryKeyReferences={secondaryKeyReferences}
         hasRemoteBaseline={hasRemoteBaseline}
         hasAuthoringEdits={hasAuthoringEdits}
         remoteBaselineChanged={remoteBaselineChanged}

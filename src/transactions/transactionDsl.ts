@@ -1,6 +1,6 @@
 import { parseDslDocument } from '../dsl/parser';
 import type { ParseDiagnostic } from '../dsl/types';
-import type { DslTransaction, RejectedTransaction, SecondaryKeyReference } from './types';
+import type { DslTransaction, PrimaryHistoricalBaselineDsl, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append slash-prefixed zero/equal
 // filler to the destination path. This filler must not be stored as part of
@@ -153,11 +153,7 @@ interface TransactionsToDslSourceOptions {
 export function transactionsToDslSource(
   transactions: readonly DslTransaction[],
   options: TransactionsToDslSourceOptions = {},
-): {
-  source: string;
-  rejected: RejectedTransaction[];
-  secondaryKeys: SecondaryKeyReference[];
-} {
+): PrimaryHistoricalBaselineDsl & { secondaryKeys: SecondaryKeyReference[] } {
   const accepted: string[] = [];
   const rejected: RejectedTransaction[] = [];
   const secondaryKeys: SecondaryKeyReference[] = [];
