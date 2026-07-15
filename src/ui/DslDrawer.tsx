@@ -125,6 +125,9 @@ interface DslDrawerProps {
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
   onUseTransactionTip: () => void;
+  onSecondaryReplay: (publicKey: string, endpoint: string) => void;
+  onSecondaryPlaybackToggle: (publicKey: string, endpoint: string) => void;
+  onLoadSecondaryHistory: (publicKey: string, endpoint: string) => void;
   selectedNodeId?: string;
   onSelectNode?: (id: string) => void;
 }
@@ -160,6 +163,9 @@ export function DslDrawer({
   onTransactionRangeChange,
   onReloadTransactions,
   onUseTransactionTip,
+  onSecondaryReplay,
+  onSecondaryPlaybackToggle,
+  onLoadSecondaryHistory,
   selectedNodeId,
   onSelectNode,
 }: DslDrawerProps) {
@@ -277,6 +283,18 @@ export function DslDrawer({
                       {streams.map((stream) => (
                         <li key={`${stream.publicKey}-${stream.endpoint}`}>
                           <span className="secondary-transaction-stream-endpoint">{stream.endpoint || '(primary endpoint)'}</span>
+                          <div className="secondary-transaction-stream-actions">
+                            <button type="button" disabled={stream.transactions.length === 0} onClick={() => onSecondaryReplay(stream.publicKey, stream.endpoint)}>
+                              Replay
+                            </button>
+                            <button type="button" disabled={stream.transactions.length === 0 || (!stream.replaying && stream.playbackIndex >= stream.transactions.length)} onClick={() => onSecondaryPlaybackToggle(stream.publicKey, stream.endpoint)}>
+                              {stream.replaying ? 'Pause' : 'Play'}
+                            </button>
+                            <button type="button" disabled={stream.historyLoading} onClick={() => onLoadSecondaryHistory(stream.publicKey, stream.endpoint)}>
+                              {stream.historyLoading ? 'Loading history…' : 'Load historical range'}
+                            </button>
+                            <span>{stream.playbackIndex}/{stream.transactions.length} rendered</span>
+                          </div>
                           {stream.transactions.length > 0 ? (
                             <ol>
                               {stream.transactions.map((transaction, index) => (

@@ -41,6 +41,9 @@ export interface DiscoveredSecondaryPublicKeyReference extends TransactionPublic
 
 export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEndpoint {
   transactions: DslTransaction[];
+  playbackIndex: number;
+  replaying: boolean;
+  historyLoading?: boolean;
 }
 
 export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;

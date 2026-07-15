@@ -12,7 +12,7 @@ import {
   selectionTargetForNodeId,
 } from './selection';
 import { SceneRoot } from './scene/SceneRoot';
-import { fetchTipHeight } from './transactions/publicKeyTransactions';
+import { fetchPublicKeyTransactions, fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { transactionsToDslSource } from './transactions/transactionDsl';
@@ -47,6 +47,9 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 interface ActiveSecondaryTransactions {
   reference: SecondaryKeyReference;
   transactions: DslTransaction[];
+  playbackIndex: number;
+  replaying: boolean;
+  historyLoading?: boolean;
 }
 
 interface LineChangeSummary {
@@ -82,6 +85,37 @@ function uniqueSecondaryReferences(references: readonly SecondaryKeyReference[])
   });
 
   return [...uniqueReferences.values()];
+}
+
+function transactionKey(transaction: DslTransaction): string {
+  return [transaction.time, transaction.series ?? 'none', transaction.nonce ?? 'none', transaction.from ?? '', transaction.to, transaction.memo].join(':');
+}
+
+function normalizeActiveSecondaryStream(
+  stream: ActiveSecondaryTransactions | undefined,
+  reference: SecondaryKeyReference,
+): ActiveSecondaryTransactions {
+  const transactions = stream?.transactions ?? [];
+  const playbackIndex = Math.min(stream?.playbackIndex ?? transactions.length, transactions.length);
+
+  return {
+    reference,
+    transactions,
+    playbackIndex,
+    replaying: stream?.replaying === true && playbackIndex < transactions.length,
+    historyLoading: stream?.historyLoading,
+  };
+}
+
+function mergeStreamTransactions(
+  currentTransactions: readonly DslTransaction[],
+  nextTransactions: readonly DslTransaction[],
+): DslTransaction[] {
+  const merged = new Map(currentTransactions.map((transaction) => [transactionKey(transaction), transaction]));
+
+  nextTransactions.forEach((transaction) => merged.set(transactionKey(transaction), transaction));
+
+  return [...merged.values()].sort((a, b) => a.time - b.time);
 }
 
 function summarizeLineChanges(originalSource: string, nextSource: string): LineChangeSummary {
@@ -120,7 +154,7 @@ export default function App() {
   const [tipHeight, setTipHeight] = useState<number | undefined>();
   const [tipLoading, setTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | undefined>();
-  const [activeSecondaryTransactions, setActiveSecondaryTransactions] = useState<Record<string, ActiveSecondaryTransactions>>({});
+  const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('dsl-active-secondary-transaction-streams', {});
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
   const transactionPublicKeyShareUrl = useMemo(() => {
     if (typeof window === 'undefined') {
@@ -209,7 +243,7 @@ export default function App() {
 
       setActiveSecondaryTransactions((streams) => ({
         ...streams,
-        [streamKey]: streams[streamKey] ?? { reference, transactions: [] },
+        [streamKey]: normalizeActiveSecondaryStream(streams[streamKey], reference),
       }));
 
       const subscription = subscribePublicKeyTransactions({
@@ -218,13 +252,16 @@ export default function App() {
         signal: controller.signal,
         onTransaction: (transaction) => {
           setActiveSecondaryTransactions((streams) => {
-            const current = streams[streamKey] ?? { reference, transactions: [] };
+            const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
+            const transactions = mergeStreamTransactions(current.transactions, [transaction]);
 
             return {
               ...streams,
               [streamKey]: {
+                ...current,
                 reference,
-                transactions: [...current.transactions, transaction],
+                transactions,
+                playbackIndex: current.replaying ? current.playbackIndex : transactions.length,
               },
             };
           });
@@ -248,15 +285,44 @@ export default function App() {
     };
   }, [secondaryKeyReferences]);
 
+  useEffect(() => {
+    const hasReplayingStreams = Object.values(activeSecondaryTransactions).some((stream) => stream.replaying);
+
+    if (!hasReplayingStreams) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      setActiveSecondaryTransactions((streams) => Object.fromEntries(Object.entries(streams).map(([streamKey, stream]) => {
+        if (!stream.replaying) {
+          return [streamKey, stream];
+        }
+
+        const playbackIndex = Math.min(stream.playbackIndex + 1, stream.transactions.length);
+
+        return [streamKey, {
+          ...stream,
+          playbackIndex,
+          replaying: playbackIndex < stream.transactions.length,
+        }];
+      })));
+    }, 800);
+
+    return () => window.clearInterval(interval);
+  }, [activeSecondaryTransactions, setActiveSecondaryTransactions]);
+
   const secondaryTransactionStreams = useMemo<ActiveSecondaryTransactionStream[]>(() => Object.values(activeSecondaryTransactions)
-    .map(({ reference, transactions: secondaryTransactions }) => ({
+    .map(({ reference, transactions: secondaryTransactions, playbackIndex, replaying, historyLoading }) => ({
       publicKey: reference.publicKey,
       endpoint: reference.endpoint,
       transactions: secondaryTransactions,
+      playbackIndex,
+      replaying,
+      historyLoading,
     })), [activeSecondaryTransactions]);
 
   const secondaryRealtimeSource = useMemo(() => secondaryTransactionStreams
-    .map(({ publicKey, endpoint, transactions: secondaryTransactions }) => transactionsToDslSource(secondaryTransactions, {
+    .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => transactionsToDslSource(secondaryTransactions.slice(0, playbackIndex), {
       publicKey,
       endpoint,
     }).source)
@@ -317,6 +383,92 @@ export default function App() {
   const selectedSceneNodeId = selectedSceneHighlightNodeId ?? sceneHighlightIdForNode(document.nodes, selectedNode) ?? selectedNodeId;
   const selectedNodeCanEdit = selectedNodeLineNumber !== undefined && canEditDeclarationLine(authoringSource, selectedNodeLineNumber);
   const isInspectorVisible = appMode === 'editor' && selectedNode !== undefined;
+
+
+  const handleSecondaryReplay = useCallback((publicKey: string, endpoint: string) => {
+    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+
+    setActiveSecondaryTransactions((streams) => {
+      const stream = streams[streamKey];
+
+      if (!stream) {
+        return streams;
+      }
+
+      return {
+        ...streams,
+        [streamKey]: { ...stream, playbackIndex: 0, replaying: stream.transactions.length > 0 },
+      };
+    });
+  }, [setActiveSecondaryTransactions]);
+
+  const handleSecondaryPlaybackToggle = useCallback((publicKey: string, endpoint: string) => {
+    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+
+    setActiveSecondaryTransactions((streams) => {
+      const stream = streams[streamKey];
+
+      if (!stream) {
+        return streams;
+      }
+
+      return {
+        ...streams,
+        [streamKey]: {
+          ...stream,
+          replaying: !stream.replaying && stream.playbackIndex < stream.transactions.length,
+        },
+      };
+    });
+  }, [setActiveSecondaryTransactions]);
+
+  const handleLoadSecondaryHistory = useCallback((publicKey: string, endpoint: string) => {
+    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+    const controller = new AbortController();
+
+    setActiveSecondaryTransactions((streams) => {
+      const stream = streams[streamKey];
+
+      return stream ? { ...streams, [streamKey]: { ...stream, historyLoading: true } } : streams;
+    });
+
+    fetchPublicKeyTransactions({ endpoint, publicKey, range: transactionRange, signal: controller.signal })
+      .then((historicalTransactions) => {
+        setActiveSecondaryTransactions((streams) => {
+          const stream = streams[streamKey];
+
+          if (!stream) {
+            return streams;
+          }
+
+          const transactions = mergeStreamTransactions(stream.transactions, historicalTransactions);
+
+          return {
+            ...streams,
+            [streamKey]: {
+              ...stream,
+              transactions,
+              playbackIndex: stream.replaying ? stream.playbackIndex : transactions.length,
+              historyLoading: false,
+            },
+          };
+        });
+      })
+      .catch((caught: unknown) => {
+        if (caught instanceof DOMException && caught.name === 'AbortError') {
+          return;
+        }
+
+        setSecondaryTransactionError(caught instanceof Error ? caught.message : 'Unable to load secondary transaction history.');
+        setActiveSecondaryTransactions((streams) => {
+          const stream = streams[streamKey];
+
+          return stream ? { ...streams, [streamKey]: { ...stream, historyLoading: false } } : streams;
+        });
+      });
+
+    return () => controller.abort();
+  }, [setActiveSecondaryTransactions, transactionRange]);
 
   const handleAuthoringSourceChange = useCallback((nextSource: string) => {
     setAuthoringSource(nextSource);
@@ -461,6 +613,9 @@ export default function App() {
         onTransactionRangeChange={setTransactionRange}
         onReloadTransactions={reloadTransactions}
         onUseTransactionTip={loadTipHeight}
+        onSecondaryReplay={handleSecondaryReplay}
+        onSecondaryPlaybackToggle={handleSecondaryPlaybackToggle}
+        onLoadSecondaryHistory={handleLoadSecondaryHistory}
         selectedNodeId={selectedNode?.id}
         onSelectNode={handleSelectExactNode}
       />
