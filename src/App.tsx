@@ -12,7 +12,7 @@ import {
   selectionTargetForNodeId,
 } from './selection';
 import { SceneRoot } from './scene/SceneRoot';
-import { fetchPublicKeyTransactions, fetchTipHeight } from './transactions/publicKeyTransactions';
+import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { transactionsToDslSource } from './transactions/transactionDsl';
@@ -105,6 +105,15 @@ function normalizeActiveSecondaryStream(
     replaying: stream?.replaying === true && playbackIndex < transactions.length,
     historyLoading: stream?.historyLoading,
   };
+}
+
+function endpointValidationError(endpoint: string): string | undefined {
+  try {
+    new URL(normalizeEndpoint(endpoint));
+    return undefined;
+  } catch (caught) {
+    return caught instanceof Error ? caught.message : 'Endpoint is not a valid WebSocket URL.';
+  }
 }
 
 function mergeStreamTransactions(
@@ -237,39 +246,51 @@ export default function App() {
       return undefined;
     }
 
-    const controllers = secondaryKeyReferences.map((reference) => {
+    const controllers = secondaryKeyReferences.flatMap((reference) => {
       const streamKey = streamKeyForSecondaryReference(reference);
       const controller = new AbortController();
+      const validationError = endpointValidationError(reference.endpoint);
 
       setActiveSecondaryTransactions((streams) => ({
         ...streams,
         [streamKey]: normalizeActiveSecondaryStream(streams[streamKey], reference),
       }));
 
-      const subscription = subscribePublicKeyTransactions({
-        endpoint: reference.endpoint,
-        publicKey: reference.publicKey,
-        signal: controller.signal,
-        onTransaction: (transaction) => {
-          setActiveSecondaryTransactions((streams) => {
-            const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-            const transactions = mergeStreamTransactions(current.transactions, [transaction]);
+      if (validationError) {
+        setSecondaryTransactionError(`Invalid secondary endpoint for ${reference.publicKey}: ${validationError}`);
+        return [];
+      }
 
-            return {
-              ...streams,
-              [streamKey]: {
-                ...current,
-                reference,
-                transactions,
-                playbackIndex: current.replaying ? current.playbackIndex : transactions.length,
-              },
-            };
-          });
-        },
-        onError: (error) => setSecondaryTransactionError(error.message),
-      });
+      try {
+        const subscription = subscribePublicKeyTransactions({
+          endpoint: reference.endpoint,
+          publicKey: reference.publicKey,
+          signal: controller.signal,
+          onTransaction: (transaction) => {
+            setActiveSecondaryTransactions((streams) => {
+              const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
+              const transactions = mergeStreamTransactions(current.transactions, [transaction]);
 
-      return { controller, subscription };
+              return {
+                ...streams,
+                [streamKey]: {
+                  ...current,
+                  reference,
+                  transactions,
+                  playbackIndex: current.replaying ? current.playbackIndex : transactions.length,
+                },
+              };
+            });
+          },
+          onError: (error) => setSecondaryTransactionError(error.message),
+        });
+
+        return [{ controller, subscription }];
+      } catch (caught) {
+        controller.abort();
+        setSecondaryTransactionError(caught instanceof Error ? caught.message : 'Unable to subscribe to secondary transactions.');
+        return [];
+      }
     });
 
     setActiveSecondaryTransactions((streams) => {
