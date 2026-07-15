@@ -45,6 +45,16 @@ describe('composeTransactionSources', () => {
     expect(result).toBe(`${primary}\n"+2+1/+0+1/+0+1" : "color: purple"`);
   });
 
+
+  it('preserves primary source leading blank lines for parser line numbers', () => {
+    const primaryWithLeadingBlank = `\n${primary}`;
+    const result = composeTransactionSources(primaryWithLeadingBlank, [
+      { declarations: '"+2+1/+0+1/+0+1" : "color: purple"' },
+    ]);
+
+    expect(result).toBe(`${primaryWithLeadingBlank}\n"+2+1/+0+1/+0+1" : "color: purple"`);
+  });
+
   it('supports playback cursors per secondary stream', () => {
     const result = composeTransactionSources('', [
       { declarations: '"+0+1/+0+1/+0+1" : ""\n"+1+1/+0+1/+0+1" : ""', playbackCursor: 1 },

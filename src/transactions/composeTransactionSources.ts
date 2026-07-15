@@ -73,7 +73,7 @@ export function composeTransactionSources(
   secondaryStreams: readonly ComposeTransactionSecondaryStream[],
   options: ComposeTransactionSourcesOptions = {},
 ): string {
-  const primary = primaryDslSource.trim();
+  const primary = primaryDslSource;
   const primaryNamespaces = primaryDeclarationNamespaces(primaryDslSource);
   const policy = options.namespacePolicy ?? 'consume-primary-namespaces';
   const composedSecondarySources = secondaryStreams.flatMap((stream) => {
