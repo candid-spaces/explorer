@@ -7,7 +7,7 @@ export interface PublicKeyTransactionRequest {
   signal?: AbortSignal;
 }
 
-function normalizeEndpoint(endpoint: string): string {
+export function normalizeEndpoint(endpoint: string): string {
   const trimmed = endpoint.trim();
 
   if (!trimmed) {
@@ -92,7 +92,7 @@ function requestSocketMessage<T>({
   });
 }
 
-function parseJsonMessage(event: MessageEvent<string>): { type?: string; body?: unknown } | undefined {
+export function parseJsonMessage(event: MessageEvent<string>): { type?: string; body?: unknown } | undefined {
   try {
     const parsed = JSON.parse(event.data) as unknown;
     return parsed && typeof parsed === 'object' ? parsed : undefined;
