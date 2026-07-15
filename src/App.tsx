@@ -16,7 +16,7 @@ import { fetchTipHeight } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import type { DslTransaction, SecondaryKeyReference, TransactionRange } from './transactions/types';
+import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
 import { SelectedNodeInspector } from './ui/SelectedNodeInspector';
@@ -248,13 +248,20 @@ export default function App() {
     };
   }, [secondaryKeyReferences]);
 
-  const secondaryRealtimeSource = useMemo(() => Object.values(activeSecondaryTransactions)
-    .map(({ reference, transactions: secondaryTransactions }) => transactionsToDslSource(secondaryTransactions, {
+  const secondaryTransactionStreams = useMemo<ActiveSecondaryTransactionStream[]>(() => Object.values(activeSecondaryTransactions)
+    .map(({ reference, transactions: secondaryTransactions }) => ({
       publicKey: reference.publicKey,
       endpoint: reference.endpoint,
+      transactions: secondaryTransactions,
+    })), [activeSecondaryTransactions]);
+
+  const secondaryRealtimeSource = useMemo(() => secondaryTransactionStreams
+    .map(({ publicKey, endpoint, transactions: secondaryTransactions }) => transactionsToDslSource(secondaryTransactions, {
+      publicKey,
+      endpoint,
     }).source)
     .filter(Boolean)
-    .join('\n'), [activeSecondaryTransactions]);
+    .join('\n'), [secondaryTransactionStreams]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
@@ -442,6 +449,7 @@ export default function App() {
         mappedTransactionSource={remoteBaselineSource}
         rejectedTransactions={transactionDsl.rejected}
         secondaryKeyReferences={secondaryKeyReferences}
+        secondaryTransactionStreams={secondaryTransactionStreams}
         hasRemoteBaseline={hasRemoteBaseline}
         hasAuthoringEdits={hasAuthoringEdits}
         remoteBaselineChanged={remoteBaselineChanged}
