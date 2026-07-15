@@ -346,11 +346,10 @@ export default function App() {
   const secondaryTransactionOverlayStreams = useMemo(() => secondaryTransactionStreams
     .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => ({
       id: `${publicKey}@@${endpoint}`,
-      declarations: transactionsToDslSource(secondaryTransactions, {
+      declarations: transactionsToDslSource(secondaryTransactions.slice(0, playbackIndex), {
         publicKey,
         endpoint,
       }).source,
-      playbackCursor: playbackIndex,
     })), [secondaryTransactionStreams]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
