@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
-import type { RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
+import type { ActiveSecondaryTransactionStream, DslTransaction, RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
 import { DslEditor } from './DslEditor';
 import { DslTransactionControls } from './DslTransactionControls';
 import { DslTreeView } from './DslTreeView';
@@ -38,6 +38,29 @@ function summarizeChanges({ added, removed }: { added: number; removed: number }
   }
 
   return parts.length > 0 ? parts.join(' · ') : 'No line changes';
+}
+
+function groupSecondaryTransactionStreams(
+  streams: readonly ActiveSecondaryTransactionStream[],
+): Map<string, ActiveSecondaryTransactionStream[]> {
+  const grouped = new Map<string, ActiveSecondaryTransactionStream[]>();
+
+  streams.forEach((stream) => {
+    grouped.set(stream.publicKey, [...(grouped.get(stream.publicKey) ?? []), stream]);
+  });
+
+  return grouped;
+}
+
+function transactionSummary(transaction: DslTransaction): string {
+  const memo = transaction.memo.trim();
+  const parts = [
+    transaction.from ? `from ${transaction.from}` : undefined,
+    `to ${transaction.to}`,
+    memo ? `memo ${memo}` : undefined,
+  ].filter(Boolean);
+
+  return parts.join(' · ');
 }
 
 function renderAuthoringStatus(
@@ -90,6 +113,7 @@ interface DslDrawerProps {
   mappedTransactionSource: string;
   rejectedTransactions: RejectedTransaction[];
   secondaryKeyReferences: SecondaryKeyReference[];
+  secondaryTransactionStreams: ActiveSecondaryTransactionStream[];
   hasRemoteBaseline: boolean;
   hasAuthoringEdits: boolean;
   remoteBaselineChanged: boolean;
@@ -101,6 +125,9 @@ interface DslDrawerProps {
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
   onUseTransactionTip: () => void;
+  onSecondaryReplay: (publicKey: string, endpoint: string) => void;
+  onSecondaryPlaybackToggle: (publicKey: string, endpoint: string) => void;
+  onLoadSecondaryHistory: (publicKey: string, endpoint: string) => void;
   selectedNodeId?: string;
   onSelectNode?: (id: string) => void;
 }
@@ -124,6 +151,7 @@ export function DslDrawer({
   mappedTransactionSource,
   rejectedTransactions,
   secondaryKeyReferences,
+  secondaryTransactionStreams,
   hasRemoteBaseline,
   hasAuthoringEdits,
   remoteBaselineChanged,
@@ -135,10 +163,14 @@ export function DslDrawer({
   onTransactionRangeChange,
   onReloadTransactions,
   onUseTransactionTip,
+  onSecondaryReplay,
+  onSecondaryPlaybackToggle,
+  onLoadSecondaryHistory,
   selectedNodeId,
   onSelectNode,
 }: DslDrawerProps) {
   const isEditorMode = appMode === 'editor';
+  const secondaryTransactionStreamsByPublicKey = groupSecondaryTransactionStreams(secondaryTransactionStreams);
 
   return (
     <aside className={`dsl-drawer dsl-drawer--${appMode} ${isOpen ? 'is-open' : ''}`}>
@@ -239,6 +271,51 @@ export function DslDrawer({
               </ul>
             </details>
           ) : null}
+
+          {secondaryTransactionStreams.length > 0 ? (
+            <details className="secondary-transaction-streams" aria-label="Secondary transaction streams" open>
+              <summary>Secondary transaction streams ({secondaryTransactionStreams.length})</summary>
+              <ul>
+                {[...secondaryTransactionStreamsByPublicKey.entries()].map(([publicKey, streams]) => (
+                  <li key={publicKey}>
+                    <strong>{publicKey}</strong>
+                    <ul>
+                      {streams.map((stream) => (
+                        <li key={`${stream.publicKey}-${stream.endpoint}`}>
+                          <span className="secondary-transaction-stream-endpoint">{stream.endpoint || '(primary endpoint)'}</span>
+                          <div className="secondary-transaction-stream-actions">
+                            <button type="button" disabled={stream.transactions.length === 0} onClick={() => onSecondaryReplay(stream.publicKey, stream.endpoint)}>
+                              Replay
+                            </button>
+                            <button type="button" disabled={stream.transactions.length === 0 || (!stream.replaying && stream.playbackIndex >= stream.transactions.length)} onClick={() => onSecondaryPlaybackToggle(stream.publicKey, stream.endpoint)}>
+                              {stream.replaying ? 'Pause' : 'Play'}
+                            </button>
+                            <button type="button" disabled={stream.historyLoading} onClick={() => onLoadSecondaryHistory(stream.publicKey, stream.endpoint)}>
+                              {stream.historyLoading ? 'Loading history…' : 'Load historical range'}
+                            </button>
+                            <span>{stream.playbackIndex}/{stream.transactions.length} rendered</span>
+                          </div>
+                          {stream.transactions.length > 0 ? (
+                            <ol>
+                              {stream.transactions.map((transaction, index) => (
+                                <li key={`${transaction.time}-${transaction.series ?? 'none'}-${transaction.nonce ?? index}`}>
+                                  <time>{new Date(transaction.time * 1000).toLocaleString()}</time>
+                                  <span>{transactionSummary(transaction)}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <p>Listening for transactions…</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+
 
           {document.diagnostics.length > 0 ? (
             <details className="diagnostics" aria-label="Spatial declaration diagnostics">

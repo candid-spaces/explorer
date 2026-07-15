@@ -16,15 +16,34 @@ export interface TransactionRange {
   limit: number;
 }
 
+export interface TransactionPublicKeyEndpoint {
+  publicKey: string;
+  endpoint: string;
+}
+
+export interface PrimaryPublicKeyReference extends TransactionPublicKeyEndpoint {}
+
+export interface PrimaryHistoricalBaselineDsl {
+  source: string;
+  rejected: RejectedTransaction[];
+}
+
 export interface RejectedTransaction {
   id: string;
   memoPreview: string;
   reasons: string[];
 }
 
-export interface SecondaryKeyReference {
-  publicKey: string;
-  endpoint: string;
+export interface DiscoveredSecondaryPublicKeyReference extends TransactionPublicKeyEndpoint {
   sourceTransactionId: string;
   memoPreview: string;
 }
+
+export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEndpoint {
+  transactions: DslTransaction[];
+  playbackIndex: number;
+  replaying: boolean;
+  historyLoading?: boolean;
+}
+
+export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;
