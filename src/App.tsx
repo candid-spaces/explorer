@@ -15,6 +15,7 @@ import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
+import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
@@ -342,13 +343,14 @@ export default function App() {
       historyLoading,
     })), [activeSecondaryTransactions]);
 
-  const secondaryRealtimeSource = useMemo(() => secondaryTransactionStreams
-    .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => transactionsToDslSource(secondaryTransactions.slice(0, playbackIndex), {
-      publicKey,
-      endpoint,
-    }).source)
-    .filter(Boolean)
-    .join('\n'), [secondaryTransactionStreams]);
+  const secondaryTransactionOverlayStreams = useMemo(() => secondaryTransactionStreams
+    .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => ({
+      id: `${publicKey}@@${endpoint}`,
+      declarations: transactionsToDslSource(secondaryTransactions.slice(0, playbackIndex), {
+        publicKey,
+        endpoint,
+      }).source,
+    })), [secondaryTransactionStreams]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
@@ -385,7 +387,9 @@ export default function App() {
     () => summarizeLineChanges(remoteBaselineAppliedToEditor, authoringSource),
     [authoringSource, remoteBaselineAppliedToEditor],
   );
-  const renderedSource = useMemo(() => [authoringSource, secondaryRealtimeSource].filter((source) => source.trim().length > 0).join('\n'), [authoringSource, secondaryRealtimeSource]);
+  const renderedSource = useMemo(() => composeTransactionSources(authoringSource, secondaryTransactionOverlayStreams, {
+    namespacePolicy: 'consume-primary-namespaces',
+  }), [authoringSource, secondaryTransactionOverlayStreams]);
   const document = useMemo(() => createSpatialDocument(renderedSource), [renderedSource]);
   const selectedNode = useMemo(
     () => findNodeById(document.nodes, selectedNodeId) ?? findNodeByLineNumber(document.nodes, selectedLineNumber),
