@@ -1,7 +1,7 @@
 import { parseDslDeclaration, parseDslDocument } from '../dsl/parser';
 import { canonicalNamespacePath } from '../dsl/pathParser';
 
-export type TransactionSourceNamespacePolicy = 'append' | 'namespace-conflicts' | 'namespace-declarations' | 'always-namespace';
+export type TransactionSourceNamespacePolicy = 'append' | 'consume-primary-namespaces';
 
 export interface SecondaryTransactionSourceDeclaration {
   source: string;
@@ -16,13 +16,6 @@ export interface ComposeTransactionSecondaryStream {
 export interface ComposeTransactionSourcesOptions {
   playbackCursor?: number;
   namespacePolicy?: TransactionSourceNamespacePolicy;
-}
-
-const DEFAULT_OVERLAY_NAMESPACE_PREFIX = 'Overlay';
-const DECLARATION_LINE_PATTERN = /^\s*"(?<path>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
-
-function stableOverlayNamespace(index: number): string {
-  return `${DEFAULT_OVERLAY_NAMESPACE_PREFIX}${String(index + 1).padStart(2, '0')}`;
 }
 
 function declarationSources(declarations: readonly SecondaryTransactionSourceDeclaration[] | string): string[] {
@@ -49,48 +42,22 @@ function primaryDeclarationNamespaces(primaryDslSource: string): Set<string> {
   return namespaces;
 }
 
-function declarationOnlyNamespacePath(line: string): string | undefined {
+function namespaceIsPrimaryConsumer(namespace: readonly string[], primaryNamespaces: ReadonlySet<string>): boolean {
+  if (namespace.length === 0) {
+    return true;
+  }
+
+  return namespace.some((_, index) => primaryNamespaces.has(canonicalNamespacePath(namespace.slice(0, index + 1))));
+}
+
+function secondaryConsumerLine(line: string, primaryNamespaces: ReadonlySet<string>): string | undefined {
   const parsed = parseDslDeclaration(line);
 
-  if (!parsed.ok || !parsed.value?.declarationOnly || parsed.value.namespace.length === 0) {
+  if (!parsed.ok || !parsed.value || parsed.value.declarationOnly || !parsed.value.box) {
     return undefined;
   }
 
-  return canonicalNamespacePath(parsed.value.namespace);
-}
-
-function shouldNamespaceStream(
-  lines: readonly string[],
-  primaryNamespaces: ReadonlySet<string>,
-  policy: TransactionSourceNamespacePolicy,
-): boolean {
-  if (policy === 'append') {
-    return false;
-  }
-
-  if (policy === 'always-namespace') {
-    return lines.length > 0;
-  }
-
-  return lines.some((line) => {
-    const namespace = declarationOnlyNamespacePath(line);
-
-    if (namespace === undefined) {
-      return false;
-    }
-
-    return policy === 'namespace-declarations' || primaryNamespaces.has(namespace);
-  });
-}
-
-function namespaceDeclarationLine(line: string, namespace: string): string {
-  const match = line.match(DECLARATION_LINE_PATTERN);
-
-  if (!match?.groups) {
-    return line;
-  }
-
-  return `"${namespace}/${match.groups.path}" : "${match.groups.properties}"`;
+  return namespaceIsPrimaryConsumer(parsed.value.namespace, primaryNamespaces) ? line : undefined;
 }
 
 function clampCursor(cursor: number | undefined, lineCount: number): number {
@@ -108,14 +75,17 @@ export function composeTransactionSources(
 ): string {
   const primary = primaryDslSource.trim();
   const primaryNamespaces = primaryDeclarationNamespaces(primaryDslSource);
-  const composedSecondarySources = secondaryStreams.flatMap((stream, streamIndex) => {
+  const policy = options.namespacePolicy ?? 'consume-primary-namespaces';
+  const composedSecondarySources = secondaryStreams.flatMap((stream) => {
     const lines = declarationSources(stream.declarations);
     const cursor = clampCursor(stream.playbackCursor ?? options.playbackCursor, lines.length);
     const visibleLines = lines.slice(0, cursor);
-    const namespace = stableOverlayNamespace(streamIndex);
-    const namespaced = shouldNamespaceStream(visibleLines, primaryNamespaces, options.namespacePolicy ?? 'namespace-declarations');
 
-    return namespaced ? visibleLines.map((line) => namespaceDeclarationLine(line, namespace)) : visibleLines;
+    if (policy === 'append') {
+      return visibleLines;
+    }
+
+    return visibleLines.flatMap((line) => secondaryConsumerLine(line, primaryNamespaces) ?? []);
   });
 
   return [primary, composedSecondarySources.join('\n')]
