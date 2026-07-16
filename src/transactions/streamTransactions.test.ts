@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { advancePlaybackIndex, mergeHistoricalStreamTransactions, mergeStreamTransactions, sortTransactionsByTimeStable } from './streamTransactions';
+import {
+  advancePlaybackIndex,
+  currentPlaybackTransaction,
+  hasPlaybackReachedEnd,
+  mergeHistoricalStreamTransactions,
+  mergeStreamTransactions,
+  playbackIndexForElapsedTime,
+  sortTransactionsByTimeStable,
+} from './streamTransactions';
 import type { DslTransaction } from './types';
 
 function transaction(overrides: Partial<DslTransaction> = {}): DslTransaction {
@@ -80,5 +88,40 @@ describe('advancePlaybackIndex', () => {
     playbackIndex = advancePlaybackIndex(playbackIndex, transactions.length);
 
     expect(playbackIndex).toBe(2);
+  });
+});
+
+describe('playbackIndexForElapsedTime', () => {
+  it('selects the transaction frame synced to transaction time', () => {
+    const transactions = [
+      transaction({ time: 100, memo: 'first' }),
+      transaction({ time: 105, memo: 'second' }),
+      transaction({ time: 120, memo: 'third' }),
+    ];
+
+    expect(playbackIndexForElapsedTime(transactions, 0)).toBe(0);
+    expect(playbackIndexForElapsedTime(transactions, 5)).toBe(1);
+    expect(playbackIndexForElapsedTime(transactions, 20)).toBe(2);
+  });
+
+  it('exposes one current playback transaction at a time', () => {
+    const transactions = [
+      transaction({ time: 100, memo: 'first' }),
+      transaction({ time: 105, memo: 'second' }),
+    ];
+
+    expect(currentPlaybackTransaction(transactions, 0)?.memo).toBe('first');
+    expect(currentPlaybackTransaction(transactions, 1)?.memo).toBe('second');
+    expect(currentPlaybackTransaction(transactions, 10)?.memo).toBe('second');
+  });
+
+  it('reports completion only after the final transaction time is reached', () => {
+    const transactions = [
+      transaction({ time: 100, memo: 'first' }),
+      transaction({ time: 105, memo: 'second' }),
+    ];
+
+    expect(hasPlaybackReachedEnd(transactions, 1, 4)).toBe(false);
+    expect(hasPlaybackReachedEnd(transactions, 1, 5)).toBe(true);
   });
 });

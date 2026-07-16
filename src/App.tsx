@@ -17,7 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import { advancePlaybackIndex, mergeHistoricalStreamTransactions, mergeStreamTransactions, sortTransactionsByTimeStable } from './transactions/streamTransactions';
+import { currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, playbackIndexForElapsedTime, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
@@ -54,6 +54,8 @@ interface ActiveSecondaryTransactions {
   streamError?: string;
   replaying: boolean;
   historyLoading?: boolean;
+  playbackStartedAtMs?: number;
+  playbackBaseTransactionTime?: number;
 }
 
 interface LineChangeSummary {
@@ -96,17 +98,27 @@ function normalizeActiveSecondaryStream(
   reference: SecondaryKeyReference,
 ): ActiveSecondaryTransactions {
   const transactions = stream?.transactions ?? [];
-  const playbackIndex = Math.min(stream?.playbackIndex ?? transactions.length, transactions.length);
+  const defaultPlaybackIndex = transactions.length > 0 ? transactions.length - 1 : 0;
+  const playbackIndex = Math.min(Math.max(stream?.playbackIndex ?? defaultPlaybackIndex, 0), defaultPlaybackIndex);
 
   return {
     reference,
     transactions,
     playbackIndex,
-    replaying: stream?.replaying === true && playbackIndex < transactions.length,
+    replaying: stream?.replaying === true && playbackIndex < defaultPlaybackIndex,
     realtimeStatus: stream?.realtimeStatus ?? 'connecting',
     streamError: stream?.streamError,
     historyLoading: stream?.historyLoading,
+    playbackStartedAtMs: stream?.playbackStartedAtMs,
+    playbackBaseTransactionTime: stream?.playbackBaseTransactionTime,
   };
+}
+
+function outgoingTransactionsForPublicKey(
+  transactions: readonly DslTransaction[],
+  publicKey: string,
+): DslTransaction[] {
+  return transactions.filter((transaction) => transaction.from === publicKey);
 }
 
 function endpointValidationError(endpoint: string): string | undefined {
@@ -272,7 +284,7 @@ export default function App() {
           onTransaction: (transaction) => {
             setActiveSecondaryTransactions((streams) => {
               const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-              const transactions = mergeStreamTransactions(current.transactions, [transaction]);
+              const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(current.transactions, [transaction]));
 
               return {
                 ...streams,
@@ -280,7 +292,7 @@ export default function App() {
                   ...current,
                   reference,
                   transactions,
-                  playbackIndex: current.replaying ? current.playbackIndex : transactions.length,
+                  playbackIndex: current.replaying ? current.playbackIndex : Math.max(0, transactions.length - 1),
                   streamError: undefined,
                 },
               };
@@ -374,12 +386,26 @@ export default function App() {
           return [streamKey, stream];
         }
 
-        const playbackIndex = advancePlaybackIndex(stream.playbackIndex, stream.transactions.length);
+        const playbackStartedAtMs = stream.playbackStartedAtMs ?? Date.now();
+        const playbackBaseTransactionTime = stream.playbackBaseTransactionTime ?? stream.transactions[0]?.time ?? 0;
+        const elapsedSeconds = (Date.now() - playbackStartedAtMs) / 1000;
+        const playbackIndex = playbackIndexForElapsedTime(
+          stream.transactions,
+          elapsedSeconds,
+          playbackBaseTransactionTime,
+        );
 
         return [streamKey, {
           ...stream,
+          playbackStartedAtMs,
+          playbackBaseTransactionTime,
           playbackIndex,
-          replaying: playbackIndex < stream.transactions.length,
+          replaying: !hasPlaybackReachedEnd(
+            stream.transactions,
+            playbackIndex,
+            elapsedSeconds,
+            playbackBaseTransactionTime,
+          ),
         }];
       })));
     }, 800);
@@ -401,13 +427,17 @@ export default function App() {
     })), [activeSecondaryTransactions]);
 
   const secondaryTransactionOverlayStreams = useMemo(() => secondaryTransactionStreams
-    .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => ({
-      id: `${publicKey}@@${endpoint}`,
-      declarations: transactionsToDslSource(secondaryTransactions.slice(0, playbackIndex), {
-        publicKey,
-        endpoint,
-      }).source,
-    })), [secondaryTransactionStreams]);
+    .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => {
+      const currentTransaction = currentPlaybackTransaction(secondaryTransactions, playbackIndex);
+
+      return {
+        id: `${publicKey}@@${endpoint}`,
+        declarations: transactionsToDslSource(currentTransaction ? [currentTransaction] : [], {
+          publicKey,
+          endpoint,
+        }).source,
+      };
+    }), [secondaryTransactionStreams]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
@@ -479,7 +509,13 @@ export default function App() {
 
       return {
         ...streams,
-        [streamKey]: { ...stream, playbackIndex: 0, replaying: stream.transactions.length > 0 },
+        [streamKey]: {
+          ...stream,
+          playbackIndex: 0,
+          replaying: stream.transactions.length > 1,
+          playbackStartedAtMs: Date.now(),
+          playbackBaseTransactionTime: stream.transactions[0]?.time,
+        },
       };
     });
   }, [setActiveSecondaryTransactions]);
@@ -498,7 +534,11 @@ export default function App() {
         ...streams,
         [streamKey]: {
           ...stream,
-          replaying: !stream.replaying && stream.playbackIndex < stream.transactions.length,
+          replaying: !stream.replaying && stream.playbackIndex < stream.transactions.length - 1,
+          playbackStartedAtMs: !stream.replaying ? Date.now() : stream.playbackStartedAtMs,
+          playbackBaseTransactionTime: !stream.replaying
+            ? stream.transactions[stream.playbackIndex]?.time
+            : stream.playbackBaseTransactionTime,
         },
       };
     });
@@ -523,14 +563,15 @@ export default function App() {
             return streams;
           }
 
-          const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, historicalTransactions));
+          const outgoingHistoricalTransactions = outgoingTransactionsForPublicKey(historicalTransactions, publicKey);
+          const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, outgoingHistoricalTransactions));
 
           return {
             ...streams,
             [streamKey]: {
               ...stream,
               transactions,
-              playbackIndex: stream.replaying ? stream.playbackIndex : transactions.length,
+              playbackIndex: stream.replaying ? stream.playbackIndex : Math.max(0, transactions.length - 1),
               historyLoading: false,
             },
           };

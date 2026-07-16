@@ -62,12 +62,12 @@ export function DslTransactionControls({
 
   const lowerPercent = (lowerHeight / sliderMax) * 100;
   const upperPercent = (upperHeight / sliderMax) * 100;
-  const secondaryReceivedCount = secondaryTransactionStreams.reduce((count, stream) => count + stream.transactions.length, 0);
+  const secondaryOutgoingCount = secondaryTransactionStreams.reduce((count, stream) => count + stream.transactions.length, 0);
   const secondaryErrorCount = secondaryTransactionStreams.filter((stream) => stream.streamError).length;
   const realtimeStatuses = Array.from(new Set(secondaryTransactionStreams.map((stream) => stream.realtimeStatus)));
   const secondaryModeStatus = secondaryTransactionStreams.some((stream) => stream.replaying)
     ? 'Playback running'
-    : secondaryTransactionStreams.some((stream) => stream.playbackIndex < stream.transactions.length)
+    : secondaryTransactionStreams.some((stream) => stream.transactions.length > 0)
       ? 'Playback paused'
       : 'Realtime';
 
@@ -311,7 +311,7 @@ export function DslTransactionControls({
             </div>
             <div>
               <dt>Secondary transactions</dt>
-              <dd>{secondaryReceivedCount} received</dd>
+              <dd>{secondaryOutgoingCount} outgoing</dd>
             </div>
             <div>
               <dt>Mode</dt>
@@ -333,7 +333,7 @@ export function DslTransactionControls({
                   <strong>{reference.publicKey}</strong>
                   <span>{reference.endpoint || '(primary endpoint)'}</span>
                   <small>
-                    {describeEndpointSource(reference.endpointSource)} · {stream?.realtimeStatus ?? 'connecting'} · {stream?.transactions.length ?? 0} received
+                    {describeEndpointSource(reference.endpointSource)} · {stream?.realtimeStatus ?? 'connecting'} · {stream?.transactions.length ?? 0} outgoing
                     {stream?.streamError ? ` · Error: ${stream.streamError}` : ''}
                   </small>
                 </li>
