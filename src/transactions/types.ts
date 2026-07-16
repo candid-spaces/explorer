@@ -34,12 +34,20 @@ export interface RejectedTransaction {
   reasons: string[];
 }
 
+export type SecondaryEndpointSource = 'node-url-address' | 'primary-fallback';
+
+export type SecondaryRealtimeStatus = 'connecting' | 'connected' | 'closed' | 'error';
+
 export interface DiscoveredSecondaryPublicKeyReference extends TransactionPublicKeyEndpoint {
+  endpointSource: SecondaryEndpointSource;
   sourceTransactionId: string;
   memoPreview: string;
 }
 
 export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEndpoint {
+  endpointSource: SecondaryEndpointSource;
+  realtimeStatus: SecondaryRealtimeStatus;
+  streamError?: string;
   transactions: DslTransaction[];
   playbackIndex: number;
   replaying: boolean;

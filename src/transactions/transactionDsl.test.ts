@@ -183,6 +183,7 @@ describe('transactionsToDslSource', () => {
       {
         publicKey: secondaryPublicKey,
         endpoint: 'wss://secondary.example/ws',
+        endpointSource: 'node-url-address',
         sourceTransactionId: `103:${secondaryPublicKey}:none:0`,
         memoPreview: `${secondaryPublicKey}: node: wss://secondary.example/ws`,
       },
@@ -201,6 +202,7 @@ describe('transactionsToDslSource', () => {
       expect.objectContaining({
         publicKey: secondaryPublicKey,
         endpoint: 'wss://primary.example/ws',
+        endpointSource: 'primary-fallback',
       }),
     ]);
   });
@@ -217,6 +219,7 @@ describe('transactionsToDslSource', () => {
       expect.objectContaining({
         publicKey: secondaryPublicKey,
         endpoint: 'wss://secondary.example/ws',
+        endpointSource: 'node-url-address',
       }),
     ]);
   });

@@ -12,6 +12,8 @@ export interface SubscribePublicKeyTransactionsOptions {
   signal?: AbortSignal;
   onTransaction: (transaction: DslTransaction) => void;
   onError?: (error: Error) => void;
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
 type PushTransactionMessageBody = {
@@ -41,6 +43,8 @@ export function subscribePublicKeyTransactions({
   signal,
   onTransaction,
   onError,
+  onOpen,
+  onClose,
 }: SubscribePublicKeyTransactionsOptions): RealtimePublicKeyTransactionSubscription {
   const watchedPublicKey = publicKey.trim();
   let closed = false;
@@ -81,6 +85,8 @@ export function subscribePublicKeyTransactions({
       close();
       return;
     }
+
+    onOpen?.();
 
     socket.send(JSON.stringify({
       type: 'filter_add',
@@ -124,6 +130,7 @@ export function subscribePublicKeyTransactions({
 
     closed = true;
     cleanup();
+    onClose?.();
     reportError(new Error('Realtime transaction endpoint closed.'));
   }
 

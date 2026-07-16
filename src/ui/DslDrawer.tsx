@@ -52,6 +52,10 @@ function groupSecondaryTransactionStreams(
   return grouped;
 }
 
+function describeEndpointSource(source: SecondaryKeyReference['endpointSource']): string {
+  return source === 'node-url-address' ? 'node: url_address' : 'Primary fallback';
+}
+
 function transactionSummary(transaction: DslTransaction): string {
   const memo = transaction.memo.trim();
   const parts = [
@@ -210,6 +214,8 @@ export function DslDrawer({
             acceptedCount={acceptedTransactionCount}
             rejectedCount={rejectedTransactions.length}
             secondaryKeyCount={secondaryKeyReferences.length}
+            secondaryKeyReferences={secondaryKeyReferences}
+            secondaryTransactionStreams={secondaryTransactionStreams}
             onPublicKeyChange={onTransactionPublicKeyChange}
             onRangeChange={onTransactionRangeChange}
             onReload={onReloadTransactions}
@@ -258,6 +264,10 @@ export function DslDrawer({
                         <dd>{reference.endpoint || '(none)'}</dd>
                       </div>
                       <div>
+                        <dt>Endpoint source</dt>
+                        <dd>{describeEndpointSource(reference.endpointSource)}</dd>
+                      </div>
+                      <div>
                         <dt>Source transaction</dt>
                         <dd>{reference.sourceTransactionId}</dd>
                       </div>
@@ -283,6 +293,25 @@ export function DslDrawer({
                       {streams.map((stream) => (
                         <li key={`${stream.publicKey}-${stream.endpoint}`}>
                           <span className="secondary-transaction-stream-endpoint">{stream.endpoint || '(primary endpoint)'}</span>
+                          <dl className="secondary-transaction-stream-state">
+                            <div>
+                              <dt>Endpoint source</dt>
+                              <dd>{describeEndpointSource(stream.endpointSource)}</dd>
+                            </div>
+                            <div>
+                              <dt>Realtime</dt>
+                              <dd>{stream.realtimeStatus}</dd>
+                            </div>
+                            <div>
+                              <dt>Received</dt>
+                              <dd>{stream.transactions.length}</dd>
+                            </div>
+                            <div>
+                              <dt>Mode</dt>
+                              <dd>{stream.replaying ? 'Playback' : stream.playbackIndex < stream.transactions.length ? 'Playback paused' : 'Realtime'}</dd>
+                            </div>
+                          </dl>
+                          {stream.streamError ? <p className="transaction-error">{stream.streamError}</p> : null}
                           <div className="secondary-transaction-stream-actions">
                             <button type="button" disabled={stream.transactions.length === 0} onClick={() => onSecondaryReplay(stream.publicKey, stream.endpoint)}>
                               Replay
