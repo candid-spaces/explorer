@@ -27,6 +27,17 @@ class FakeWebSocket extends EventTarget {
     this.readyState = FakeWebSocket.CLOSED;
   }
 
+  serverClose(init: CloseEventInit = {}) {
+    this.readyState = FakeWebSocket.CLOSED;
+    const event = new Event('close') as CloseEvent;
+    Object.defineProperties(event, {
+      code: { value: init.code ?? 1006 },
+      reason: { value: init.reason ?? '' },
+      wasClean: { value: init.wasClean ?? false },
+    });
+    this.dispatchEvent(event);
+  }
+
   open() {
     this.readyState = FakeWebSocket.OPEN;
     this.dispatchEvent(new Event('open'));
@@ -47,6 +58,7 @@ describe('subscribePublicKeyTransactions', () => {
   afterEach(() => {
     globalThis.WebSocket = RealWebSocket;
     FakeWebSocket.instances = [];
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -115,6 +127,97 @@ describe('subscribePublicKeyTransactions', () => {
     expect(onTransaction.mock.calls.map(([transaction]) => transaction.memo)).toEqual(['incoming', 'outgoing']);
   });
 
+  it('reports close details and reconnects after an unexpected close', async () => {
+    vi.useFakeTimers();
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+    const onError = vi.fn();
+    const onClose = vi.fn();
+
+    subscribePublicKeyTransactions({
+      endpoint: 'wss://example.test:8831',
+      publicKey: 'secondary-key',
+      onTransaction: vi.fn(),
+      onError,
+      onClose,
+    });
+
+    const firstSocket = FakeWebSocket.instances[0];
+    firstSocket.open();
+    firstSocket.serverClose({ code: 1011, reason: 'upstream restart', wasClean: false });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Realtime transaction endpoint closed (code 1011, reason: upstream restart, unclean close). Reconnecting...',
+    }));
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    const secondSocket = FakeWebSocket.instances[1];
+    secondSocket.open();
+
+    expect(secondSocket.url).toBe('wss://example.test:8831');
+    expect(secondSocket.protocols).toEqual(['cruzbit.1']);
+    expect(secondSocket.sent).toEqual([
+      JSON.stringify({
+        type: 'filter_add',
+        body: { public_keys: ['secondary-key'] },
+      }),
+    ]);
+  });
+
+  it('backs off when connections open and then immediately close repeatedly', async () => {
+    vi.useFakeTimers();
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+
+    subscribePublicKeyTransactions({
+      endpoint: 'wss://example.test:8831',
+      publicKey: 'secondary-key',
+      onTransaction: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    const firstSocket = FakeWebSocket.instances[0];
+    firstSocket.open();
+    firstSocket.serverClose({ code: 1011 });
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    const secondSocket = FakeWebSocket.instances[1];
+    secondSocket.open();
+    secondSocket.serverClose({ code: 1011 });
+
+    await vi.advanceTimersByTimeAsync(1_999);
+
+    expect(FakeWebSocket.instances).toHaveLength(2);
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(FakeWebSocket.instances).toHaveLength(3);
+  });
+
+  it('does not reconnect after an explicit subscription close', async () => {
+    vi.useFakeTimers();
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+
+    const subscription = subscribePublicKeyTransactions({
+      endpoint: 'example.test:8831',
+      publicKey: 'secondary-key',
+      onTransaction: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    socket.open();
+    subscription.close();
+    socket.serverClose();
+
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
   it('cleans up without reporting errors when aborted', () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
     const controller = new AbortController();
@@ -131,6 +234,7 @@ describe('subscribePublicKeyTransactions', () => {
     const socket = FakeWebSocket.instances[0];
     controller.abort();
     socket.fail();
+    socket.serverClose();
 
     expect(socket.closed).toBe(true);
     expect(onError).not.toHaveBeenCalled();

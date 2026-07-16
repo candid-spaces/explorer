@@ -20,6 +20,9 @@ type PushTransactionMessageBody = {
   transaction?: DslTransaction;
 };
 
+const INITIAL_RECONNECT_DELAY_MS = 1_000;
+const MAX_RECONNECT_DELAY_MS = 30_000;
+
 function isAbortError(error: Error): error is DOMException {
   return error instanceof DOMException && error.name === 'AbortError';
 }
@@ -30,6 +33,16 @@ function matchesPublicKey(transaction: DslTransaction, publicKey: string): boole
 
 function isOpenOrConnecting(socket: WebSocket): boolean {
   return socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING;
+}
+
+function realtimeCloseError(event: CloseEvent): Error {
+  const details = [
+    `code ${event.code}`,
+    event.reason ? `reason: ${event.reason}` : undefined,
+    event.wasClean ? 'clean close' : 'unclean close',
+  ].filter(Boolean).join(', ');
+
+  return new Error(`Realtime transaction endpoint closed (${details}). Reconnecting...`);
 }
 
 /**
@@ -47,8 +60,12 @@ export function subscribePublicKeyTransactions({
   onClose,
 }: SubscribePublicKeyTransactionsOptions): RealtimePublicKeyTransactionSubscription {
   const watchedPublicKey = publicKey.trim();
+  const normalizedEndpoint = normalizeEndpoint(endpoint);
   let closed = false;
-  const socket = new WebSocket(normalizeEndpoint(endpoint), ['cruzbit.1']);
+  let reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let socket: WebSocket | undefined;
+  let cleanupSocket: (() => void) | undefined;
 
   const reportError = (error: Error) => {
     if (!isAbortError(error)) {
@@ -56,12 +73,32 @@ export function subscribePublicKeyTransactions({
     }
   };
 
-  const cleanup = () => {
-    socket.removeEventListener('open', handleOpen);
-    socket.removeEventListener('message', handleMessage);
-    socket.removeEventListener('error', handleError);
-    socket.removeEventListener('close', handleClose);
-    signal?.removeEventListener('abort', handleAbort);
+  const clearReconnectTimer = () => {
+    if (reconnectTimer !== undefined) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
+    }
+  };
+
+  const cleanupCurrentSocket = () => {
+    cleanupSocket?.();
+    cleanupSocket = undefined;
+  };
+
+  const markSubscriptionHealthy = () => {
+    reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+  };
+
+  const scheduleReconnect = () => {
+    if (closed || signal?.aborted || reconnectTimer !== undefined) {
+      return;
+    }
+
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = undefined;
+      connect();
+    }, reconnectDelayMs);
+    reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
   };
 
   const close = () => {
@@ -70,8 +107,11 @@ export function subscribePublicKeyTransactions({
     }
 
     closed = true;
-    cleanup();
-    if (isOpenOrConnecting(socket)) {
+    clearReconnectTimer();
+    cleanupCurrentSocket();
+    signal?.removeEventListener('abort', handleAbort);
+
+    if (socket && isOpenOrConnecting(socket)) {
       socket.close();
     }
   };
@@ -80,65 +120,97 @@ export function subscribePublicKeyTransactions({
     close();
   }
 
-  function handleOpen() {
-    if (!watchedPublicKey) {
-      close();
+  function connect() {
+    if (closed || signal?.aborted) {
       return;
     }
 
-    onOpen?.();
+    const nextSocket = new WebSocket(normalizedEndpoint, ['cruzbit.1']);
+    socket = nextSocket;
 
-    socket.send(JSON.stringify({
-      type: 'filter_add',
-      body: {
-        public_keys: [watchedPublicKey],
-      },
-    }));
-  }
+    const cleanup = () => {
+      nextSocket.removeEventListener('open', handleOpen);
+      nextSocket.removeEventListener('message', handleMessage);
+      nextSocket.removeEventListener('error', handleError);
+      nextSocket.removeEventListener('close', handleClose);
+    };
 
-  function handleMessage(event: MessageEvent<string>) {
-    const parsed = parseJsonMessage(event);
+    cleanupSocket = cleanup;
 
-    if (parsed?.type === 'filter_result') {
-      const error = (parsed.body as { error?: unknown } | undefined)?.error;
-      if (typeof error === 'string' && error) {
-        reportError(new Error(error));
+    function handleOpen() {
+      if (!watchedPublicKey) {
+        close();
+        return;
       }
-      return;
+
+      onOpen?.();
+
+      nextSocket.send(JSON.stringify({
+        type: 'filter_add',
+        body: {
+          public_keys: [watchedPublicKey],
+        },
+      }));
     }
 
-    if (parsed?.type !== 'push_transaction') {
-      return;
+    function handleMessage(event: MessageEvent<string>) {
+      const parsed = parseJsonMessage(event);
+
+      if (parsed?.type === 'filter_result') {
+        const error = (parsed.body as { error?: unknown } | undefined)?.error;
+        if (typeof error === 'string' && error) {
+          reportError(new Error(error));
+        } else {
+          markSubscriptionHealthy();
+        }
+        return;
+      }
+
+      if (parsed?.type !== 'push_transaction') {
+        return;
+      }
+
+      const transaction = (parsed.body as PushTransactionMessageBody | undefined)?.transaction;
+      if (!transaction || !matchesPublicKey(transaction, watchedPublicKey)) {
+        return;
+      }
+
+      markSubscriptionHealthy();
+      onTransaction(normalizeDslTransaction(transaction));
     }
 
-    const transaction = (parsed.body as PushTransactionMessageBody | undefined)?.transaction;
-    if (!transaction || !matchesPublicKey(transaction, watchedPublicKey)) {
-      return;
+    function handleError() {
+      reportError(new Error('Unable to communicate with realtime transaction endpoint.'));
     }
 
-    onTransaction(normalizeDslTransaction(transaction));
-  }
+    function handleClose(event: CloseEvent) {
+      cleanup();
 
-  function handleError() {
-    reportError(new Error('Unable to communicate with realtime transaction endpoint.'));
-  }
+      if (cleanupSocket === cleanup) {
+        cleanupSocket = undefined;
+      }
 
-  function handleClose() {
-    if (closed) {
-      return;
+      if (socket === nextSocket) {
+        socket = undefined;
+      }
+
+      if (closed) {
+        return;
+      }
+
+      onClose?.();
+      reportError(realtimeCloseError(event));
+      scheduleReconnect();
     }
 
-    closed = true;
-    cleanup();
-    onClose?.();
-    reportError(new Error('Realtime transaction endpoint closed.'));
+    nextSocket.addEventListener('open', handleOpen);
+    nextSocket.addEventListener('message', handleMessage);
+    nextSocket.addEventListener('error', handleError);
+    nextSocket.addEventListener('close', handleClose);
   }
 
   signal?.addEventListener('abort', handleAbort, { once: true });
-  socket.addEventListener('open', handleOpen);
-  socket.addEventListener('message', handleMessage);
-  socket.addEventListener('error', handleError);
-  socket.addEventListener('close', handleClose);
+  connect();
 
   if (signal?.aborted) {
     handleAbort();
