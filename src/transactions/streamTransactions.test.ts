@@ -8,6 +8,7 @@ import {
   mergeStreamTransactions,
   outgoingTransactionsForPublicKey,
   playbackIndexForElapsedTime,
+  playbackTickIntervalMilliseconds,
   scaledPlaybackElapsedSeconds,
   sortTransactionsByTimeStable,
 } from './streamTransactions';
@@ -156,5 +157,18 @@ describe('scaledPlaybackElapsedSeconds', () => {
 
   it('falls back to original speed for an unsupported value', () => {
     expect(scaledPlaybackElapsedSeconds(3, 3)).toBe(3);
+  });
+});
+
+describe('playbackTickIntervalMilliseconds', () => {
+  it('ticks fast enough to render every one-second frame at accelerated speeds', () => {
+    const transactions = [transaction({ time: 100 }), transaction({ time: 101 }), transaction({ time: 102 })];
+
+    expect(playbackTickIntervalMilliseconds(transactions, 4)).toBe(125);
+    expect(playbackTickIntervalMilliseconds(transactions, 16)).toBe(31.25);
+  });
+
+  it('uses the standard cadence when there is no positive timestamp gap', () => {
+    expect(playbackTickIntervalMilliseconds([transaction({ time: 100 })], 16)).toBe(800);
   });
 });

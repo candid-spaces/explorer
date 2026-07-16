@@ -17,7 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
+import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
@@ -369,11 +369,16 @@ export default function App() {
   }, [secondaryKeyReferences]);
 
   useEffect(() => {
-    const hasReplayingStreams = Object.values(activeSecondaryTransactions).some((stream) => stream.replaying);
+    const replayingStreams = Object.values(activeSecondaryTransactions).filter((stream) => stream.replaying);
 
-    if (!hasReplayingStreams) {
+    if (replayingStreams.length === 0) {
       return undefined;
     }
+
+    const playbackTickMilliseconds = Math.min(...replayingStreams.map((stream) => playbackTickIntervalMilliseconds(
+      stream.transactions,
+      stream.playbackSpeed,
+    )));
 
     const interval = window.setInterval(() => {
       setActiveSecondaryTransactions((streams) => Object.fromEntries(Object.entries(streams).map(([streamKey, stream]) => {
@@ -406,7 +411,7 @@ export default function App() {
           ),
         }];
       })));
-    }, 800);
+    }, playbackTickMilliseconds);
 
     return () => window.clearInterval(interval);
   }, [activeSecondaryTransactions, setActiveSecondaryTransactions]);
