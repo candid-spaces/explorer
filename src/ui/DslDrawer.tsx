@@ -303,12 +303,12 @@ export function DslDrawer({
                               <dd>{stream.realtimeStatus}</dd>
                             </div>
                             <div>
-                              <dt>Received</dt>
+                              <dt>Outgoing</dt>
                               <dd>{stream.transactions.length}</dd>
                             </div>
                             <div>
                               <dt>Mode</dt>
-                              <dd>{stream.replaying ? 'Playback' : stream.playbackIndex < stream.transactions.length ? 'Playback paused' : 'Realtime'}</dd>
+                              <dd>{stream.replaying ? 'Playback' : stream.transactions.length > 0 ? 'Playback paused' : 'Realtime'}</dd>
                             </div>
                           </dl>
                           {stream.streamError ? <p className="transaction-error">{stream.streamError}</p> : null}
@@ -316,13 +316,13 @@ export function DslDrawer({
                             <button type="button" disabled={stream.transactions.length === 0} onClick={() => onSecondaryReplay(stream.publicKey, stream.endpoint)}>
                               Replay
                             </button>
-                            <button type="button" disabled={stream.transactions.length === 0 || (!stream.replaying && stream.playbackIndex >= stream.transactions.length)} onClick={() => onSecondaryPlaybackToggle(stream.publicKey, stream.endpoint)}>
+                            <button type="button" disabled={stream.transactions.length === 0 || (!stream.replaying && stream.playbackIndex >= stream.transactions.length - 1)} onClick={() => onSecondaryPlaybackToggle(stream.publicKey, stream.endpoint)}>
                               {stream.replaying ? 'Pause' : 'Play'}
                             </button>
                             <button type="button" disabled={stream.historyLoading} onClick={() => onLoadSecondaryHistory(stream.publicKey, stream.endpoint)}>
                               {stream.historyLoading ? 'Loading history…' : 'Load historical range'}
                             </button>
-                            <span>{stream.playbackIndex}/{stream.transactions.length} rendered</span>
+                            <span>{stream.transactions.length > 0 ? stream.playbackIndex + 1 : 0}/{stream.transactions.length} frame</span>
                           </div>
                           {stream.transactions.length > 0 ? (
                             <ol>

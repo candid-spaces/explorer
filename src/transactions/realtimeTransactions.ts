@@ -28,7 +28,7 @@ function isAbortError(error: Error): error is DOMException {
 }
 
 function matchesPublicKey(transaction: DslTransaction, publicKey: string): boolean {
-  return transaction.from === publicKey || transaction.to === publicKey;
+  return transaction.from === publicKey;
 }
 
 function isOpenOrConnecting(socket: WebSocket): boolean {
@@ -47,7 +47,7 @@ function realtimeCloseError(event: CloseEvent): Error {
 
 /**
  * Opens a long-lived Cruzbit websocket subscription for realtime transactions
- * involving a secondary/public key. Transactions are emitted in exactly the
+ * sent by a secondary/public key. Transactions are emitted in exactly the
  * order their matching push_transaction messages are received for the key.
  */
 export function subscribePublicKeyTransactions({

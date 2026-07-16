@@ -43,6 +43,64 @@ export function sortTransactionsByTimeStable(transactions: readonly DslTransacti
     .map(({ transaction }) => transaction);
 }
 
+export function outgoingTransactionsForPublicKey(
+  transactions: readonly DslTransaction[],
+  publicKey: string,
+): DslTransaction[] {
+  return transactions.filter((transaction) => transaction.from === publicKey);
+}
+
 export function advancePlaybackIndex(playbackIndex: number, transactionCount: number): number {
   return Math.min(playbackIndex + 1, transactionCount);
+}
+
+export function playbackIndexForElapsedTime(
+  transactions: readonly DslTransaction[],
+  elapsedSeconds: number,
+  baseTransactionTime = transactions[0]?.time ?? 0,
+): number {
+  if (transactions.length === 0) {
+    return 0;
+  }
+
+  const targetTransactionTime = baseTransactionTime + Math.max(0, elapsedSeconds);
+  let index = 0;
+
+  for (let candidateIndex = 0; candidateIndex < transactions.length; candidateIndex += 1) {
+    if (transactions[candidateIndex].time > targetTransactionTime) {
+      break;
+    }
+
+    index = candidateIndex;
+  }
+
+  return index;
+}
+
+export function currentPlaybackTransaction(
+  transactions: readonly DslTransaction[],
+  playbackIndex: number,
+): DslTransaction | undefined {
+  if (transactions.length === 0) {
+    return undefined;
+  }
+
+  const index = Math.min(Math.max(Math.trunc(playbackIndex), 0), transactions.length - 1);
+  return transactions[index];
+}
+
+export function hasPlaybackReachedEnd(
+  transactions: readonly DslTransaction[],
+  playbackIndex: number,
+  elapsedSeconds: number,
+  baseTransactionTime = transactions[0]?.time ?? 0,
+): boolean {
+  if (transactions.length === 0) {
+    return true;
+  }
+
+  const lastTransaction = transactions[transactions.length - 1];
+
+  return playbackIndex >= transactions.length - 1
+    && baseTransactionTime + Math.max(0, elapsedSeconds) >= lastTransaction.time;
 }
