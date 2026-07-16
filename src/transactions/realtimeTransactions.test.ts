@@ -127,6 +127,52 @@ describe('subscribePublicKeyTransactions', () => {
     expect(onTransaction.mock.calls.map(([transaction]) => transaction.memo)).toEqual(['outgoing']);
   });
 
+  it('drains outgoing matching transactions from filter blocks', () => {
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+    const onTransaction = vi.fn();
+    const matchingIncoming: DslTransaction = {
+      time: 1,
+      to: 'secondary-key',
+      amount: 1,
+      fee: 0,
+      memo: 'incoming',
+    };
+    const matchingOutgoing: DslTransaction = {
+      time: 2,
+      from: 'secondary-key',
+      to: 'recipient',
+      amount: 2,
+      fee: 0,
+      memo: 'first outgoing',
+    };
+    const anotherMatchingOutgoing: DslTransaction = {
+      time: 3,
+      from: 'secondary-key',
+      to: 'another recipient',
+      amount: 3,
+      fee: 0,
+      memo: 'second outgoing',
+    };
+
+    subscribePublicKeyTransactions({
+      endpoint: 'wss://example.test:8831',
+      publicKey: 'secondary-key',
+      onTransaction,
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    socket.open();
+    socket.message({
+      type: 'filter_block',
+      body: { transactions: [matchingIncoming, matchingOutgoing, anotherMatchingOutgoing] },
+    });
+
+    expect(onTransaction.mock.calls.map(([transaction]) => transaction.memo)).toEqual([
+      'first outgoing',
+      'second outgoing',
+    ]);
+  });
+
   it('reports close details and reconnects after an unexpected close', async () => {
     vi.useFakeTimers();
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
