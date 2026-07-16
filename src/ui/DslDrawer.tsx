@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
+import { PLAYBACK_SPEED_OPTIONS } from '../transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
 import { DslEditor } from './DslEditor';
 import { DslTransactionControls } from './DslTransactionControls';
@@ -131,6 +132,8 @@ interface DslDrawerProps {
   onUseTransactionTip: () => void;
   onSecondaryReplay: (publicKey: string, endpoint: string) => void;
   onSecondaryPlaybackToggle: (publicKey: string, endpoint: string) => void;
+  onSecondaryPlaybackSpeedChange: (publicKey: string, endpoint: string, playbackSpeed: number) => void;
+  onSecondaryPlaybackSeek: (publicKey: string, endpoint: string, playbackIndex: number) => void;
   onLoadSecondaryHistory: (publicKey: string, endpoint: string) => void;
   selectedNodeId?: string;
   onSelectNode?: (id: string) => void;
@@ -169,6 +172,8 @@ export function DslDrawer({
   onUseTransactionTip,
   onSecondaryReplay,
   onSecondaryPlaybackToggle,
+  onSecondaryPlaybackSpeedChange,
+  onSecondaryPlaybackSeek,
   onLoadSecondaryHistory,
   selectedNodeId,
   onSelectNode,
@@ -319,6 +324,37 @@ export function DslDrawer({
                             <button type="button" disabled={stream.transactions.length === 0 || (!stream.replaying && stream.playbackIndex >= stream.transactions.length - 1)} onClick={() => onSecondaryPlaybackToggle(stream.publicKey, stream.endpoint)}>
                               {stream.replaying ? 'Pause' : 'Play'}
                             </button>
+                            <label>
+                              Playback speed
+                              <select
+                                value={stream.playbackSpeed}
+                                onChange={(event) => onSecondaryPlaybackSpeedChange(
+                                  stream.publicKey,
+                                  stream.endpoint,
+                                  Number(event.target.value),
+                                )}
+                              >
+                                {PLAYBACK_SPEED_OPTIONS.map((speed) => (
+                                  <option key={speed} value={speed}>{speed}x</option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              Historical frame
+                              <input
+                                type="range"
+                                min={0}
+                                max={Math.max(stream.transactions.length - 1, 0)}
+                                step={1}
+                                value={stream.playbackIndex}
+                                disabled={stream.transactions.length === 0}
+                                onChange={(event) => onSecondaryPlaybackSeek(
+                                  stream.publicKey,
+                                  stream.endpoint,
+                                  Number(event.target.value),
+                                )}
+                              />
+                            </label>
                             <button type="button" disabled={stream.historyLoading} onClick={() => onLoadSecondaryHistory(stream.publicKey, stream.endpoint)}>
                               {stream.historyLoading ? 'Loading history…' : 'Load historical range'}
                             </button>

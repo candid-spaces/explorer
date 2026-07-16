@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   advancePlaybackIndex,
+  clampPlaybackIndex,
   currentPlaybackTransaction,
   hasPlaybackReachedEnd,
   mergeHistoricalStreamTransactions,
   mergeStreamTransactions,
   outgoingTransactionsForPublicKey,
   playbackIndexForElapsedTime,
+  playbackTickIntervalMilliseconds,
+  playbackTimeForElapsedTime,
+  scaledPlaybackElapsedSeconds,
   sortTransactionsByTimeStable,
 } from './streamTransactions';
 import type { DslTransaction } from './types';
@@ -102,6 +106,15 @@ describe('advancePlaybackIndex', () => {
   });
 });
 
+describe('clampPlaybackIndex', () => {
+  it('keeps a seek position within the loaded transaction range', () => {
+    expect(clampPlaybackIndex(-1, 3)).toBe(0);
+    expect(clampPlaybackIndex(1.8, 3)).toBe(1);
+    expect(clampPlaybackIndex(5, 3)).toBe(2);
+    expect(clampPlaybackIndex(5, 0)).toBe(0);
+  });
+});
+
 describe('playbackIndexForElapsedTime', () => {
   it('selects the transaction frame synced to transaction time', () => {
     const transactions = [
@@ -134,5 +147,36 @@ describe('playbackIndexForElapsedTime', () => {
 
     expect(hasPlaybackReachedEnd(transactions, 1, 4)).toBe(false);
     expect(hasPlaybackReachedEnd(transactions, 1, 5)).toBe(true);
+  });
+});
+
+describe('scaledPlaybackElapsedSeconds', () => {
+  it('advances replay elapsed time at the selected speed', () => {
+    expect(scaledPlaybackElapsedSeconds(3, 2)).toBe(6);
+    expect(scaledPlaybackElapsedSeconds(3, 8)).toBe(24);
+  });
+
+  it('falls back to original speed for an unsupported value', () => {
+    expect(scaledPlaybackElapsedSeconds(3, 3)).toBe(3);
+  });
+
+  it('preserves the in-progress position when replay is restarted at a new speed', () => {
+    const playbackTime = playbackTimeForElapsedTime(0, 99, 1);
+
+    expect(playbackTime).toBe(99);
+    expect(playbackTimeForElapsedTime(playbackTime, 1 / 16, 16)).toBe(100);
+  });
+});
+
+describe('playbackTickIntervalMilliseconds', () => {
+  it('ticks fast enough to render every one-second frame at accelerated speeds', () => {
+    const transactions = [transaction({ time: 100 }), transaction({ time: 101 }), transaction({ time: 102 })];
+
+    expect(playbackTickIntervalMilliseconds(transactions, 4)).toBe(125);
+    expect(playbackTickIntervalMilliseconds(transactions, 16)).toBe(31.25);
+  });
+
+  it('uses the standard cadence when there is no positive timestamp gap', () => {
+    expect(playbackTickIntervalMilliseconds([transaction({ time: 100 })], 16)).toBe(800);
   });
 });

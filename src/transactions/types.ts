@@ -50,6 +50,7 @@ export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEn
   streamError?: string;
   transactions: DslTransaction[];
   playbackIndex: number;
+  playbackSpeed: number;
   replaying: boolean;
   historyLoading?: boolean;
 }

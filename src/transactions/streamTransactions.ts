@@ -1,5 +1,57 @@
 import type { DslTransaction } from './types';
 
+export const DEFAULT_PLAYBACK_SPEED = 1;
+export const PLAYBACK_SPEED_OPTIONS = [0.5, 1, 2, 4, 8, 16] as const;
+const MIN_PLAYBACK_TICK_MILLISECONDS = 16;
+const MAX_PLAYBACK_TICK_MILLISECONDS = 800;
+
+export function normalizePlaybackSpeed(playbackSpeed: number | undefined): number {
+  if (playbackSpeed !== undefined && (PLAYBACK_SPEED_OPTIONS as readonly number[]).includes(playbackSpeed)) {
+    return playbackSpeed;
+  }
+
+  return DEFAULT_PLAYBACK_SPEED;
+}
+
+export function scaledPlaybackElapsedSeconds(
+  elapsedSeconds: number,
+  playbackSpeed = DEFAULT_PLAYBACK_SPEED,
+): number {
+  return Math.max(0, elapsedSeconds) * normalizePlaybackSpeed(playbackSpeed);
+}
+
+export function playbackTimeForElapsedTime(
+  baseTransactionTime: number,
+  elapsedSeconds: number,
+  playbackSpeed = DEFAULT_PLAYBACK_SPEED,
+): number {
+  return baseTransactionTime + scaledPlaybackElapsedSeconds(elapsedSeconds, playbackSpeed);
+}
+
+export function playbackTickIntervalMilliseconds(
+  transactions: readonly DslTransaction[],
+  playbackSpeed = DEFAULT_PLAYBACK_SPEED,
+): number {
+  const smallestGapSeconds = transactions.slice(1).reduce<number | undefined>((smallestGap, transaction, index) => {
+    const gapSeconds = transaction.time - transactions[index].time;
+
+    if (gapSeconds <= 0) {
+      return smallestGap;
+    }
+
+    return smallestGap === undefined ? gapSeconds : Math.min(smallestGap, gapSeconds);
+  }, undefined);
+
+  if (smallestGapSeconds === undefined) {
+    return MAX_PLAYBACK_TICK_MILLISECONDS;
+  }
+
+  return Math.max(
+    MIN_PLAYBACK_TICK_MILLISECONDS,
+    Math.min(MAX_PLAYBACK_TICK_MILLISECONDS, (smallestGapSeconds * 1000) / normalizePlaybackSpeed(playbackSpeed) / 2),
+  );
+}
+
 export function mergeStreamTransactions(
   currentTransactions: readonly DslTransaction[],
   nextTransactions: readonly DslTransaction[],
@@ -52,6 +104,10 @@ export function outgoingTransactionsForPublicKey(
 
 export function advancePlaybackIndex(playbackIndex: number, transactionCount: number): number {
   return Math.min(playbackIndex + 1, transactionCount);
+}
+
+export function clampPlaybackIndex(playbackIndex: number, transactionCount: number): number {
+  return Math.min(Math.max(Math.trunc(playbackIndex), 0), Math.max(transactionCount - 1, 0));
 }
 
 export function playbackIndexForElapsedTime(
