@@ -7,6 +7,7 @@ import {
   mergeStreamTransactions,
   outgoingTransactionsForPublicKey,
   playbackIndexForElapsedTime,
+  scaledPlaybackElapsedSeconds,
   sortTransactionsByTimeStable,
 } from './streamTransactions';
 import type { DslTransaction } from './types';
@@ -134,5 +135,16 @@ describe('playbackIndexForElapsedTime', () => {
 
     expect(hasPlaybackReachedEnd(transactions, 1, 4)).toBe(false);
     expect(hasPlaybackReachedEnd(transactions, 1, 5)).toBe(true);
+  });
+});
+
+describe('scaledPlaybackElapsedSeconds', () => {
+  it('advances replay elapsed time at the selected speed', () => {
+    expect(scaledPlaybackElapsedSeconds(3, 2)).toBe(6);
+    expect(scaledPlaybackElapsedSeconds(3, 8)).toBe(24);
+  });
+
+  it('falls back to original speed for an unsupported value', () => {
+    expect(scaledPlaybackElapsedSeconds(3, 3)).toBe(3);
   });
 });

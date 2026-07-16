@@ -1,5 +1,23 @@
 import type { DslTransaction } from './types';
 
+export const DEFAULT_PLAYBACK_SPEED = 1;
+export const PLAYBACK_SPEED_OPTIONS = [0.5, 1, 2, 4, 8, 16] as const;
+
+export function normalizePlaybackSpeed(playbackSpeed: number | undefined): number {
+  if (playbackSpeed !== undefined && (PLAYBACK_SPEED_OPTIONS as readonly number[]).includes(playbackSpeed)) {
+    return playbackSpeed;
+  }
+
+  return DEFAULT_PLAYBACK_SPEED;
+}
+
+export function scaledPlaybackElapsedSeconds(
+  elapsedSeconds: number,
+  playbackSpeed = DEFAULT_PLAYBACK_SPEED,
+): number {
+  return Math.max(0, elapsedSeconds) * normalizePlaybackSpeed(playbackSpeed);
+}
+
 export function mergeStreamTransactions(
   currentTransactions: readonly DslTransaction[],
   nextTransactions: readonly DslTransaction[],
