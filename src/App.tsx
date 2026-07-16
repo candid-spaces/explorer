@@ -498,7 +498,6 @@ export default function App() {
   }, [document.nodes, selectedLeafNodeId, selectedNode]);
   const selectedSceneNodeId = selectedSceneHighlightNodeId ?? sceneHighlightIdForNode(document.nodes, selectedNode) ?? selectedNodeId;
   const selectedNodeCanEdit = selectedNodeLineNumber !== undefined && canEditDeclarationLine(authoringSource, selectedNodeLineNumber);
-  const isInspectorVisible = appMode === 'editor' && selectedNode !== undefined;
 
 
   const handleSecondaryReplay = useCallback((publicKey: string, endpoint: string) => {
@@ -757,12 +756,6 @@ export default function App() {
         selectedNodeId={selectedSceneNodeId}
         onSelectNode={handleSelectNode}
       />
-      <div
-        className={`navigation-overlay${isInspectorVisible ? ' navigation-overlay--avoid-inspector' : ''}`}
-        aria-label="Scene navigation controls"
-      >
-        <p>Select an object to orbit around it. Clear the selection to return to the default scene orbit.</p>
-      </div>
       {appMode === 'editor' ? (
         <SelectedNodeInspector
           canEdit={selectedNodeCanEdit}
