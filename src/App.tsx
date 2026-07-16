@@ -17,6 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
+import { advancePlaybackIndex, mergeHistoricalStreamTransactions, mergeStreamTransactions, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
@@ -90,10 +91,6 @@ function uniqueSecondaryReferences(references: readonly SecondaryKeyReference[])
   return [...uniqueReferences.values()];
 }
 
-function transactionKey(transaction: DslTransaction): string {
-  return [transaction.time, transaction.series ?? 'none', transaction.nonce ?? 'none', transaction.from ?? '', transaction.to, transaction.memo].join(':');
-}
-
 function normalizeActiveSecondaryStream(
   stream: ActiveSecondaryTransactions | undefined,
   reference: SecondaryKeyReference,
@@ -119,17 +116,6 @@ function endpointValidationError(endpoint: string): string | undefined {
   } catch (caught) {
     return caught instanceof Error ? caught.message : 'Endpoint is not a valid WebSocket URL.';
   }
-}
-
-function mergeStreamTransactions(
-  currentTransactions: readonly DslTransaction[],
-  nextTransactions: readonly DslTransaction[],
-): DslTransaction[] {
-  const merged = new Map(currentTransactions.map((transaction) => [transactionKey(transaction), transaction]));
-
-  nextTransactions.forEach((transaction) => merged.set(transactionKey(transaction), transaction));
-
-  return [...merged.values()].sort((a, b) => a.time - b.time);
 }
 
 function summarizeLineChanges(originalSource: string, nextSource: string): LineChangeSummary {
@@ -388,7 +374,7 @@ export default function App() {
           return [streamKey, stream];
         }
 
-        const playbackIndex = Math.min(stream.playbackIndex + 1, stream.transactions.length);
+        const playbackIndex = advancePlaybackIndex(stream.playbackIndex, stream.transactions.length);
 
         return [streamKey, {
           ...stream,
@@ -537,7 +523,7 @@ export default function App() {
             return streams;
           }
 
-          const transactions = mergeStreamTransactions(stream.transactions, historicalTransactions);
+          const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, historicalTransactions));
 
           return {
             ...streams,
