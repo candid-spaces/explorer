@@ -7,6 +7,35 @@ export function mergeStreamTransactions(
   return [...currentTransactions, ...nextTransactions];
 }
 
+function transactionIdentity(transaction: DslTransaction): string | undefined {
+  return transaction.signature;
+}
+
+export function mergeHistoricalStreamTransactions(
+  currentTransactions: readonly DslTransaction[],
+  nextTransactions: readonly DslTransaction[],
+): DslTransaction[] {
+  const seenIdentities = new Set(
+    currentTransactions.map(transactionIdentity).filter((identity): identity is string => identity !== undefined),
+  );
+  const newTransactions = nextTransactions.filter((transaction) => {
+    const identity = transactionIdentity(transaction);
+
+    if (identity === undefined) {
+      return true;
+    }
+
+    if (seenIdentities.has(identity)) {
+      return false;
+    }
+
+    seenIdentities.add(identity);
+    return true;
+  });
+
+  return mergeStreamTransactions(currentTransactions, newTransactions);
+}
+
 export function sortTransactionsByTimeStable(transactions: readonly DslTransaction[]): DslTransaction[] {
   return transactions
     .map((transaction, index) => ({ transaction, index }))

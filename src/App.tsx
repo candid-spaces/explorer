@@ -17,7 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import { advancePlaybackIndex, mergeStreamTransactions, sortTransactionsByTimeStable } from './transactions/streamTransactions';
+import { advancePlaybackIndex, mergeHistoricalStreamTransactions, mergeStreamTransactions, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
@@ -523,7 +523,7 @@ export default function App() {
             return streams;
           }
 
-          const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(stream.transactions, historicalTransactions));
+          const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, historicalTransactions));
 
           return {
             ...streams,

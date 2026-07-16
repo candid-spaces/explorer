@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advancePlaybackIndex, mergeStreamTransactions, sortTransactionsByTimeStable } from './streamTransactions';
+import { advancePlaybackIndex, mergeHistoricalStreamTransactions, mergeStreamTransactions, sortTransactionsByTimeStable } from './streamTransactions';
 import type { DslTransaction } from './types';
 
 function transaction(overrides: Partial<DslTransaction> = {}): DslTransaction {
@@ -33,6 +33,23 @@ describe('mergeStreamTransactions', () => {
     const afterSecond = mergeStreamTransactions(afterFirst, [secondRealtime]);
 
     expect(afterSecond.map(({ memo }) => memo)).toEqual(['existing', 'first realtime', 'second realtime']);
+  });
+});
+
+describe('mergeHistoricalStreamTransactions', () => {
+  it('does not re-add already loaded transactions with the same blockchain signature', () => {
+    const loaded = transaction({ signature: 'same-chain-transaction', memo: 'loaded' });
+    const refetched = transaction({ signature: 'same-chain-transaction', memo: 'refetched' });
+    const fresh = transaction({ signature: 'fresh-chain-transaction', memo: 'fresh' });
+
+    expect(mergeHistoricalStreamTransactions([loaded], [refetched, fresh])).toEqual([loaded, fresh]);
+  });
+
+  it('preserves duplicate-looking historical transactions when no blockchain identity is available', () => {
+    const first = transaction();
+    const duplicate = transaction();
+
+    expect(mergeHistoricalStreamTransactions([first], [duplicate])).toEqual([first, duplicate]);
   });
 });
 
