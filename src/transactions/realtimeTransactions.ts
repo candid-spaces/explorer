@@ -20,6 +20,10 @@ type PushTransactionMessageBody = {
   transaction?: DslTransaction;
 };
 
+type FilterBlockMessageBody = {
+  transactions?: DslTransaction[];
+};
+
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 
@@ -48,7 +52,8 @@ function realtimeCloseError(event: CloseEvent): Error {
 /**
  * Opens a long-lived Cruzbit websocket subscription for realtime transactions
  * sent by a secondary/public key. Transactions are emitted in exactly the
- * order their matching push_transaction messages are received for the key.
+ * order their matching push_transaction and filter_block messages are received
+ * for the key.
  */
 export function subscribePublicKeyTransactions({
   endpoint,
@@ -166,17 +171,20 @@ export function subscribePublicKeyTransactions({
         return;
       }
 
-      if (parsed?.type !== 'push_transaction') {
-        return;
-      }
+      const transactions = parsed?.type === 'push_transaction'
+        ? [(parsed.body as PushTransactionMessageBody | undefined)?.transaction]
+        : parsed?.type === 'filter_block'
+          ? (parsed.body as FilterBlockMessageBody | undefined)?.transactions ?? []
+          : [];
 
-      const transaction = (parsed.body as PushTransactionMessageBody | undefined)?.transaction;
-      if (!transaction || !matchesPublicKey(transaction, watchedPublicKey)) {
-        return;
-      }
+      for (const transaction of transactions) {
+        if (!transaction || !matchesPublicKey(transaction, watchedPublicKey)) {
+          continue;
+        }
 
-      markSubscriptionHealthy();
-      onTransaction(normalizeDslTransaction(transaction));
+        markSubscriptionHealthy();
+        onTransaction(normalizeDslTransaction(transaction));
+      }
     }
 
     function handleError() {
