@@ -84,7 +84,7 @@ describe('subscribePublicKeyTransactions', () => {
     ]);
   });
 
-  it('emits matching push transactions in received serial order only', () => {
+  it('emits outgoing matching push transactions in received serial order only', () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
     const onTransaction = vi.fn();
     const matchingIncoming: DslTransaction = {
@@ -123,8 +123,8 @@ describe('subscribePublicKeyTransactions', () => {
     socket.message({ type: 'tip_header', body: {} });
     socket.message({ type: 'push_transaction', body: { transaction: matchingOutgoing } });
 
-    expect(onTransaction).toHaveBeenCalledTimes(2);
-    expect(onTransaction.mock.calls.map(([transaction]) => transaction.memo)).toEqual(['incoming', 'outgoing']);
+    expect(onTransaction).toHaveBeenCalledTimes(1);
+    expect(onTransaction.mock.calls.map(([transaction]) => transaction.memo)).toEqual(['outgoing']);
   });
 
   it('reports close details and reconnects after an unexpected close', async () => {
