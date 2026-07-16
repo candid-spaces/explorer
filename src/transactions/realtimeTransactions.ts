@@ -85,6 +85,10 @@ export function subscribePublicKeyTransactions({
     cleanupSocket = undefined;
   };
 
+  const markSubscriptionHealthy = () => {
+    reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+  };
+
   const scheduleReconnect = () => {
     if (closed || signal?.aborted || reconnectTimer !== undefined) {
       return;
@@ -139,7 +143,6 @@ export function subscribePublicKeyTransactions({
         return;
       }
 
-      reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
       onOpen?.();
 
       nextSocket.send(JSON.stringify({
@@ -157,6 +160,8 @@ export function subscribePublicKeyTransactions({
         const error = (parsed.body as { error?: unknown } | undefined)?.error;
         if (typeof error === 'string' && error) {
           reportError(new Error(error));
+        } else {
+          markSubscriptionHealthy();
         }
         return;
       }
@@ -170,6 +175,7 @@ export function subscribePublicKeyTransactions({
         return;
       }
 
+      markSubscriptionHealthy();
       onTransaction(normalizeDslTransaction(transaction));
     }
 

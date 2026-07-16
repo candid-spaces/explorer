@@ -166,6 +166,37 @@ describe('subscribePublicKeyTransactions', () => {
     ]);
   });
 
+  it('backs off when connections open and then immediately close repeatedly', async () => {
+    vi.useFakeTimers();
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+
+    subscribePublicKeyTransactions({
+      endpoint: 'wss://example.test:8831',
+      publicKey: 'secondary-key',
+      onTransaction: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    const firstSocket = FakeWebSocket.instances[0];
+    firstSocket.open();
+    firstSocket.serverClose({ code: 1011 });
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    const secondSocket = FakeWebSocket.instances[1];
+    secondSocket.open();
+    secondSocket.serverClose({ code: 1011 });
+
+    await vi.advanceTimersByTimeAsync(1_999);
+
+    expect(FakeWebSocket.instances).toHaveLength(2);
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(FakeWebSocket.instances).toHaveLength(3);
+  });
+
   it('does not reconnect after an explicit subscription close', async () => {
     vi.useFakeTimers();
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
