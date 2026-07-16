@@ -107,9 +107,12 @@ function secondaryKeyReferenceFromInvalidDeclaration(
     return undefined;
   }
 
+  const nodeEndpoint = endpointFromNodeMemoProperty(memo);
+
   return {
     publicKey,
-    endpoint: endpointFromNodeMemoProperty(memo) ?? primaryEndpoint,
+    endpoint: nodeEndpoint ?? primaryEndpoint,
+    endpointSource: nodeEndpoint ? 'node-url-address' : 'primary-fallback',
     sourceTransactionId: transactionId,
     memoPreview: previewMemo(`${publicKey}: ${memo}`),
   };
