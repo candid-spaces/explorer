@@ -43,6 +43,13 @@ export function sortTransactionsByTimeStable(transactions: readonly DslTransacti
     .map(({ transaction }) => transaction);
 }
 
+export function outgoingTransactionsForPublicKey(
+  transactions: readonly DslTransaction[],
+  publicKey: string,
+): DslTransaction[] {
+  return transactions.filter((transaction) => transaction.from === publicKey);
+}
+
 export function advancePlaybackIndex(playbackIndex: number, transactionCount: number): number {
   return Math.min(playbackIndex + 1, transactionCount);
 }

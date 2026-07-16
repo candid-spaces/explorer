@@ -17,7 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import { currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, playbackIndexForElapsedTime, sortTransactionsByTimeStable } from './transactions/streamTransactions';
+import { currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
@@ -97,7 +97,7 @@ function normalizeActiveSecondaryStream(
   stream: ActiveSecondaryTransactions | undefined,
   reference: SecondaryKeyReference,
 ): ActiveSecondaryTransactions {
-  const transactions = stream?.transactions ?? [];
+  const transactions = outgoingTransactionsForPublicKey(stream?.transactions ?? [], reference.publicKey);
   const defaultPlaybackIndex = transactions.length > 0 ? transactions.length - 1 : 0;
   const playbackIndex = Math.min(Math.max(stream?.playbackIndex ?? defaultPlaybackIndex, 0), defaultPlaybackIndex);
 
@@ -112,13 +112,6 @@ function normalizeActiveSecondaryStream(
     playbackStartedAtMs: stream?.playbackStartedAtMs,
     playbackBaseTransactionTime: stream?.playbackBaseTransactionTime,
   };
-}
-
-function outgoingTransactionsForPublicKey(
-  transactions: readonly DslTransaction[],
-  publicKey: string,
-): DslTransaction[] {
-  return transactions.filter((transaction) => transaction.from === publicKey);
 }
 
 function endpointValidationError(endpoint: string): string | undefined {

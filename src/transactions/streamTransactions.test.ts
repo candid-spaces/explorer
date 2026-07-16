@@ -5,6 +5,7 @@ import {
   hasPlaybackReachedEnd,
   mergeHistoricalStreamTransactions,
   mergeStreamTransactions,
+  outgoingTransactionsForPublicKey,
   playbackIndexForElapsedTime,
   sortTransactionsByTimeStable,
 } from './streamTransactions';
@@ -74,6 +75,16 @@ describe('sortTransactionsByTimeStable', () => {
       'middle',
       'later',
     ]);
+  });
+});
+
+describe('outgoingTransactionsForPublicKey', () => {
+  it('filters stale persisted streams to only transactions from the watched key', () => {
+    const incoming = transaction({ from: 'someone-else', to: 'secondary-key', memo: 'incoming' });
+    const outgoing = transaction({ from: 'secondary-key', to: 'recipient-key', memo: 'outgoing' });
+    const missingSender = transaction({ from: undefined, to: 'secondary-key', memo: 'missing sender' });
+
+    expect(outgoingTransactionsForPublicKey([incoming, outgoing, missingSender], 'secondary-key')).toEqual([outgoing]);
   });
 });
 
