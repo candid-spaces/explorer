@@ -20,6 +20,14 @@ export function scaledPlaybackElapsedSeconds(
   return Math.max(0, elapsedSeconds) * normalizePlaybackSpeed(playbackSpeed);
 }
 
+export function playbackTimeForElapsedTime(
+  baseTransactionTime: number,
+  elapsedSeconds: number,
+  playbackSpeed = DEFAULT_PLAYBACK_SPEED,
+): number {
+  return baseTransactionTime + scaledPlaybackElapsedSeconds(elapsedSeconds, playbackSpeed);
+}
+
 export function playbackTickIntervalMilliseconds(
   transactions: readonly DslTransaction[],
   playbackSpeed = DEFAULT_PLAYBACK_SPEED,

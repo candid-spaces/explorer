@@ -9,6 +9,7 @@ import {
   outgoingTransactionsForPublicKey,
   playbackIndexForElapsedTime,
   playbackTickIntervalMilliseconds,
+  playbackTimeForElapsedTime,
   scaledPlaybackElapsedSeconds,
   sortTransactionsByTimeStable,
 } from './streamTransactions';
@@ -157,6 +158,13 @@ describe('scaledPlaybackElapsedSeconds', () => {
 
   it('falls back to original speed for an unsupported value', () => {
     expect(scaledPlaybackElapsedSeconds(3, 3)).toBe(3);
+  });
+
+  it('preserves the in-progress position when replay is restarted at a new speed', () => {
+    const playbackTime = playbackTimeForElapsedTime(0, 99, 1);
+
+    expect(playbackTime).toBe(99);
+    expect(playbackTimeForElapsedTime(playbackTime, 1 / 16, 16)).toBe(100);
   });
 });
 

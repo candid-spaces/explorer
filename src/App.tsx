@@ -17,7 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
+import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
@@ -562,14 +562,27 @@ export default function App() {
         return streams;
       }
 
+      const now = Date.now();
+      const playbackStartedAtMs = stream.playbackStartedAtMs ?? now;
+      const playbackBaseTransactionTime = stream.playbackBaseTransactionTime ?? stream.transactions[0]?.time ?? 0;
+      const elapsedSeconds = (now - playbackStartedAtMs) / 1000;
+      const playbackTime = playbackTimeForElapsedTime(
+        playbackBaseTransactionTime,
+        elapsedSeconds,
+        stream.playbackSpeed,
+      );
+
       return {
         ...streams,
         [streamKey]: {
           ...stream,
           playbackSpeed: normalizePlaybackSpeed(playbackSpeed),
-          playbackStartedAtMs: stream.replaying ? Date.now() : stream.playbackStartedAtMs,
+          playbackIndex: stream.replaying
+            ? playbackIndexForElapsedTime(stream.transactions, 0, playbackTime)
+            : stream.playbackIndex,
+          playbackStartedAtMs: stream.replaying ? now : stream.playbackStartedAtMs,
           playbackBaseTransactionTime: stream.replaying
-            ? stream.transactions[stream.playbackIndex]?.time
+            ? playbackTime
             : stream.playbackBaseTransactionTime,
         },
       };
