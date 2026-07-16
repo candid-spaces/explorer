@@ -72,6 +72,10 @@ export function advancePlaybackIndex(playbackIndex: number, transactionCount: nu
   return Math.min(playbackIndex + 1, transactionCount);
 }
 
+export function clampPlaybackIndex(playbackIndex: number, transactionCount: number): number {
+  return Math.min(Math.max(Math.trunc(playbackIndex), 0), Math.max(transactionCount - 1, 0));
+}
+
 export function playbackIndexForElapsedTime(
   transactions: readonly DslTransaction[],
   elapsedSeconds: number,

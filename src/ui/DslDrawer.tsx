@@ -133,6 +133,7 @@ interface DslDrawerProps {
   onSecondaryReplay: (publicKey: string, endpoint: string) => void;
   onSecondaryPlaybackToggle: (publicKey: string, endpoint: string) => void;
   onSecondaryPlaybackSpeedChange: (publicKey: string, endpoint: string, playbackSpeed: number) => void;
+  onSecondaryPlaybackSeek: (publicKey: string, endpoint: string, playbackIndex: number) => void;
   onLoadSecondaryHistory: (publicKey: string, endpoint: string) => void;
   selectedNodeId?: string;
   onSelectNode?: (id: string) => void;
@@ -172,6 +173,7 @@ export function DslDrawer({
   onSecondaryReplay,
   onSecondaryPlaybackToggle,
   onSecondaryPlaybackSpeedChange,
+  onSecondaryPlaybackSeek,
   onLoadSecondaryHistory,
   selectedNodeId,
   onSelectNode,
@@ -336,6 +338,22 @@ export function DslDrawer({
                                   <option key={speed} value={speed}>{speed}x</option>
                                 ))}
                               </select>
+                            </label>
+                            <label>
+                              Historical frame
+                              <input
+                                type="range"
+                                min={0}
+                                max={Math.max(stream.transactions.length - 1, 0)}
+                                step={1}
+                                value={stream.playbackIndex}
+                                disabled={stream.transactions.length === 0}
+                                onChange={(event) => onSecondaryPlaybackSeek(
+                                  stream.publicKey,
+                                  stream.endpoint,
+                                  Number(event.target.value),
+                                )}
+                              />
                             </label>
                             <button type="button" disabled={stream.historyLoading} onClick={() => onLoadSecondaryHistory(stream.publicKey, stream.endpoint)}>
                               {stream.historyLoading ? 'Loading history…' : 'Load historical range'}

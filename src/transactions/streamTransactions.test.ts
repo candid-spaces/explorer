@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   advancePlaybackIndex,
+  clampPlaybackIndex,
   currentPlaybackTransaction,
   hasPlaybackReachedEnd,
   mergeHistoricalStreamTransactions,
@@ -100,6 +101,15 @@ describe('advancePlaybackIndex', () => {
     playbackIndex = advancePlaybackIndex(playbackIndex, transactions.length);
 
     expect(playbackIndex).toBe(2);
+  });
+});
+
+describe('clampPlaybackIndex', () => {
+  it('keeps a seek position within the loaded transaction range', () => {
+    expect(clampPlaybackIndex(-1, 3)).toBe(0);
+    expect(clampPlaybackIndex(1.8, 3)).toBe(1);
+    expect(clampPlaybackIndex(5, 3)).toBe(2);
+    expect(clampPlaybackIndex(5, 0)).toBe(0);
   });
 });
 

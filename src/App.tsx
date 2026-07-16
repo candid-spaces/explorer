@@ -17,7 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { transactionsToDslSource } from './transactions/transactionDsl';
-import { currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
+import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
@@ -571,6 +571,33 @@ export default function App() {
     });
   }, [setActiveSecondaryTransactions]);
 
+  const handleSecondaryPlaybackSeek = useCallback((
+    publicKey: string,
+    endpoint: string,
+    playbackIndex: number,
+  ) => {
+    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+
+    setActiveSecondaryTransactions((streams) => {
+      const stream = streams[streamKey];
+
+      if (!stream) {
+        return streams;
+      }
+
+      return {
+        ...streams,
+        [streamKey]: {
+          ...stream,
+          playbackIndex: clampPlaybackIndex(playbackIndex, stream.transactions.length),
+          replaying: false,
+          playbackStartedAtMs: undefined,
+          playbackBaseTransactionTime: undefined,
+        },
+      };
+    });
+  }, [setActiveSecondaryTransactions]);
+
   const handleLoadSecondaryHistory = useCallback((publicKey: string, endpoint: string) => {
     const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
     const controller = new AbortController();
@@ -766,6 +793,7 @@ export default function App() {
         onSecondaryReplay={handleSecondaryReplay}
         onSecondaryPlaybackToggle={handleSecondaryPlaybackToggle}
         onSecondaryPlaybackSpeedChange={handleSecondaryPlaybackSpeedChange}
+        onSecondaryPlaybackSeek={handleSecondaryPlaybackSeek}
         onLoadSecondaryHistory={handleLoadSecondaryHistory}
         selectedNodeId={selectedNode?.id}
         onSelectNode={handleSelectExactNode}
