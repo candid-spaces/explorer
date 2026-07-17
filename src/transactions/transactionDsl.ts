@@ -3,12 +3,12 @@ import type { ParseDiagnostic } from '../dsl/types';
 import type { DslTransaction, PrimaryHistoricalBaselineDsl, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append either slash-prefixed
-// zero/equal filler or zero filler before a terminal equals marker on the final
-// axis size. This filler must not be stored as part of the renderable spatial
+// zero/equal filler or a terminal equals marker with optional zero filler on
+// the final axis size. This filler must not be stored as part of the renderable spatial
 // declaration path. Keep this path-scoped: memo/content values may legitimately
 // contain "=" and should not use this cleanup rule.
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
-const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0+=$/;
+const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0*=$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
 
 function transactionFallbackId(transaction: DslTransaction, index: number): string {

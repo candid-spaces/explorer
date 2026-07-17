@@ -105,8 +105,8 @@ describe('transactionsToDslSource', () => {
   it.each([
     ['+2+4/+6+6/+4+300000000000000000000000000000000=', '+2+4/+6+6/+4+3'],
     ['+2+4/+6+6/+4+300', '+2+4/+6+6/+4+300'],
-    ['+2+4/+6+6/+4+3=', '+2+4/+6+6/+4+3='],
-  ])('trims only terminal axis-size zero filler: %s', (path, expected) => {
+    ['+2+4/+6+6/+4+3=', '+2+4/+6+6/+4+3'],
+  ])('trims only terminal axis-size filler: %s', (path, expected) => {
     expect(trimTransactionPathFiller(path)).toBe(expected);
   });
 
