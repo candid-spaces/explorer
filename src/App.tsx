@@ -98,7 +98,10 @@ function normalizeActiveSecondaryStream(
   stream: ActiveSecondaryTransactions | undefined,
   reference: SecondaryKeyReference,
 ): ActiveSecondaryTransactions {
-  const transactions = outgoingTransactionsForPublicKey(stream?.transactions ?? [], reference.publicKey);
+  const transactions = outgoingTransactionsForPublicKey(
+    normalizeDslTransactions(stream?.transactions ?? []),
+    reference.publicKey,
+  );
   const defaultPlaybackIndex = transactions.length > 0 ? transactions.length - 1 : 0;
   const playbackIndex = Math.min(Math.max(stream?.playbackIndex ?? defaultPlaybackIndex, 0), defaultPlaybackIndex);
 
