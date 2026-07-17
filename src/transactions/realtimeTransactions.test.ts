@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { subscribePublicKeyTransactions } from './realtimeTransactions';
+import { transactionsToDslSource } from './transactionDsl';
 import type { DslTransaction } from './types';
 
 class FakeWebSocket extends EventTarget {
@@ -125,6 +126,58 @@ describe('subscribePublicKeyTransactions', () => {
 
     expect(onTransaction).toHaveBeenCalledTimes(1);
     expect(onTransaction.mock.calls.map(([transaction]) => transaction.memo)).toEqual(['outgoing']);
+  });
+
+  it('preserves parsing diagnostics for invalid secondary push destinations while normalizing valid ones', () => {
+    globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
+    const received: DslTransaction[] = [];
+
+    subscribePublicKeyTransactions({
+      endpoint: 'wss://example.test:8831',
+      publicKey: 'secondary-key',
+      onTransaction: (transaction) => received.push(transaction),
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    socket.open();
+    socket.message({
+      type: 'push_transaction',
+      body: {
+        transaction: {
+          time: 1,
+          from: 'secondary-key',
+          to: '+2+4/+6+6/+4+300000000000000000000000000000000=',
+          amount: 1,
+          fee: 0,
+          memo: 'geometry: box',
+        },
+      },
+    });
+    socket.message({
+      type: 'push_transaction',
+      body: {
+        transaction: {
+          time: 2,
+          from: 'secondary-key',
+          to: '+2+4/+6+6/not-a-coordinate',
+          amount: 1,
+          fee: 0,
+          memo: 'geometry: sphere',
+        },
+      },
+    });
+
+    const validResult = transactionsToDslSource([received[0]], { publicKey: 'secondary-key' });
+    const invalidResult = transactionsToDslSource([received[1]], { publicKey: 'secondary-key' });
+
+    expect(validResult.source).toBe('"+2+4/+6+6/+4+3" : "geometry: box"');
+    expect(validResult.rejected).toEqual([]);
+    expect(invalidResult.source).toBe('');
+    expect(invalidResult.rejected).toHaveLength(1);
+    expect(invalidResult.rejected[0]).toMatchObject({
+      memoPreview: '+2+4/+6+6/not-a-coordinate: geometry: sphere',
+    });
+    expect(invalidResult.rejected[0]?.reasons).not.toEqual([]);
   });
 
   it('drains outgoing matching transactions from filter blocks', () => {

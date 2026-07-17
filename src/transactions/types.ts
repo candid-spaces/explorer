@@ -53,6 +53,8 @@ export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEn
   playbackSpeed: number;
   replaying: boolean;
   historyLoading?: boolean;
+  /** Diagnostics for the transaction selected by this stream's playback cursor. */
+  currentTransactionRejectedDiagnostics: RejectedTransaction[];
 }
 
 export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;

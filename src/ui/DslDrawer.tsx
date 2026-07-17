@@ -314,11 +314,31 @@ export function DslDrawer({
                               <dd>{stream.transactions.length}</dd>
                             </div>
                             <div>
+                              <dt>Parsing rejections</dt>
+                              <dd>{stream.currentTransactionRejectedDiagnostics.length}</dd>
+                            </div>
+                            <div>
                               <dt>Mode</dt>
                               <dd>{stream.replaying ? 'Playback' : stream.transactions.length > 0 ? 'Playback paused' : 'Realtime'}</dd>
                             </div>
                           </dl>
                           {stream.streamError ? <p className="transaction-error">{stream.streamError}</p> : null}
+                          {stream.currentTransactionRejectedDiagnostics.length > 0 ? (
+                            <details className="diagnostics secondary-transaction-diagnostics" open>
+                              <summary>Rejected while parsing current outgoing transaction</summary>
+                              <ul>
+                                {stream.currentTransactionRejectedDiagnostics.map((rejection) => (
+                                  <li key={rejection.id}>
+                                    <strong>{rejection.id}:</strong> {rejection.memoPreview || '(empty memo)'}
+                                    <ul>
+                                      {rejection.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+                                    </ul>
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          ) : null}
+                          <small className="secondary-transaction-filter-note">Non-outgoing transactions are intentionally filtered and are not parsing rejections.</small>
                           <div className="secondary-transaction-stream-actions">
                             <button type="button" disabled={stream.transactions.length === 0} onClick={() => onSecondaryReplay(stream.publicKey, stream.endpoint)}>
                               Replay

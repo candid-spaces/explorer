@@ -64,6 +64,10 @@ export function DslTransactionControls({
   const upperPercent = (upperHeight / sliderMax) * 100;
   const secondaryOutgoingCount = secondaryTransactionStreams.reduce((count, stream) => count + stream.transactions.length, 0);
   const secondaryErrorCount = secondaryTransactionStreams.filter((stream) => stream.streamError).length;
+  const secondaryRejectedCount = secondaryTransactionStreams.reduce(
+    (count, stream) => count + stream.currentTransactionRejectedDiagnostics.length,
+    0,
+  );
   const realtimeStatuses = Array.from(new Set(secondaryTransactionStreams.map((stream) => stream.realtimeStatus)));
   const secondaryModeStatus = secondaryTransactionStreams.some((stream) => stream.replaying)
     ? 'Playback running'
@@ -321,7 +325,12 @@ export function DslTransactionControls({
               <dt>Stream errors</dt>
               <dd>{secondaryErrorCount}</dd>
             </div>
+            <div>
+              <dt>Parsing rejections</dt>
+              <dd>{secondaryRejectedCount}</dd>
+            </div>
           </dl>
+          <small>Only outgoing transactions are included in secondary streams; parsing rejections are reported separately.</small>
           <ul>
             {secondaryKeyReferences.map((reference) => {
               const stream = secondaryTransactionStreams.find((candidate) => (
@@ -334,6 +343,7 @@ export function DslTransactionControls({
                   <span>{reference.endpoint || '(primary endpoint)'}</span>
                   <small>
                     {describeEndpointSource(reference.endpointSource)} · {stream?.realtimeStatus ?? 'connecting'} · {stream?.transactions.length ?? 0} outgoing
+                    {stream?.currentTransactionRejectedDiagnostics.length ? ` · ${stream.currentTransactionRejectedDiagnostics.length} parsing rejection${stream.currentTransactionRejectedDiagnostics.length === 1 ? '' : 's'}` : ''}
                     {stream?.streamError ? ` · Error: ${stream.streamError}` : ''}
                   </small>
                 </li>

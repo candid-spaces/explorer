@@ -431,20 +431,33 @@ export default function App() {
       realtimeStatus,
       streamError,
       historyLoading,
+      currentTransactionRejectedDiagnostics: [],
     })), [activeSecondaryTransactions]);
 
   const secondaryTransactionOverlayStreams = useMemo(() => secondaryTransactionStreams
     .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => {
       const currentTransaction = currentPlaybackTransaction(secondaryTransactions, playbackIndex);
+      const dslResult = transactionsToDslSource(currentTransaction ? [currentTransaction] : [], {
+        publicKey,
+        endpoint,
+      });
 
       return {
         id: `${publicKey}@@${endpoint}`,
-        declarations: transactionsToDslSource(currentTransaction ? [currentTransaction] : [], {
-          publicKey,
-          endpoint,
-        }).source,
+        declarations: dslResult.source,
+        dslResult,
       };
     }), [secondaryTransactionStreams]);
+  const secondaryTransactionStreamsWithDiagnostics = useMemo<ActiveSecondaryTransactionStream[]>(() => {
+    const diagnosticsByStreamId = new Map(
+      secondaryTransactionOverlayStreams.map((stream) => [stream.id, stream.dslResult.rejected]),
+    );
+
+    return secondaryTransactionStreams.map((stream) => ({
+      ...stream,
+      currentTransactionRejectedDiagnostics: diagnosticsByStreamId.get(`${stream.publicKey}@@${stream.endpoint}`) ?? [],
+    }));
+  }, [secondaryTransactionOverlayStreams, secondaryTransactionStreams]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
@@ -795,7 +808,7 @@ export default function App() {
         mappedTransactionSource={remoteBaselineSource}
         rejectedTransactions={transactionDsl.rejected}
         secondaryKeyReferences={secondaryKeyReferences}
-        secondaryTransactionStreams={secondaryTransactionStreams}
+        secondaryTransactionStreams={secondaryTransactionStreamsWithDiagnostics}
         hasRemoteBaseline={hasRemoteBaseline}
         hasAuthoringEdits={hasAuthoringEdits}
         remoteBaselineChanged={remoteBaselineChanged}
