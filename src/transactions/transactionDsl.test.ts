@@ -151,6 +151,22 @@ describe('transactionsToDslSource', () => {
     ]);
   });
 
+  it('preserves Base64 secondary-key destinations that resemble terminal axis filler', () => {
+    const secondaryPublicKey = `${'A'.repeat(38)}+1+10=`;
+    const transactions = normalizeDslTransactions([
+      transaction('node: wss://secondary.example/ws', 0, secondaryPublicKey),
+    ]);
+    const result = transactionsToDslSource(transactions, { endpoint: 'wss://primary.example/ws' });
+
+    expect(transactions[0]?.to).toBe(secondaryPublicKey);
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: 'wss://secondary.example/ws',
+      }),
+    ]);
+  });
+
   it('preserves text memo content ending with equals padding characters', () => {
     const result = transactionsToDslSource([
       transaction('token==', 0, '+0+4/+0+2/+0+1'),

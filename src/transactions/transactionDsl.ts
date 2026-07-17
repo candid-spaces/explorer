@@ -34,9 +34,14 @@ export function trimTransactionMemoFiller(memo: string): string {
 }
 
 export function normalizeDslTransaction(transaction: DslTransaction): DslTransaction {
+  const destination = transaction.to ?? '';
+
   return {
     ...transaction,
-    to: trimTransactionPathFiller(transaction.to ?? ''),
+    // Base64 public keys can end in text that resembles terminal path filler
+    // (for example, "+1+10="). Keep them raw so node discovery can identify
+    // secondary-key references before any spatial-path normalization occurs.
+    to: secondaryPublicKeyCandidate(destination) ? destination : trimTransactionPathFiller(destination),
   };
 }
 
