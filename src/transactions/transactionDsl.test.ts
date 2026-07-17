@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   normalizeDslTransaction,
+  normalizeDslTransactions,
   transactionsToDslSource,
   trimTransactionMemoFiller,
   trimTransactionPathFiller,
@@ -102,6 +103,23 @@ describe('transactionsToDslSource', () => {
   });
 
   it.each([
+    ['+2+4/+6+6/+4+300000000000000000000000000000000=', '+2+4/+6+6/+4+3'],
+    ['+2+4/+6+6/+4+300', '+2+4/+6+6/+4+300'],
+    ['+2+4/+6+6/+4+3=', '+2+4/+6+6/+4+3='],
+  ])('trims only terminal axis-size zero filler: %s', (path, expected) => {
+    expect(trimTransactionPathFiller(path)).toBe(expected);
+  });
+
+  it('uses a trimmed terminal axis size when building a spatial declaration', () => {
+    const result = transactionsToDslSource([
+      transaction('geometry: box', 0, '+2+4/+6+6/+4+300000000000000000000000000000000='),
+    ]);
+
+    expect(result.source).toBe('"+2+4/+6+6/+4+3" : "geometry: box"');
+    expect(result.rejected).toEqual([]);
+  });
+
+  it.each([
     ['/000', '+2+6/+0+6/+1+13'],
     ['/000=', '+2+6/+0+6/+1+13'],
     ['/000000000=', '+2+6/+0+6/+1+13'],
@@ -123,6 +141,14 @@ describe('transactionsToDslSource', () => {
       memo: 'geometry: box',
       to: '+2+6/+0+6/+1+13',
     });
+  });
+
+  it('normalizes transaction collections used by historical secondary streams', () => {
+    expect(normalizeDslTransactions([
+      transaction('geometry: box', 0, '+2+4/+6+6/+4+300000000000000000000000000000000='),
+    ])).toMatchObject([
+      { to: '+2+4/+6+6/+4+3' },
+    ]);
   });
 
   it('preserves text memo content ending with equals padding characters', () => {

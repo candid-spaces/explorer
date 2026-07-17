@@ -16,7 +16,7 @@ import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from '.
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
-import { transactionsToDslSource } from './transactions/transactionDsl';
+import { normalizeDslTransactions, transactionsToDslSource } from './transactions/transactionDsl';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
@@ -634,7 +634,10 @@ export default function App() {
             return streams;
           }
 
-          const outgoingHistoricalTransactions = outgoingTransactionsForPublicKey(historicalTransactions, publicKey);
+          const outgoingHistoricalTransactions = outgoingTransactionsForPublicKey(
+            normalizeDslTransactions(historicalTransactions),
+            publicKey,
+          );
           const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, outgoingHistoricalTransactions));
 
           return {
