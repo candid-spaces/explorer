@@ -2,11 +2,13 @@ import { parseDslDocument } from '../dsl/parser';
 import type { ParseDiagnostic } from '../dsl/types';
 import type { DslTransaction, PrimaryHistoricalBaselineDsl, RejectedTransaction, SecondaryKeyReference } from './types';
 
-// Remote transaction transport/validation can append slash-prefixed zero/equal
-// filler to the destination path. This filler must not be stored as part of
-// the renderable spatial declaration path. Keep this path-scoped: memo/content values may
-// legitimately contain "=" and should not use this cleanup rule.
+// Remote transaction transport/validation can append either slash-prefixed
+// zero/equal filler or a terminal equals marker with optional zero filler on
+// the final axis size. This filler must not be stored as part of the renderable spatial
+// declaration path. Keep this path-scoped: memo/content values may legitimately
+// contain "=" and should not use this cleanup rule.
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
+const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0*=$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
 
 function transactionFallbackId(transaction: DslTransaction, index: number): string {
@@ -21,7 +23,10 @@ function previewMemo(memo: string): string {
 }
 
 export function trimTransactionPathFiller(path: string): string {
-  return path.trim().replace(TRAILING_FILLER_PATTERN, '');
+  return path
+    .trim()
+    .replace(TRAILING_FILLER_PATTERN, '')
+    .replace(TERMINAL_AXIS_SIZE_FILLER_PATTERN, '$<prefix>$<size>');
 }
 
 export function trimTransactionMemoFiller(memo: string): string {
@@ -29,10 +34,19 @@ export function trimTransactionMemoFiller(memo: string): string {
 }
 
 export function normalizeDslTransaction(transaction: DslTransaction): DslTransaction {
+  const destination = transaction.to ?? '';
+
   return {
     ...transaction,
-    to: trimTransactionPathFiller(transaction.to ?? ''),
+    // Base64 public keys can end in text that resembles terminal path filler
+    // (for example, "+1+10="). Keep them raw so node discovery can identify
+    // secondary-key references before any spatial-path normalization occurs.
+    to: secondaryPublicKeyCandidate(destination) ? destination : trimTransactionPathFiller(destination),
   };
+}
+
+export function normalizeDslTransactions(transactions: readonly DslTransaction[]): DslTransaction[] {
+  return transactions.map(normalizeDslTransaction);
 }
 
 function isPlainHttpUrlMemo(memo: string): boolean {

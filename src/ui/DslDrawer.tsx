@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
 import { PLAYBACK_SPEED_OPTIONS } from '../transactions/streamTransactions';
+import { normalizeDslTransaction } from '../transactions/transactionDsl';
 import type { ActiveSecondaryTransactionStream, DslTransaction, RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
 import { DslEditor } from './DslEditor';
 import { DslTransactionControls } from './DslTransactionControls';
@@ -57,11 +58,12 @@ function describeEndpointSource(source: SecondaryKeyReference['endpointSource'])
   return source === 'node-url-address' ? 'node: url_address' : 'Primary fallback';
 }
 
-function transactionSummary(transaction: DslTransaction): string {
-  const memo = transaction.memo.trim();
+export function transactionSummary(transaction: DslTransaction): string {
+  const normalizedTransaction = normalizeDslTransaction(transaction);
+  const memo = normalizedTransaction.memo.trim();
   const parts = [
-    transaction.from ? `from ${transaction.from}` : undefined,
-    `to ${transaction.to}`,
+    normalizedTransaction.from ? `from ${normalizedTransaction.from}` : undefined,
+    `to ${normalizedTransaction.to}`,
     memo ? `memo ${memo}` : undefined,
   ].filter(Boolean);
 
