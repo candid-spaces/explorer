@@ -56,16 +56,6 @@ export function useRealtimePublicKeyTransactions({
       MAX_RECONNECT_DELAY_MS,
     ),
     shouldReconnect: () => true,
-    onOpen: () => {
-      if (!watchedPublicKey) {
-        return;
-      }
-
-      sendJsonMessage({
-        type: 'filter_add',
-        body: { public_keys: [watchedPublicKey] },
-      }, false);
-    },
     onMessage: (event) => {
       realtimeTransactionsFromMessage(event, watchedPublicKey).forEach((transaction) => {
         callbacksRef.current.onTransaction(transaction);
@@ -82,6 +72,19 @@ export function useRealtimePublicKeyTransactions({
   useEffect(() => {
     callbacksRef.current.onStatusChange?.(statusForReadyState(readyState));
   }, [readyState]);
+
+  useEffect(() => {
+    if (readyState !== ReadyState.OPEN || !watchedPublicKey) {
+      return;
+    }
+
+    // This also runs for a subscriber joining a socket already shared by an
+    // existing endpoint subscription; that join does not trigger onOpen.
+    sendJsonMessage({
+      type: 'filter_add',
+      body: { public_keys: [watchedPublicKey] },
+    }, false);
+  }, [readyState, sendJsonMessage, watchedPublicKey]);
 
   return { readyState };
 }
