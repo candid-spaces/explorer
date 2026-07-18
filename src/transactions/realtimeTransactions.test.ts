@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeEndpoint } from './publicKeyTransactions';
-import { realtimeCloseError, realtimeTransactionsFromMessage } from './realtimeTransactions';
+import { realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
 import { transactionsToDslSource } from './transactionDsl';
 
 function realtimeMessage(data: unknown): MessageEvent<string> {
@@ -80,5 +80,19 @@ describe('realtimeCloseError', () => {
 
     expect(realtimeCloseError(event).message)
       .toBe('Realtime transaction endpoint closed (code 1006, reason: network reset, unclean close). Reconnecting...');
+  });
+});
+
+describe('realtimeFilterResultError', () => {
+  it('surfaces a rejected realtime filter registration', () => {
+    expect(realtimeFilterResultError(realtimeMessage({
+      type: 'filter_result',
+      body: { error: 'public key is not permitted' },
+    }))?.message).toBe('public key is not permitted');
+  });
+
+  it('ignores successful filter registrations and unrelated messages', () => {
+    expect(realtimeFilterResultError(realtimeMessage({ type: 'filter_result', body: {} }))).toBeUndefined();
+    expect(realtimeFilterResultError(realtimeMessage({ type: 'push_transaction', body: {} }))).toBeUndefined();
   });
 });

@@ -10,6 +10,10 @@ type FilterBlockMessageBody = {
   transactions?: DslTransaction[];
 };
 
+type FilterResultMessageBody = {
+  error?: unknown;
+};
+
 /**
  * Extracts outgoing transactions for a public key from one Cruzbit realtime
  * message. WebSocket lifecycle and reconnection are owned by react-use-websocket.
@@ -25,6 +29,18 @@ export function realtimeTransactionsFromMessage(event: MessageEvent<string>, pub
   return transactions
     .filter((transaction): transaction is DslTransaction => transaction?.from === publicKey)
     .map(normalizeDslTransaction);
+}
+
+/** Returns a server-side error reported while registering a realtime filter. */
+export function realtimeFilterResultError(event: MessageEvent<string>): Error | undefined {
+  const parsed = parseJsonMessage(event);
+
+  if (parsed?.type !== 'filter_result') {
+    return undefined;
+  }
+
+  const error = (parsed.body as FilterResultMessageBody | undefined)?.error;
+  return typeof error === 'string' && error ? new Error(error) : undefined;
 }
 
 export function realtimeCloseError(event: CloseEvent): Error {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { normalizeEndpoint } from './publicKeyTransactions';
-import { realtimeCloseError, realtimeTransactionsFromMessage } from './realtimeTransactions';
+import { realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
 import type { DslTransaction, SecondaryRealtimeStatus } from './types';
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
@@ -57,6 +57,13 @@ export function useRealtimePublicKeyTransactions({
     ),
     shouldReconnect: () => true,
     onMessage: (event) => {
+      const filterError = realtimeFilterResultError(event);
+
+      if (filterError) {
+        callbacksRef.current.onError?.(filterError);
+        return;
+      }
+
       realtimeTransactionsFromMessage(event, watchedPublicKey).forEach((transaction) => {
         callbacksRef.current.onTransaction(transaction);
       });
