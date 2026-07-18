@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { normalizeEndpoint } from './publicKeyTransactions';
 import { subscribePublicKeyTransactions } from './realtimeTransactions';
 import { transactionsToDslSource } from './transactionDsl';
 import type { DslTransaction } from './types';
@@ -54,6 +55,22 @@ class FakeWebSocket extends EventTarget {
 }
 
 const RealWebSocket = globalThis.WebSocket;
+
+describe('normalizeEndpoint', () => {
+  it('preserves WebSocket endpoints', () => {
+    expect(normalizeEndpoint('wss://example.test/path')).toBe('wss://example.test/path');
+    expect(normalizeEndpoint('ws://example.test/path')).toBe('ws://example.test/path');
+  });
+
+  it('converts HTTP endpoints to WebSocket endpoints', () => {
+    expect(normalizeEndpoint('https://example.test/path')).toBe('wss://example.test/path');
+    expect(normalizeEndpoint('http://example.test/path')).toBe('ws://example.test/path');
+  });
+
+  it('treats endpoints without a protocol as secure WebSocket endpoints', () => {
+    expect(normalizeEndpoint('example.test/path')).toBe('wss://example.test/path');
+  });
+});
 
 describe('subscribePublicKeyTransactions', () => {
   afterEach(() => {
