@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { normalizeEndpoint } from './publicKeyTransactions';
 import { realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
@@ -44,8 +44,16 @@ export function useRealtimePublicKeyTransactions({
 }: UseRealtimePublicKeyTransactionsOptions) {
   const watchedPublicKey = publicKey.trim();
   const normalizedEndpoint = useMemo(() => normalizeEndpoint(endpoint), [endpoint]);
+  const [shouldConnect, setShouldConnect] = useState(false);
   const callbacksRef = useRef({ onTransaction, onError, onStatusChange });
   callbacksRef.current = { onTransaction, onError, onStatusChange };
+
+  // Defer the initial connection until after the component has committed. This
+  // avoids opening then immediately closing a socket during React StrictMode's
+  // development-only effect cleanup pass.
+  useEffect(() => {
+    setShouldConnect(true);
+  }, []);
 
   const { readyState, sendJsonMessage } = useWebSocket(normalizedEndpoint, {
     protocols: ['cruzbit.1'],
@@ -74,7 +82,7 @@ export function useRealtimePublicKeyTransactions({
     onClose: (event) => {
       callbacksRef.current.onError?.(realtimeCloseError(event));
     },
-  }, Boolean(watchedPublicKey));
+  }, Boolean(watchedPublicKey) && shouldConnect);
 
   useEffect(() => {
     callbacksRef.current.onStatusChange?.(statusForReadyState(readyState));
