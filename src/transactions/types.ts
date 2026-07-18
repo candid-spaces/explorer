@@ -34,7 +34,7 @@ export interface RejectedTransaction {
   reasons: string[];
 }
 
-export type SecondaryEndpointSource = 'node-url-address' | 'primary-fallback';
+export type SecondaryEndpointSource = 'node-url-address' | 'default-secondary';
 
 export type SecondaryRealtimeStatus = 'connecting' | 'connected' | 'closed' | 'error';
 

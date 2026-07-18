@@ -32,7 +32,7 @@ function clampHeight(value: number, max: number): number {
 }
 
 function describeEndpointSource(source: SecondaryKeyReference['endpointSource']): string {
-  return source === 'node-url-address' ? 'node: url_address' : 'Primary fallback';
+  return source === 'node-url-address' ? 'node: url_address' : 'Default secondary endpoint';
 }
 
 export function DslTransactionControls({

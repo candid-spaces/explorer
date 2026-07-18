@@ -10,6 +10,7 @@ import type { DslTransaction, PrimaryHistoricalBaselineDsl, RejectedTransaction,
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
 const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0*=$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
+export const DEFAULT_SECONDARY_TRANSACTION_ENDPOINT = 'https://ungallant-unimpeding-kade.ngrok-free.dev/000000b179a6172473845cbc913598edef179aabb31108324694ca1b12a19e32';
 
 function transactionFallbackId(transaction: DslTransaction, index: number): string {
   return [transaction.time, trimTransactionPathFiller(transaction.to), transaction.series ?? 'none', index].join(':');
@@ -110,7 +111,6 @@ function secondaryKeyReferenceFromInvalidDeclaration(
   path: string,
   memo: string,
   transactionId: string,
-  primaryEndpoint = '',
   rawDestination = path,
 ): SecondaryKeyReference | undefined {
   const publicKey = secondaryPublicKeyCandidate(rawDestination)
@@ -125,8 +125,8 @@ function secondaryKeyReferenceFromInvalidDeclaration(
 
   return {
     publicKey,
-    endpoint: nodeEndpoint ?? primaryEndpoint,
-    endpointSource: nodeEndpoint ? 'node-url-address' : 'primary-fallback',
+    endpoint: nodeEndpoint ?? DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+    endpointSource: nodeEndpoint ? 'node-url-address' : 'default-secondary',
     sourceTransactionId: transactionId,
     memoPreview: previewMemo(`${publicKey}: ${memo}`),
   };
@@ -175,8 +175,6 @@ export function transactionsToDslSource(
   const rejected: RejectedTransaction[] = [];
   const secondaryKeys: SecondaryKeyReference[] = [];
   const publicKey = options.publicKey?.trim();
-  const endpoint = options.endpoint?.trim() ?? '';
-
   transactions.forEach((transaction, index) => {
     if (publicKey && transaction.from !== publicKey) {
       return;
@@ -210,7 +208,6 @@ export function transactionsToDslSource(
       path,
       memo,
       id,
-      endpoint,
       rawDestination,
     );
 

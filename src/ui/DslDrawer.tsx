@@ -55,7 +55,7 @@ function groupSecondaryTransactionStreams(
 }
 
 function describeEndpointSource(source: SecondaryKeyReference['endpointSource']): string {
-  return source === 'node-url-address' ? 'node: url_address' : 'Primary fallback';
+  return source === 'node-url-address' ? 'node: url_address' : 'Default secondary endpoint';
 }
 
 export function transactionSummary(transaction: DslTransaction): string {
