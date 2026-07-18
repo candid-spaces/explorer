@@ -18,6 +18,10 @@ export function normalizeEndpoint(endpoint: string): string {
     return trimmed;
   }
 
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/^http/i, 'ws');
+  }
+
   return `wss://${trimmed}`;
 }
 
