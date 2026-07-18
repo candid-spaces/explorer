@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
   normalizeDslTransaction,
   normalizeDslTransactions,
   transactionsToDslSource,
@@ -232,7 +233,7 @@ describe('transactionsToDslSource', () => {
     ]);
   });
 
-  it('uses the primary endpoint fallback for secondary-key references without a node memo property', () => {
+  it('uses the default secondary endpoint for secondary-key references without a node memo property', () => {
     const secondaryPublicKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     const result = transactionsToDslSource([
       transaction(secondaryPublicKey, 4, 'secondary-key-reference'),
@@ -243,8 +244,23 @@ describe('transactionsToDslSource', () => {
     expect(result.secondaryKeys).toEqual([
       expect.objectContaining({
         publicKey: secondaryPublicKey,
-        endpoint: 'wss://primary.example/ws',
-        endpointSource: 'primary-fallback',
+        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+        endpointSource: 'default-secondary',
+      }),
+    ]);
+  });
+
+  it('uses the default secondary endpoint for empty node memo properties', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+    const result = transactionsToDslSource([
+      transaction('node:   ', 5, secondaryPublicKey),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+        endpointSource: 'default-secondary',
       }),
     ]);
   });
