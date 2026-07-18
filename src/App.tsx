@@ -14,12 +14,12 @@ import {
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
-import { subscribePublicKeyTransactions } from './transactions/realtimeTransactions';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { normalizeDslTransactions, transactionsToDslSource } from './transactions/transactionDsl';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
+import { useRealtimePublicKeyTransactions } from './transactions/useRealtimePublicKeyTransactions';
 import { DslDrawer } from './ui/DslDrawer';
 import { SelectedNodeInspector } from './ui/SelectedNodeInspector';
 import { usePersistentState } from './ui/usePersistentState';
@@ -145,6 +145,30 @@ function summarizeLineChanges(originalSource: string, nextSource: string): LineC
   return { added, removed };
 }
 
+interface SecondaryRealtimeSubscriptionProps {
+  reference: SecondaryKeyReference;
+  onTransaction: (reference: SecondaryKeyReference, transaction: DslTransaction) => void;
+  onError: (reference: SecondaryKeyReference, error: Error) => void;
+  onStatusChange: (reference: SecondaryKeyReference, status: SecondaryRealtimeStatus) => void;
+}
+
+function SecondaryRealtimeSubscription({
+  reference,
+  onTransaction,
+  onError,
+  onStatusChange,
+}: SecondaryRealtimeSubscriptionProps) {
+  useRealtimePublicKeyTransactions({
+    endpoint: reference.endpoint,
+    publicKey: reference.publicKey,
+    onTransaction: (transaction) => onTransaction(reference, transaction),
+    onError: (error) => onError(reference, error),
+    onStatusChange: (status) => onStatusChange(reference, status),
+  });
+
+  return null;
+}
+
 export default function App() {
   const [authoringSource, setAuthoringSource] = useState(INITIAL_DSL);
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
@@ -239,137 +263,96 @@ export default function App() {
     [transactionDsl.secondaryKeys],
   );
 
+  const handleSecondaryRealtimeTransaction = useCallback((reference: SecondaryKeyReference, transaction: DslTransaction) => {
+    const streamKey = streamKeyForSecondaryReference(reference);
+
+    setActiveSecondaryTransactions((streams) => {
+      const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
+      const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(current.transactions, [transaction]));
+
+      return {
+        ...streams,
+        [streamKey]: {
+          ...current,
+          reference,
+          transactions,
+          playbackIndex: current.replaying ? current.playbackIndex : Math.max(0, transactions.length - 1),
+          streamError: undefined,
+        },
+      };
+    });
+  }, [setActiveSecondaryTransactions]);
+
+  const handleSecondaryRealtimeStatusChange = useCallback((
+    reference: SecondaryKeyReference,
+    realtimeStatus: SecondaryRealtimeStatus,
+  ) => {
+    const streamKey = streamKeyForSecondaryReference(reference);
+
+    setActiveSecondaryTransactions((streams) => {
+      const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
+
+      return {
+        ...streams,
+        [streamKey]: {
+          ...current,
+          realtimeStatus,
+          streamError: realtimeStatus === 'connected' ? undefined : current.streamError,
+        },
+      };
+    });
+  }, [setActiveSecondaryTransactions]);
+
+  const handleSecondaryRealtimeError = useCallback((reference: SecondaryKeyReference, error: Error) => {
+    const streamKey = streamKeyForSecondaryReference(reference);
+    setSecondaryTransactionError(error.message);
+    setActiveSecondaryTransactions((streams) => {
+      const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
+
+      return {
+        ...streams,
+        [streamKey]: {
+          ...current,
+          realtimeStatus: 'error',
+          streamError: error.message,
+        },
+      };
+    });
+  }, [setActiveSecondaryTransactions]);
+
   useEffect(() => {
-    setSecondaryTransactionError(undefined);
+    const invalidReference = secondaryKeyReferences.find((reference) => endpointValidationError(reference.endpoint) !== undefined);
+    setSecondaryTransactionError(invalidReference
+      ? `Invalid secondary endpoint for ${invalidReference.publicKey}: ${endpointValidationError(invalidReference.endpoint)}`
+      : undefined);
 
     if (secondaryKeyReferences.length === 0) {
       setActiveSecondaryTransactions({});
-      return undefined;
+      return;
     }
-
-    const controllers = secondaryKeyReferences.flatMap((reference) => {
-      const streamKey = streamKeyForSecondaryReference(reference);
-      const controller = new AbortController();
-      const validationError = endpointValidationError(reference.endpoint);
-
-      setActiveSecondaryTransactions((streams) => ({
-        ...streams,
-        [streamKey]: normalizeActiveSecondaryStream(streams[streamKey], reference),
-      }));
-
-      if (validationError) {
-        setSecondaryTransactionError(`Invalid secondary endpoint for ${reference.publicKey}: ${validationError}`);
-        setActiveSecondaryTransactions((streams) => {
-          const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-
-          return {
-            ...streams,
-            [streamKey]: {
-              ...current,
-              realtimeStatus: 'error',
-              streamError: validationError,
-            },
-          };
-        });
-        return [];
-      }
-
-      try {
-        const subscription = subscribePublicKeyTransactions({
-          endpoint: reference.endpoint,
-          publicKey: reference.publicKey,
-          signal: controller.signal,
-          onTransaction: (transaction) => {
-            setActiveSecondaryTransactions((streams) => {
-              const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-              const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(current.transactions, [transaction]));
-
-              return {
-                ...streams,
-                [streamKey]: {
-                  ...current,
-                  reference,
-                  transactions,
-                  playbackIndex: current.replaying ? current.playbackIndex : Math.max(0, transactions.length - 1),
-                  streamError: undefined,
-                },
-              };
-            });
-          },
-          onOpen: () => {
-            setActiveSecondaryTransactions((streams) => {
-              const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-
-              return {
-                ...streams,
-                [streamKey]: {
-                  ...current,
-                  realtimeStatus: 'connected',
-                  streamError: undefined,
-                },
-              };
-            });
-          },
-          onClose: () => {
-            setActiveSecondaryTransactions((streams) => {
-              const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-
-              return {
-                ...streams,
-                [streamKey]: { ...current, realtimeStatus: 'closed' },
-              };
-            });
-          },
-          onError: (error) => {
-            setSecondaryTransactionError(error.message);
-            setActiveSecondaryTransactions((streams) => {
-              const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-
-              return {
-                ...streams,
-                [streamKey]: {
-                  ...current,
-                  realtimeStatus: 'error',
-                  streamError: error.message,
-                },
-              };
-            });
-          },
-        });
-
-        return [{ controller, subscription }];
-      } catch (caught) {
-        controller.abort();
-        const errorMessage = caught instanceof Error ? caught.message : 'Unable to subscribe to secondary transactions.';
-        setSecondaryTransactionError(errorMessage);
-        setActiveSecondaryTransactions((streams) => {
-          const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
-
-          return {
-            ...streams,
-            [streamKey]: {
-              ...current,
-              realtimeStatus: 'error',
-              streamError: errorMessage,
-            },
-          };
-        });
-        return [];
-      }
-    });
 
     setActiveSecondaryTransactions((streams) => {
       const activeStreamKeys = new Set(secondaryKeyReferences.map(streamKeyForSecondaryReference));
-      return Object.fromEntries(Object.entries(streams).filter(([key]) => activeStreamKeys.has(key)));
-    });
+      const nextStreams = Object.fromEntries(Object.entries(streams).filter(([key]) => activeStreamKeys.has(key)));
 
-    return () => {
-      controllers.forEach(({ controller, subscription }) => {
-        controller.abort();
-        subscription.close();
+      secondaryKeyReferences.forEach((reference) => {
+        const streamKey = streamKeyForSecondaryReference(reference);
+        const validationError = endpointValidationError(reference.endpoint);
+        const current = normalizeActiveSecondaryStream(nextStreams[streamKey], reference);
+
+        nextStreams[streamKey] = validationError
+          ? { ...current, realtimeStatus: 'error', streamError: validationError }
+          : current;
       });
-    };
-  }, [secondaryKeyReferences]);
+
+      return nextStreams;
+    });
+  }, [secondaryKeyReferences, setActiveSecondaryTransactions]);
+
+  const validSecondaryKeyReferences = useMemo(
+    () => secondaryKeyReferences.filter((reference) => endpointValidationError(reference.endpoint) === undefined),
+    [secondaryKeyReferences],
+  );
 
   useEffect(() => {
     const replayingStreams = Object.values(activeSecondaryTransactions).filter((stream) => stream.replaying);
@@ -770,6 +753,15 @@ export default function App() {
 
   return (
     <main className={`app-shell app-shell--${appMode}`}>
+      {validSecondaryKeyReferences.map((reference) => (
+        <SecondaryRealtimeSubscription
+          key={streamKeyForSecondaryReference(reference)}
+          reference={reference}
+          onTransaction={handleSecondaryRealtimeTransaction}
+          onError={handleSecondaryRealtimeError}
+          onStatusChange={handleSecondaryRealtimeStatusChange}
+        />
+      ))}
       <SceneRoot
         document={document}
         selectedNodeId={selectedSceneNodeId}
