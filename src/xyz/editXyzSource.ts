@@ -1,5 +1,5 @@
 import { CENTIUNITS_PER_UNIT } from '../model/units';
-import { parseDslDeclaration } from './parser';
+import { parseXyzDeclaration } from './parser';
 import type { AxisName } from './types';
 
 const DECLARATION_PATTERN = /^(?<indent>\s*)"(?<path>[^"]+)"(?<middle>\s*:\s*)"(?<properties>[^"]*)"(?<suffix>\s*)$/;
@@ -259,5 +259,5 @@ export function canEditDeclarationLine(source: string, lineNumber: number): bool
     return false;
   }
 
-  return parseDslDeclaration(line, lineNumber).ok;
+  return parseXyzDeclaration(line, lineNumber).ok;
 }

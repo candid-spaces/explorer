@@ -1,12 +1,12 @@
 export type AxisName = 'x' | 'y' | 'z';
 
-export interface DslAxisSpec {
+export interface XyzAxisSpec {
   axis: AxisName;
   offset: number;
   size: number;
 }
 
-export interface DslBoxSpec {
+export interface XyzBoxSpec {
   source: string;
   x: number;
   y: number;
@@ -16,31 +16,31 @@ export interface DslBoxSpec {
   depth: number;
 }
 
-export interface DslPathSpec {
+export interface XyzPathSpec {
   source: string;
   namespace: string[];
-  box?: DslBoxSpec;
+  box?: XyzBoxSpec;
   canonicalPath: string;
   isDeclarationOnly: boolean;
 }
 
-export type DslGeometryKind = 'box' | 'cylinder' | 'cone' | 'sphere';
-export type DslCsgOperation = 'union' | 'subtraction' | 'intersection';
+export type XyzGeometryKind = 'box' | 'cylinder' | 'cone' | 'sphere';
+export type XyzCsgOperation = 'union' | 'subtraction' | 'intersection';
 
-export interface DslGeometrySpec {
-  kind: DslGeometryKind;
+export interface XyzGeometrySpec {
+  kind: XyzGeometryKind;
   diagnostics: string[];
   declared?: boolean;
   kindDeclared?: boolean;
   'box-radius'?: number;
   puff?: number;
-  operation?: DslCsgOperation;
+  operation?: XyzCsgOperation;
 }
 
 
-export type DslTextureChannel = 'map' | 'roughnessMap' | 'normalMap' | 'bumpMap' | 'metalnessMap' | 'alphaMap';
+export type XyzTextureChannel = 'map' | 'roughnessMap' | 'normalMap' | 'bumpMap' | 'metalnessMap' | 'alphaMap';
 
-export interface DslTextureSpec {
+export interface XyzTextureSpec {
   preset?: string;
   src?: string;
   repeat?: [number, number];
@@ -49,13 +49,13 @@ export interface DslTextureSpec {
   strength?: number;
 }
 
-export interface DslMaterialSpec {
+export interface XyzMaterialSpec {
   materialPreset?: string;
   semanticMaterial?: string;
   materialVariant?: string;
   materialPattern?: string;
   materialFinish?: string;
-  textures?: Partial<Record<DslTextureChannel, DslTextureSpec>>;
+  textures?: Partial<Record<XyzTextureChannel, XyzTextureSpec>>;
   color?: string | number;
   metalness?: number;
   roughness?: number;
@@ -67,18 +67,18 @@ export interface DslMaterialSpec {
   diagnostics: string[];
 }
 
-export interface DslTransformSpec {
+export interface XyzTransformSpec {
   rotation: [number, number, number];
   diagnostics: string[];
   declared?: boolean;
 }
 
-export type DslContentSpec =
+export type XyzContentSpec =
   | { kind?: undefined; diagnostics: string[] }
   | { kind: 'text'; text: string; diagnostics: string[] }
   | { kind: 'url'; url: string; diagnostics: string[] };
 
-export interface DslReferenceSpec {
+export interface XyzReferenceSpec {
   targetPath?: string;
   scale?: boolean;
   diagnostics: string[];
@@ -87,14 +87,14 @@ export interface DslReferenceSpec {
 export interface SpatialObject {
   id: string;
   source: string;
-  path: DslPathSpec;
+  path: XyzPathSpec;
   namespace: string[];
-  box?: DslBoxSpec;
-  material: DslMaterialSpec;
-  geometry: DslGeometrySpec;
-  transform: DslTransformSpec;
-  reference: DslReferenceSpec;
-  content: DslContentSpec;
+  box?: XyzBoxSpec;
+  material: XyzMaterialSpec;
+  geometry: XyzGeometrySpec;
+  transform: XyzTransformSpec;
+  reference: XyzReferenceSpec;
+  content: XyzContentSpec;
   declarationOnly: boolean;
   lineNumber: number;
   unionGroupId?: string;

@@ -1,6 +1,6 @@
-import { parseDslDocument } from '../dsl/parser';
-import type { ParseDiagnostic } from '../dsl/types';
-import type { DslTransaction, PrimaryHistoricalBaselineDsl, RejectedTransaction, SecondaryKeyReference } from './types';
+import { parseXyzDocument } from '../xyz/parser';
+import type { ParseDiagnostic } from '../xyz/types';
+import type { XyzTransaction, PrimaryHistoricalBaselineXyz, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append either slash-prefixed
 // zero/equal filler or a terminal equals marker with optional zero filler on
@@ -12,7 +12,7 @@ const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0
 const MAX_MEMO_PREVIEW_LENGTH = 120;
 export const DEFAULT_SECONDARY_TRANSACTION_ENDPOINT = 'wss://ungallant-unimpeding-kade.ngrok-free.dev/000000b179a6172473845cbc913598edef179aabb31108324694ca1b12a19e32';
 
-function transactionFallbackId(transaction: DslTransaction, index: number): string {
+function transactionFallbackId(transaction: XyzTransaction, index: number): string {
   return [transaction.time, trimTransactionPathFiller(transaction.to), transaction.series ?? 'none', index].join(':');
 }
 
@@ -34,7 +34,7 @@ export function trimTransactionMemoFiller(memo: string): string {
   return memo.trim();
 }
 
-export function normalizeDslTransaction(transaction: DslTransaction): DslTransaction {
+export function normalizeXyzTransaction(transaction: XyzTransaction): XyzTransaction {
   const destination = transaction.to ?? '';
 
   return {
@@ -46,8 +46,8 @@ export function normalizeDslTransaction(transaction: DslTransaction): DslTransac
   };
 }
 
-export function normalizeDslTransactions(transactions: readonly DslTransaction[]): DslTransaction[] {
-  return transactions.map(normalizeDslTransaction);
+export function normalizeXyzTransactions(transactions: readonly XyzTransaction[]): XyzTransaction[] {
+  return transactions.map(normalizeXyzTransaction);
 }
 
 function isPlainHttpUrlMemo(memo: string): boolean {
@@ -59,16 +59,16 @@ function isPlainHttpUrlMemo(memo: string): boolean {
   }
 }
 
-function encodeDslContentValue(value: string): string {
+function encodeXyzContentValue(value: string): string {
   return encodeURIComponent(value);
 }
 
 function memoToContentProperties(memo: string): string {
   if (isPlainHttpUrlMemo(memo)) {
-    return `content-kind: url; content-url-uri: ${encodeDslContentValue(memo)}`;
+    return `content-kind: url; content-url-uri: ${encodeXyzContentValue(memo)}`;
   }
 
-  return `content-kind: text; content-text-uri: ${encodeDslContentValue(memo)}`;
+  return `content-kind: text; content-text-uri: ${encodeXyzContentValue(memo)}`;
 }
 
 function secondaryPublicKeyCandidate(value: string): string | undefined {
@@ -132,13 +132,13 @@ function secondaryKeyReferenceFromInvalidDeclaration(
   };
 }
 
-function memoToDslProperties(path: string, memo: string): string {
+function memoToXyzProperties(path: string, memo: string): string {
   if (!memo) {
     return memo;
   }
 
-  const source = quoteDslDeclaration(path, memo);
-  const { valid } = parseValidDsl(source);
+  const source = quoteXyzDeclaration(path, memo);
+  const { valid } = parseValidXyz(source);
 
   return valid ? memo : memoToContentProperties(memo);
 }
@@ -147,12 +147,12 @@ function diagnosticsToReasons(diagnostics: readonly ParseDiagnostic[]): string[]
   return diagnostics.map((diagnostic) => `Line ${diagnostic.line}: ${diagnostic.message}`);
 }
 
-function quoteDslDeclaration(path: string, properties: string): string {
+function quoteXyzDeclaration(path: string, properties: string): string {
   return `"${path}" : "${properties.replace(/"/g, '\\"')}"`;
 }
 
-function parseValidDsl(source: string) {
-  const parsed = parseDslDocument(source);
+function parseValidXyz(source: string) {
+  const parsed = parseXyzDocument(source);
   const objects = parsed.value ?? [];
   const hasInvalidObject = objects.some((object) => !object.declarationOnly && !object.box);
 
@@ -162,15 +162,15 @@ function parseValidDsl(source: string) {
   };
 }
 
-interface TransactionsToDslSourceOptions {
+interface TransactionsToXyzSourceOptions {
   publicKey?: string;
   endpoint?: string;
 }
 
-export function transactionsToDslSource(
-  transactions: readonly DslTransaction[],
-  options: TransactionsToDslSourceOptions = {},
-): PrimaryHistoricalBaselineDsl & { secondaryKeys: SecondaryKeyReference[] } {
+export function transactionsToXyzSource(
+  transactions: readonly XyzTransaction[],
+  options: TransactionsToXyzSourceOptions = {},
+): PrimaryHistoricalBaselineXyz & { secondaryKeys: SecondaryKeyReference[] } {
   const accepted: string[] = [];
   const rejected: RejectedTransaction[] = [];
   const secondaryKeys: SecondaryKeyReference[] = [];
@@ -195,9 +195,9 @@ export function transactionsToDslSource(
       return;
     }
 
-    const properties = memoToDslProperties(path, memo);
-    const source = quoteDslDeclaration(path, properties);
-    const { parsed, valid } = parseValidDsl(source);
+    const properties = memoToXyzProperties(path, memo);
+    const source = quoteXyzDeclaration(path, properties);
+    const { parsed, valid } = parseValidXyz(source);
 
     if (valid) {
       accepted.push(source);

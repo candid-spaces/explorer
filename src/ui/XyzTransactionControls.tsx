@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import type { ActiveSecondaryTransactionStream, SecondaryKeyReference, TransactionRange } from '../transactions/types';
 
-interface DslTransactionControlsProps {
+interface XyzTransactionControlsProps {
   publicKey: string;
   publicKeyShareUrl?: string;
   range: TransactionRange;
@@ -35,7 +35,7 @@ function describeEndpointSource(source: SecondaryKeyReference['endpointSource'])
   return source === 'node-url-address' ? 'node: url_address' : 'Default secondary endpoint';
 }
 
-export function DslTransactionControls({
+export function XyzTransactionControls({
   publicKey,
   publicKeyShareUrl,
   range,
@@ -54,7 +54,7 @@ export function DslTransactionControls({
   onRangeChange,
   onReload,
   onUseTip,
-}: DslTransactionControlsProps) {
+}: XyzTransactionControlsProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const sliderMax = Math.max(tipHeight ?? 0, range.startHeight, range.endHeight, 1);
   const lowerHeight = Math.min(range.startHeight, range.endHeight);

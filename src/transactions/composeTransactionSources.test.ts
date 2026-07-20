@@ -4,7 +4,7 @@ import { composeTransactionSources } from './composeTransactionSources';
 describe('composeTransactionSources', () => {
   const primary = '"Table/" : "color: white"\n"Table/+0+1/+0+1/+0+1" : ""';
 
-  it('keeps primary DSL first so secondary primitive instances can reference base objects', () => {
+  it('keeps primary XYZ first so secondary primitive instances can reference base objects', () => {
     const result = composeTransactionSources(primary, [
       { declarations: '"+1+1/+0+1/+0+1" : "ref: Table/"' },
     ]);

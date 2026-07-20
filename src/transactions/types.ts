@@ -1,4 +1,4 @@
-export interface DslTransaction {
+export interface XyzTransaction {
   time: number;
   nonce?: number;
   from?: string;
@@ -23,7 +23,7 @@ export interface TransactionPublicKeyEndpoint {
 
 export interface PrimaryPublicKeyReference extends TransactionPublicKeyEndpoint {}
 
-export interface PrimaryHistoricalBaselineDsl {
+export interface PrimaryHistoricalBaselineXyz {
   source: string;
   rejected: RejectedTransaction[];
 }
@@ -48,7 +48,7 @@ export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEn
   endpointSource: SecondaryEndpointSource;
   realtimeStatus: SecondaryRealtimeStatus;
   streamError?: string;
-  transactions: DslTransaction[];
+  transactions: XyzTransaction[];
   playbackIndex: number;
   playbackSpeed: number;
   replaying: boolean;

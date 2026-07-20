@@ -1,13 +1,13 @@
-import type { DslBoxSpec } from '../dsl/types';
+import type { XyzBoxSpec } from '../xyz/types';
 import type { SpatialBounds, SpatialNode } from './SpatialNode';
 import type { SpatialTransform } from './transform';
 import { transformFromBox } from './transform';
 
-export function boundsFromBox(box: DslBoxSpec): SpatialBounds {
+export function boundsFromBox(box: XyzBoxSpec): SpatialBounds {
   return boundsFromTransformedBox(box, transformFromBox(box, { rotation: [0, 0, 0], diagnostics: [] }));
 }
 
-export function boundsFromTransformedBox(box: DslBoxSpec, transform: SpatialTransform): SpatialBounds {
+export function boundsFromTransformedBox(box: XyzBoxSpec, transform: SpatialTransform): SpatialBounds {
   const [width, height, depth] = transform.scale;
   const halfWidth = width / 2;
   const halfHeight = height / 2;

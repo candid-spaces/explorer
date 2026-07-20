@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
-  normalizeDslTransaction,
-  normalizeDslTransactions,
-  transactionsToDslSource,
+  normalizeXyzTransaction,
+  normalizeXyzTransactions,
+  transactionsToXyzSource,
   trimTransactionMemoFiller,
   trimTransactionPathFiller,
-} from './transactionDsl';
-import type { DslTransaction } from './types';
+} from './transactionXyz';
+import type { XyzTransaction } from './types';
 
-function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from?: string): DslTransaction {
+function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from?: string): XyzTransaction {
   return {
     time: 100 + index,
     from,
@@ -20,9 +20,9 @@ function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from
   };
 }
 
-describe('transactionsToDslSource', () => {
+describe('transactionsToXyzSource', () => {
   it('builds valid XYZ coordinate declarations from transaction path and memo properties', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('geometry: box', 0, '+0+1/+0+1/+0+1'),
     ]);
 
@@ -31,7 +31,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('accepts namespaces and namespace declarations from transaction paths', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('color: red', 0, 'Room/'),
       transaction('', 1, 'Room/Chair/+0+1/+0+1/+0+1'),
     ]);
@@ -42,7 +42,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('accepts plain-text memos as text content declarations', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('Hello from a memo', 0, '+0+4/+0+2/+0+1'),
     ]);
 
@@ -51,7 +51,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('accepts plain URL memos as URL content declarations', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('https://example.com/view?x=1', 0, '+0+4/+0+2/+0+1'),
     ]);
 
@@ -60,7 +60,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('treats non-http URL-like memos as text content', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('javascript:alert(1)', 0, '+0+4/+0+2/+0+1'),
     ]);
 
@@ -69,8 +69,8 @@ describe('transactionsToDslSource', () => {
   });
 
   it('does not accept full spatial declarations embedded directly in memo text', () => {
-    const result = transactionsToDslSource([
-      transaction('"+0+1/+0+1/+0+1" : "geometry: box"', 0, 'not-a-valid-dsl-path'),
+    const result = transactionsToXyzSource([
+      transaction('"+0+1/+0+1/+0+1" : "geometry: box"', 0, 'not-a-valid-xyz-path'),
     ]);
 
     expect(result.source).toBe('');
@@ -78,7 +78,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('rejects malformed transaction paths', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('geometry: box', 0, '+0+1/+0+1'),
     ]);
 
@@ -87,7 +87,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('trims filler from transaction to paths before parsing', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('geometry: sphere; color: blue;', 0, '+2+6/+0+6/+1+13/000000000000000000000000000='),
     ]);
 
@@ -112,7 +112,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('uses a trimmed terminal axis size when building a spatial declaration', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('geometry: box', 0, '+2+4/+6+6/+4+300000000000000000000000000000000='),
     ]);
 
@@ -138,14 +138,14 @@ describe('transactionsToDslSource', () => {
   });
 
   it('normalizes transaction paths before transactions are stored at rest', () => {
-    expect(normalizeDslTransaction(transaction('geometry: box', 0, '+2+6/+0+6/+1+13/000000000='))).toMatchObject({
+    expect(normalizeXyzTransaction(transaction('geometry: box', 0, '+2+6/+0+6/+1+13/000000000='))).toMatchObject({
       memo: 'geometry: box',
       to: '+2+6/+0+6/+1+13',
     });
   });
 
   it('normalizes transaction collections used by historical secondary streams', () => {
-    expect(normalizeDslTransactions([
+    expect(normalizeXyzTransactions([
       transaction('geometry: box', 0, '+2+4/+6+6/+4+300000000000000000000000000000000='),
     ])).toMatchObject([
       { to: '+2+4/+6+6/+4+3' },
@@ -154,10 +154,10 @@ describe('transactionsToDslSource', () => {
 
   it('preserves Base64 secondary-key destinations that resemble terminal axis filler', () => {
     const secondaryPublicKey = `${'A'.repeat(38)}+1+10=`;
-    const transactions = normalizeDslTransactions([
+    const transactions = normalizeXyzTransactions([
       transaction('node: wss://secondary.example/ws', 0, secondaryPublicKey),
     ]);
-    const result = transactionsToDslSource(transactions, { endpoint: 'wss://primary.example/ws' });
+    const result = transactionsToXyzSource(transactions, { endpoint: 'wss://primary.example/ws' });
 
     expect(transactions[0]?.to).toBe(secondaryPublicKey);
     expect(result.secondaryKeys).toEqual([
@@ -169,7 +169,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('preserves text memo content ending with equals padding characters', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('token==', 0, '+0+4/+0+2/+0+1'),
     ]);
 
@@ -178,7 +178,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('preserves URL memo content containing query-string equals characters', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('https://example.com/view?token=abc==', 0, '+0+4/+0+2/+0+1'),
     ]);
 
@@ -187,7 +187,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('maps only outgoing transactions when a public key is provided', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('color: red', 1, '+0+1/+0+1/+0+1', 'sender-key'),
       transaction('color: blue', 2, '+1+1/+0+1/+0+1', 'other-key'),
     ], { publicKey: 'sender-key' });
@@ -197,7 +197,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('ignores incoming transactions sent to the public key', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('color: red', 1, 'sender-key', 'other-key'),
     ], { publicKey: 'sender-key' });
 
@@ -206,7 +206,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('ignores transactions missing a sender when a public key is provided', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('color: red', 1, '+0+1/+0+1/+0+1'),
     ], { publicKey: 'sender-key' });
 
@@ -216,7 +216,7 @@ describe('transactionsToDslSource', () => {
 
   it('returns secondary-key references from invalid paths with node memo properties', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction(`node: wss://secondary.example/ws`, 3, secondaryPublicKey),
     ], { endpoint: 'wss://primary.example/ws' });
 
@@ -235,7 +235,7 @@ describe('transactionsToDslSource', () => {
 
   it('uses the default secondary endpoint for secondary-key references without a node memo property', () => {
     const secondaryPublicKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction(secondaryPublicKey, 4, 'secondary-key-reference'),
     ], { endpoint: 'wss://primary.example/ws' });
 
@@ -252,7 +252,7 @@ describe('transactionsToDslSource', () => {
 
   it('uses the default secondary endpoint for empty node memo properties', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('node:   ', 5, secondaryPublicKey),
     ], { endpoint: 'wss://primary.example/ws' });
 
@@ -267,7 +267,7 @@ describe('transactionsToDslSource', () => {
 
   it('extracts secondary public keys from untrimmed destinations before path filler cleanup', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0=';
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('node: wss://secondary.example/ws', 6, secondaryPublicKey),
     ], { endpoint: 'wss://primary.example/ws' });
 
@@ -284,7 +284,7 @@ describe('transactionsToDslSource', () => {
 
   it('keeps content fallback for valid spatial paths with secondary-looking memo text', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction(secondaryPublicKey, 5, '+0+4/+0+2/+0+1'),
     ], { endpoint: 'wss://primary.example/ws' });
 
@@ -294,7 +294,7 @@ describe('transactionsToDslSource', () => {
   });
 
   it('preserves transaction order for accepted transactions', () => {
-    const result = transactionsToDslSource([
+    const result = transactionsToXyzSource([
       transaction('color: red', 1, '+0+1/+0+1/+0+1'),
       transaction('color: blue', 2, '+1+1/+0+1/+0+1'),
     ]);

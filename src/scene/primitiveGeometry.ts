@@ -4,7 +4,7 @@ import type { SpatialGeometry } from '../model/geometry';
 
 const COMPACT_STRENGTH_MAX = 5;
 
-export function normalizedDslStrength(value?: number): number | undefined {
+export function normalizedXyzStrength(value?: number): number | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -14,7 +14,7 @@ export function normalizedDslStrength(value?: number): number | undefined {
 
 export function normalizedRoundedBoxRadius(geometry: SpatialGeometry): number {
   const radius = geometry['box-radius'] ?? 0;
-  const puff = normalizedDslStrength(geometry.puff) ?? 0;
+  const puff = normalizedXyzStrength(geometry.puff) ?? 0;
 
   if (radius <= 0 && puff <= 0) {
     return 0;
@@ -44,7 +44,7 @@ export function bufferGeometryForSpatialGeometry(geometry: SpatialGeometry): Buf
       const radius = normalizedRoundedBoxRadius(geometry);
 
       if (radius > 0) {
-        const puff = normalizedDslStrength(geometry.puff) ?? 0;
+        const puff = normalizedXyzStrength(geometry.puff) ?? 0;
         const segments = 4 + Math.round(puff * 4);
 
         return new RoundedBufferBoxGeometry(1, 1, 1, segments, radius);

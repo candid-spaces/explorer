@@ -1,22 +1,22 @@
 import type {
-  DslBoxSpec,
-  DslContentSpec,
-  DslGeometrySpec,
-  DslMaterialSpec,
-  DslTextureChannel,
-  DslTextureSpec,
-  DslTransformSpec,
+  XyzBoxSpec,
+  XyzContentSpec,
+  XyzGeometrySpec,
+  XyzMaterialSpec,
+  XyzTextureChannel,
+  XyzTextureSpec,
+  XyzTransformSpec,
   ParseDiagnostic,
   SpatialObject,
 } from './types';
 import { canonicalNamespacePath } from './pathParser';
 
 export interface ResolvedSpatialObject extends SpatialObject {
-  box: DslBoxSpec;
-  material: DslMaterialSpec;
-  geometry: DslGeometrySpec;
-  transform: DslTransformSpec;
-  content: DslContentSpec;
+  box: XyzBoxSpec;
+  material: XyzMaterialSpec;
+  geometry: XyzGeometrySpec;
+  transform: XyzTransformSpec;
+  content: XyzContentSpec;
   namespacePath: string;
   parentNamespacePath: string;
   renderable: boolean;
@@ -25,14 +25,14 @@ export interface ResolvedSpatialObject extends SpatialObject {
 }
 
 interface ResolvedProperties {
-  material: DslMaterialSpec;
-  geometry: DslGeometrySpec;
-  transform: DslTransformSpec;
-  content: DslContentSpec;
+  material: XyzMaterialSpec;
+  geometry: XyzGeometrySpec;
+  transform: XyzTransformSpec;
+  content: XyzContentSpec;
 }
 
 
-function cloneTextureSpec(texture: DslTextureSpec): DslTextureSpec {
+function cloneTextureSpec(texture: XyzTextureSpec): XyzTextureSpec {
   return {
     ...texture,
     ...(texture.repeat ? { repeat: [...texture.repeat] as [number, number] } : {}),
@@ -41,12 +41,12 @@ function cloneTextureSpec(texture: DslTextureSpec): DslTextureSpec {
 }
 
 function mergeTextures(
-  base: DslMaterialSpec['textures'],
-  override: DslMaterialSpec['textures'],
-): DslMaterialSpec['textures'] {
-  const merged: DslMaterialSpec['textures'] = {};
+  base: XyzMaterialSpec['textures'],
+  override: XyzMaterialSpec['textures'],
+): XyzMaterialSpec['textures'] {
+  const merged: XyzMaterialSpec['textures'] = {};
 
-  (Object.keys(base ?? {}) as DslTextureChannel[]).forEach((channel) => {
+  (Object.keys(base ?? {}) as XyzTextureChannel[]).forEach((channel) => {
     const texture = base?.[channel];
 
     if (texture) {
@@ -54,7 +54,7 @@ function mergeTextures(
     }
   });
 
-  (Object.keys(override ?? {}) as DslTextureChannel[]).forEach((channel) => {
+  (Object.keys(override ?? {}) as XyzTextureChannel[]).forEach((channel) => {
     const baseTexture = merged[channel];
     const overrideTexture = override?.[channel];
 
@@ -77,9 +77,9 @@ const DEFAULT_PROPERTIES: ResolvedProperties = {
 };
 
 function mergeGeometry(
-  base: DslGeometrySpec,
-  override: DslGeometrySpec,
-): DslGeometrySpec {
+  base: XyzGeometrySpec,
+  override: XyzGeometrySpec,
+): XyzGeometrySpec {
   if (!override.declared) {
     return { ...base, diagnostics: [] };
   }
@@ -103,7 +103,7 @@ function mergeGeometry(
   };
 }
 
-function mergeContent(base: DslContentSpec, override: DslContentSpec): DslContentSpec {
+function mergeContent(base: XyzContentSpec, override: XyzContentSpec): XyzContentSpec {
   if (!override.kind) {
     return { ...base, diagnostics: [] };
   }
@@ -349,7 +349,7 @@ function mergeResolvedProperties(
   return mergeProperties(base, override);
 }
 
-function dimensionsFromBox(box: DslBoxSpec): [number, number, number] {
+function dimensionsFromBox(box: XyzBoxSpec): [number, number, number] {
   return [box.width, box.height, box.depth];
 }
 
@@ -362,7 +362,7 @@ function dimensionsFromRootChildren(
   );
   const boxes = (rootChildren.length > 0 ? rootChildren : descendants)
     .map((descendant) => descendant.box)
-    .filter(Boolean) as DslBoxSpec[];
+    .filter(Boolean) as XyzBoxSpec[];
 
   if (boxes.length === 0) {
     return undefined;
@@ -380,7 +380,7 @@ function dimensionsFromRootChildren(
 
 function scaleToFit(
   sourceDimensions: [number, number, number] | undefined,
-  targetBox: DslBoxSpec,
+  targetBox: XyzBoxSpec,
 ): [number, number, number] | undefined {
   if (
     !sourceDimensions ||
@@ -396,7 +396,7 @@ function scaleToFit(
   ];
 }
 
-export function resolveDslDocument(objects: SpatialObject[]): {
+export function resolveXyzDocument(objects: SpatialObject[]): {
   objects: ResolvedSpatialObject[];
   diagnostics: ParseDiagnostic[];
 } {

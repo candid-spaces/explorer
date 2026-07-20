@@ -1,7 +1,7 @@
 import type { ChangeEvent, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 
-interface DslEditorProps {
+interface XyzEditorProps {
   value: string;
   description: string;
   status?: ReactNode;
@@ -10,7 +10,7 @@ interface DslEditorProps {
   onChange: (value: string) => void;
 }
 
-export function DslEditor({ value, description, status, selectedLineNumber, actions, onChange }: DslEditorProps) {
+export function XyzEditor({ value, description, status, selectedLineNumber, actions, onChange }: XyzEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -30,14 +30,14 @@ export function DslEditor({ value, description, status, selectedLineNumber, acti
   }
 
   return (
-    <label className="dsl-editor">
-      <span className="dsl-editor-heading">
+    <label className="xyz-editor">
+      <span className="xyz-editor-heading">
         <span>Spatial declarations</span>
-        {actions ? <span className="dsl-editor-actions">{actions}</span> : null}
+        {actions ? <span className="xyz-editor-actions">{actions}</span> : null}
       </span>
       <small>{description}</small>
-      {status ? <span className="dsl-editor-status">{status}</span> : null}
-      {selectedLineNumber ? <span className="dsl-editor-selected-line">Selected scene object: line {selectedLineNumber}</span> : null}
+      {status ? <span className="xyz-editor-status">{status}</span> : null}
+      {selectedLineNumber ? <span className="xyz-editor-selected-line">Selected scene object: line {selectedLineNumber}</span> : null}
       <textarea ref={textareaRef} spellCheck={false} value={value} wrap="off" onChange={handleChange} />
     </label>
   );

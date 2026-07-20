@@ -9,7 +9,7 @@ The long-term model is intentionally DOM-like: spatial declarations compile into
 
 ## Terminology
 
-- **Spatial Declaration Language**: the compact text authoring syntax for spatial paths and object properties. Internal parser modules still use `dsl` names for historical continuity.
+- **Spatial Declaration Language**: the compact text authoring syntax for spatial paths and object properties. Internal parser modules still use `xyz` names for historical continuity.
 - **Spatial declaration**: one quoted path/property line in the authoring source.
 - **Spatial path**: a slash-delimited namespace plus an optional final X/Y/Z bounding box.
 - **Namespace declaration**: a spatial path ending in `/`; it does not render by itself and exists to provide inherited defaults.
@@ -150,7 +150,7 @@ This renders a right-side scaled sphere inside a 6 × 15 × 0.5 bounding box.
 
 ```txt
 src/
-  dsl/
+  xyz/
     materialParser.ts
     parser.ts
     types.ts
@@ -166,8 +166,8 @@ src/
     SpatialPrimitive.tsx
     materials.ts
   ui/
-    DslDrawer.tsx
-    DslEditor.tsx
+    XyzDrawer.tsx
+    XyzEditor.tsx
     ObjectList.tsx
 ```
 

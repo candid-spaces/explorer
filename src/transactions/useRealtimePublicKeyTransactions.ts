@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { normalizeEndpoint } from './publicKeyTransactions';
 import { realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
-import type { DslTransaction, SecondaryRealtimeStatus } from './types';
+import type { XyzTransaction, SecondaryRealtimeStatus } from './types';
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
@@ -11,7 +11,7 @@ const SUSTAINED_RECONNECT_ATTEMPTS = Number.MAX_SAFE_INTEGER;
 interface UseRealtimePublicKeyTransactionsOptions {
   endpoint: string;
   publicKey: string;
-  onTransaction: (transaction: DslTransaction) => void;
+  onTransaction: (transaction: XyzTransaction) => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: SecondaryRealtimeStatus) => void;
 }

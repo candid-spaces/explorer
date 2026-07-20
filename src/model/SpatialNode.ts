@@ -1,4 +1,4 @@
-import type { DslBoxSpec, DslContentSpec, DslMaterialSpec } from '../dsl/types';
+import type { XyzBoxSpec, XyzContentSpec, XyzMaterialSpec } from '../xyz/types';
 import type { SpatialGeometry } from './geometry';
 import type { SpatialTransform } from './transform';
 
@@ -14,10 +14,10 @@ export interface SpatialBounds {
 export interface SpatialNode {
   id: string;
   source: string;
-  box: DslBoxSpec;
+  box: XyzBoxSpec;
   bounds: SpatialBounds;
-  material: DslMaterialSpec;
-  content?: DslContentSpec;
+  material: XyzMaterialSpec;
+  content?: XyzContentSpec;
   geometry: SpatialGeometry;
   transform: SpatialTransform;
   localTransform?: SpatialTransform;
