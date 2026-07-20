@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent } from 'react';
-import type { AxisName, DslGeometryKind } from '../dsl/types';
+import type { AxisName, XyzGeometryKind } from '../xyz/types';
 import type { SpatialNode } from '../model/SpatialNode';
 
 interface SelectedNodeInspectorProps {
@@ -24,7 +24,7 @@ function displayName(node: SpatialNode): string {
   return node.namespacePath?.replace(/\/$/, '') || node.id;
 }
 
-const GEOMETRY_OPTIONS: DslGeometryKind[] = ['box', 'cylinder', 'cone', 'sphere'];
+const GEOMETRY_OPTIONS: XyzGeometryKind[] = ['box', 'cylinder', 'cone', 'sphere'];
 
 const ROTATION_AXIS_DESCRIPTIONS: Record<AxisName, string> = {
   x: 'Rotates around the left-right X axis, pitching the object forward or backward.',

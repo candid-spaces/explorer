@@ -6,12 +6,12 @@ import {
   resizeDeclarationPath,
   rotateDeclarationPath,
   updateDeclarationProperty,
-} from './editDslSource';
+} from './editXyzSource';
 
 const SOURCE = `"Table/+18+8/+0+5/+4+8" : "color: white; metalness: 0.8"
 "Table/Top/+0+8/+4+1/+0+8" : ""`;
 
-describe('editDslSource', () => {
+describe('editXyzSource', () => {
   it('replaces declaration paths and properties without changing surrounding lines', () => {
     expect(replaceDeclarationPath(SOURCE, 2, 'Table/Top/+1+8/+4+1/+0+8')).toBe(
       `"Table/+18+8/+0+5/+4+8" : "color: white; metalness: 0.8"

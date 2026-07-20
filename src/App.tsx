@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rotateDeclarationPath, updateDeclarationProperty } from './dsl/editDslSource';
-import type { AxisName } from './dsl/types';
+import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rotateDeclarationPath, updateDeclarationProperty } from './xyz/editXyzSource';
+import type { AxisName } from './xyz/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
 import {
@@ -15,16 +15,16 @@ import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
-import { normalizeDslTransactions, transactionsToDslSource } from './transactions/transactionDsl';
+import { normalizeXyzTransactions, transactionsToXyzSource } from './transactions/transactionXyz';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
-import type { ActiveSecondaryTransactionStream, DslTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
+import type { ActiveSecondaryTransactionStream, XyzTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { useRealtimePublicKeyTransactions } from './transactions/useRealtimePublicKeyTransactions';
-import { DslDrawer } from './ui/DslDrawer';
+import { XyzDrawer } from './ui/XyzDrawer';
 import { SelectedNodeInspector } from './ui/SelectedNodeInspector';
 import { usePersistentState } from './ui/usePersistentState';
 
-const INITIAL_DSL = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
+const INITIAL_XYZ = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
 "+2+4/+7+6/+0+10c" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
 "+7+6/+0+15/+0+50c" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"
 
@@ -48,7 +48,7 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 
 interface ActiveSecondaryTransactions {
   reference: SecondaryKeyReference;
-  transactions: DslTransaction[];
+  transactions: XyzTransaction[];
   playbackIndex: number;
   playbackSpeed?: number;
   realtimeStatus: SecondaryRealtimeStatus;
@@ -99,7 +99,7 @@ function normalizeActiveSecondaryStream(
   reference: SecondaryKeyReference,
 ): ActiveSecondaryTransactions {
   const transactions = outgoingTransactionsForPublicKey(
-    normalizeDslTransactions(stream?.transactions ?? []),
+    normalizeXyzTransactions(stream?.transactions ?? []),
     reference.publicKey,
   );
   const defaultPlaybackIndex = transactions.length > 0 ? transactions.length - 1 : 0;
@@ -147,7 +147,7 @@ function summarizeLineChanges(originalSource: string, nextSource: string): LineC
 
 interface SecondaryRealtimeSubscriptionProps {
   reference: SecondaryKeyReference;
-  onTransaction: (reference: SecondaryKeyReference, transaction: DslTransaction) => void;
+  onTransaction: (reference: SecondaryKeyReference, transaction: XyzTransaction) => void;
   onError: (reference: SecondaryKeyReference, error: Error) => void;
   onStatusChange: (reference: SecondaryKeyReference, status: SecondaryRealtimeStatus) => void;
 }
@@ -170,7 +170,7 @@ function SecondaryRealtimeSubscription({
 }
 
 export default function App() {
-  const [authoringSource, setAuthoringSource] = useState(INITIAL_DSL);
+  const [authoringSource, setAuthoringSource] = useState(INITIAL_XYZ);
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
   const latestRemoteBaselineRef = useRef('');
   const [appMode, setAppMode] = useState<'viewer' | 'editor'>('viewer');
@@ -180,7 +180,7 @@ export default function App() {
   const [selectedSceneHighlightNodeId, setSelectedSceneHighlightNodeId] = useState<string | undefined>();
   const [selectedLineNumber, setSelectedLineNumber] = useState<number | undefined>();
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
-    'dsl-transaction-public-key',
+    'xyz-transaction-public-key',
     '',
     SHARED_TRANSACTION_PUBLIC_KEY,
   );
@@ -188,7 +188,7 @@ export default function App() {
   const [tipHeight, setTipHeight] = useState<number | undefined>();
   const [tipLoading, setTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | undefined>();
-  const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('dsl-active-secondary-transaction-streams', {});
+  const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyz-active-secondary-transaction-streams', {});
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
   const transactionPublicKeyShareUrl = useMemo(() => {
     if (typeof window === 'undefined') {
@@ -253,17 +253,17 @@ export default function App() {
     }
   }, [appMode]);
 
-  const transactionDsl = useMemo(
-    () => transactionsToDslSource(transactions, { publicKey: transactionPublicKey, endpoint: DEFAULT_TRANSACTION_ENDPOINT }),
+  const transactionXyz = useMemo(
+    () => transactionsToXyzSource(transactions, { publicKey: transactionPublicKey, endpoint: DEFAULT_TRANSACTION_ENDPOINT }),
     [transactions, transactionPublicKey],
   );
-  const primaryRemoteBaselineSource = transactionDsl.source;
+  const primaryRemoteBaselineSource = transactionXyz.source;
   const secondaryKeyReferences = useMemo(
-    () => uniqueSecondaryReferences(transactionDsl.secondaryKeys),
-    [transactionDsl.secondaryKeys],
+    () => uniqueSecondaryReferences(transactionXyz.secondaryKeys),
+    [transactionXyz.secondaryKeys],
   );
 
-  const handleSecondaryRealtimeTransaction = useCallback((reference: SecondaryKeyReference, transaction: DslTransaction) => {
+  const handleSecondaryRealtimeTransaction = useCallback((reference: SecondaryKeyReference, transaction: XyzTransaction) => {
     const streamKey = streamKeyForSecondaryReference(reference);
 
     setActiveSecondaryTransactions((streams) => {
@@ -420,20 +420,20 @@ export default function App() {
   const secondaryTransactionOverlayStreams = useMemo(() => secondaryTransactionStreams
     .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => {
       const currentTransaction = currentPlaybackTransaction(secondaryTransactions, playbackIndex);
-      const dslResult = transactionsToDslSource(currentTransaction ? [currentTransaction] : [], {
+      const xyzResult = transactionsToXyzSource(currentTransaction ? [currentTransaction] : [], {
         publicKey,
         endpoint,
       });
 
       return {
         id: `${publicKey}@@${endpoint}`,
-        declarations: dslResult.source,
-        dslResult,
+        declarations: xyzResult.source,
+        xyzResult,
       };
     }), [secondaryTransactionStreams]);
   const secondaryTransactionStreamsWithDiagnostics = useMemo<ActiveSecondaryTransactionStream[]>(() => {
     const diagnosticsByStreamId = new Map(
-      secondaryTransactionOverlayStreams.map((stream) => [stream.id, stream.dslResult.rejected]),
+      secondaryTransactionOverlayStreams.map((stream) => [stream.id, stream.xyzResult.rejected]),
     );
 
     return secondaryTransactionStreams.map((stream) => ({
@@ -445,7 +445,7 @@ export default function App() {
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
     ? authoringSource !== remoteBaselineAppliedToEditor
-    : authoringSource !== INITIAL_DSL;
+    : authoringSource !== INITIAL_XYZ;
   const remoteBaselineChanged = hasRemoteBaseline && remoteBaselineSource !== remoteBaselineAppliedToEditor;
 
   useEffect(() => {
@@ -463,7 +463,7 @@ export default function App() {
 
     const currentHasEdits = remoteBaselineAppliedToEditor.trim().length > 0
       ? authoringSource !== remoteBaselineAppliedToEditor
-      : authoringSource !== INITIAL_DSL;
+      : authoringSource !== INITIAL_XYZ;
 
     if (currentHasEdits) {
       return;
@@ -634,7 +634,7 @@ export default function App() {
           }
 
           const outgoingHistoricalTransactions = outgoingTransactionsForPublicKey(
-            normalizeDslTransactions(historicalTransactions),
+            normalizeXyzTransactions(historicalTransactions),
             publicKey,
           );
           const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, outgoingHistoricalTransactions));
@@ -781,7 +781,7 @@ export default function App() {
           onRotate={rotateSelectedDeclaration}
         />
       ) : null}
-      <DslDrawer
+      <XyzDrawer
         appMode={appMode}
         document={document}
         isOpen={drawerOpen}
@@ -796,9 +796,9 @@ export default function App() {
         tipLoading={tipLoading}
         tipError={tipError}
         transactionCount={transactions.length}
-        acceptedTransactionCount={transactionDsl.source ? transactionDsl.source.split('\n').filter(Boolean).length : 0}
+        acceptedTransactionCount={transactionXyz.source ? transactionXyz.source.split('\n').filter(Boolean).length : 0}
         mappedTransactionSource={remoteBaselineSource}
-        rejectedTransactions={transactionDsl.rejected}
+        rejectedTransactions={transactionXyz.rejected}
         secondaryKeyReferences={secondaryKeyReferences}
         secondaryTransactionStreams={secondaryTransactionStreamsWithDiagnostics}
         hasRemoteBaseline={hasRemoteBaseline}

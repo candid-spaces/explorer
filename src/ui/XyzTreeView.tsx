@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import type { SpatialNode } from '../model/SpatialNode';
 
-interface DslTreeViewProps {
+interface XyzTreeViewProps {
   document: SpatialDocument;
   selectedNodeId?: string;
   onSelectNode?: (id: string) => void;
@@ -68,24 +68,24 @@ function TreeItem({
   const csgLabel = node.csgExpressionId ? (node.csgConsumed ? `boolean tool ${node.csgExpressionId}` : node.csgExpressionId) : undefined;
 
   return (
-    <li className="dsl-tree-item">
-      <div className={`dsl-tree-row${isSelected ? ' is-selected' : ''}`}>
+    <li className="xyz-tree-item">
+      <div className={`xyz-tree-row${isSelected ? ' is-selected' : ''}`}>
         {hasChildren ? (
           <button
             aria-expanded={!isCollapsed}
             aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${displayName(node)}`}
-            className="dsl-tree-toggle"
+            className="xyz-tree-toggle"
             type="button"
             onClick={() => onToggle(node.id)}
           >
             {isCollapsed ? '▸' : '▾'}
           </button>
         ) : (
-          <span className="dsl-tree-spacer" aria-hidden="true" />
+          <span className="xyz-tree-spacer" aria-hidden="true" />
         )}
 
         <button
-          className="dsl-tree-node-summary"
+          className="xyz-tree-node-summary"
           type="button"
           aria-current={isSelected ? 'true' : undefined}
           onClick={() => onSelectNode?.(node.id)}
@@ -96,14 +96,14 @@ function TreeItem({
             {node.box.y}, {node.box.z})
           </span>
           {node.renderable ? (
-            <span className="dsl-tree-object-details">
+            <span className="xyz-tree-object-details">
               {geometryLabel(node)} bounding box: {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y},{' '}
               {node.box.z}); rotation: {rotationDegrees(node)}°
             </span>
           ) : null}
         </button>
 
-        <div className="dsl-tree-badges" aria-label="Spatial node metadata">
+        <div className="xyz-tree-badges" aria-label="Spatial node metadata">
           {lineNumber ? <em>line {lineNumber}</em> : null}
           {node.renderable ? null : <em>container</em>}
           {reference ? <em>ref {reference}</em> : null}
@@ -114,7 +114,7 @@ function TreeItem({
       </div>
 
       {hasChildren && !isCollapsed ? (
-        <ul className="dsl-tree-children">
+        <ul className="xyz-tree-children">
           {children.map((child) => (
             <TreeItem
               key={child.id}
@@ -131,7 +131,7 @@ function TreeItem({
   );
 }
 
-export function DslTreeView({ document, selectedNodeId, onSelectNode }: DslTreeViewProps) {
+export function XyzTreeView({ document, selectedNodeId, onSelectNode }: XyzTreeViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const nodeIds = useMemo(() => sortedTreeIds(document.nodes), [document.nodes]);
   const hasCollapsibleNodes = useMemo(() => hasNestedNodes(document.nodes), [document.nodes]);
@@ -159,7 +159,7 @@ export function DslTreeView({ document, selectedNodeId, onSelectNode }: DslTreeV
   }
 
   return (
-    <section className="dsl-tree-view" aria-label="Spatial declaration tree">
+    <section className="xyz-tree-view" aria-label="Spatial declaration tree">
       <div className="section-heading-row">
         <h2>Definition tree</h2>
         {hasCollapsibleNodes ? (
@@ -179,7 +179,7 @@ export function DslTreeView({ document, selectedNodeId, onSelectNode }: DslTreeV
       ) : (
         <>
           {document.csgExpressions.length > 0 ? (
-            <div className="dsl-csg-summary" aria-label="Boolean composition summary">
+            <div className="xyz-csg-summary" aria-label="Boolean composition summary">
               <h3>Boolean composition expressions</h3>
               <ul>
                 {document.csgExpressions.map((expression) => (
@@ -197,7 +197,7 @@ export function DslTreeView({ document, selectedNodeId, onSelectNode }: DslTreeV
             </div>
           ) : null}
 
-          <ul className="dsl-tree-root">
+          <ul className="xyz-tree-root">
             {document.nodes.map((node) => (
               <TreeItem
                 key={node.id}

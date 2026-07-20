@@ -1,4 +1,4 @@
-import type { DslTransaction } from './types';
+import type { XyzTransaction } from './types';
 
 export const DEFAULT_PLAYBACK_SPEED = 1;
 export const PLAYBACK_SPEED_OPTIONS = [0.5, 1, 2, 4, 8, 16] as const;
@@ -29,7 +29,7 @@ export function playbackTimeForElapsedTime(
 }
 
 export function playbackTickIntervalMilliseconds(
-  transactions: readonly DslTransaction[],
+  transactions: readonly XyzTransaction[],
   playbackSpeed = DEFAULT_PLAYBACK_SPEED,
 ): number {
   const smallestGapSeconds = transactions.slice(1).reduce<number | undefined>((smallestGap, transaction, index) => {
@@ -53,20 +53,20 @@ export function playbackTickIntervalMilliseconds(
 }
 
 export function mergeStreamTransactions(
-  currentTransactions: readonly DslTransaction[],
-  nextTransactions: readonly DslTransaction[],
-): DslTransaction[] {
+  currentTransactions: readonly XyzTransaction[],
+  nextTransactions: readonly XyzTransaction[],
+): XyzTransaction[] {
   return [...currentTransactions, ...nextTransactions];
 }
 
-function transactionIdentity(transaction: DslTransaction): string | undefined {
+function transactionIdentity(transaction: XyzTransaction): string | undefined {
   return transaction.signature;
 }
 
 export function mergeHistoricalStreamTransactions(
-  currentTransactions: readonly DslTransaction[],
-  nextTransactions: readonly DslTransaction[],
-): DslTransaction[] {
+  currentTransactions: readonly XyzTransaction[],
+  nextTransactions: readonly XyzTransaction[],
+): XyzTransaction[] {
   const seenIdentities = new Set(
     currentTransactions.map(transactionIdentity).filter((identity): identity is string => identity !== undefined),
   );
@@ -88,7 +88,7 @@ export function mergeHistoricalStreamTransactions(
   return mergeStreamTransactions(currentTransactions, newTransactions);
 }
 
-export function sortTransactionsByTimeStable(transactions: readonly DslTransaction[]): DslTransaction[] {
+export function sortTransactionsByTimeStable(transactions: readonly XyzTransaction[]): XyzTransaction[] {
   return transactions
     .map((transaction, index) => ({ transaction, index }))
     .sort((a, b) => a.transaction.time - b.transaction.time || a.index - b.index)
@@ -96,9 +96,9 @@ export function sortTransactionsByTimeStable(transactions: readonly DslTransacti
 }
 
 export function outgoingTransactionsForPublicKey(
-  transactions: readonly DslTransaction[],
+  transactions: readonly XyzTransaction[],
   publicKey: string,
-): DslTransaction[] {
+): XyzTransaction[] {
   return transactions.filter((transaction) => transaction.from === publicKey);
 }
 
@@ -111,7 +111,7 @@ export function clampPlaybackIndex(playbackIndex: number, transactionCount: numb
 }
 
 export function playbackIndexForElapsedTime(
-  transactions: readonly DslTransaction[],
+  transactions: readonly XyzTransaction[],
   elapsedSeconds: number,
   baseTransactionTime = transactions[0]?.time ?? 0,
 ): number {
@@ -134,9 +134,9 @@ export function playbackIndexForElapsedTime(
 }
 
 export function currentPlaybackTransaction(
-  transactions: readonly DslTransaction[],
+  transactions: readonly XyzTransaction[],
   playbackIndex: number,
-): DslTransaction | undefined {
+): XyzTransaction | undefined {
   if (transactions.length === 0) {
     return undefined;
   }
@@ -146,7 +146,7 @@ export function currentPlaybackTransaction(
 }
 
 export function hasPlaybackReachedEnd(
-  transactions: readonly DslTransaction[],
+  transactions: readonly XyzTransaction[],
   playbackIndex: number,
   elapsedSeconds: number,
   baseTransactionTime = transactions[0]?.time ?? 0,

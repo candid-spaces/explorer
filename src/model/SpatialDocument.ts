@@ -1,4 +1,4 @@
-import type { ParseDiagnostic } from '../dsl/types';
+import type { ParseDiagnostic } from '../xyz/types';
 import type { CsgExpression } from './csg';
 import type { SpatialNode } from './SpatialNode';
 

@@ -1,6 +1,6 @@
-import { parseDslDocument } from '../dsl/parser';
-import { resolveDslDocument } from '../dsl/resolveDocument';
-import { canonicalNamespacePath } from '../dsl/pathParser';
+import { parseXyzDocument } from '../xyz/parser';
+import { resolveXyzDocument } from '../xyz/resolveDocument';
+import { canonicalNamespacePath } from '../xyz/pathParser';
 import type { SpatialDocument } from './SpatialDocument';
 import type { SpatialNode } from './SpatialNode';
 import { assignUnionGroups, boundsFromTransformedBox } from './collision';
@@ -58,8 +58,8 @@ function applyRenderableStateToTree(
 }
 
 export function createSpatialDocument(source: string): SpatialDocument {
-  const parsed = parseDslDocument(source);
-  const resolved = resolveDslDocument(parsed.value ?? []);
+  const parsed = parseXyzDocument(source);
+  const resolved = resolveXyzDocument(parsed.value ?? []);
   const diagnostics = [...parsed.diagnostics, ...resolved.diagnostics];
   const nodesByNamespace = new Map<string, SpatialNode>();
   const topLevelNodes: SpatialNode[] = [];

@@ -1,5 +1,5 @@
 import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
-import type { DslBoxSpec, DslTransformSpec } from '../dsl/types';
+import type { XyzBoxSpec, XyzTransformSpec } from '../xyz/types';
 
 export interface SpatialTransform {
   position: [number, number, number];
@@ -15,7 +15,7 @@ export function degreesToRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
-export function transformFromBox(box: DslBoxSpec, spec: DslTransformSpec): SpatialTransform {
+export function transformFromBox(box: XyzBoxSpec, spec: XyzTransformSpec): SpatialTransform {
   return {
     position: [box.x + box.width / 2, box.y + box.height / 2, box.z + box.depth / 2],
     rotation: spec.rotation,
@@ -24,7 +24,7 @@ export function transformFromBox(box: DslBoxSpec, spec: DslTransformSpec): Spati
   };
 }
 
-export function anchorTransformFromBox(box: DslBoxSpec, spec: DslTransformSpec): SpatialTransform {
+export function anchorTransformFromBox(box: XyzBoxSpec, spec: XyzTransformSpec): SpatialTransform {
   return {
     position: [box.x, box.y, box.z],
     rotation: spec.rotation,

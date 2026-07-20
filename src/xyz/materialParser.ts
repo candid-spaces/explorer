@@ -1,9 +1,9 @@
 import { materialPresetFor, materialPresetNames } from './materialPresets';
 import { resolveSemanticMaterial } from './materialCatalog';
-import type { DslMaterialSpec, DslTextureChannel, DslTextureSpec } from './types';
-import type { DslPropertyDeclaration } from './propertyParser';
+import type { XyzMaterialSpec, XyzTextureChannel, XyzTextureSpec } from './types';
+import type { XyzPropertyDeclaration } from './propertyParser';
 
-const CHANNEL_PROPERTY_ALIASES: Record<string, DslTextureChannel> = {
+const CHANNEL_PROPERTY_ALIASES: Record<string, XyzTextureChannel> = {
   texture: 'map',
   map: 'map',
   'color-texture': 'map',
@@ -14,7 +14,7 @@ const CHANNEL_PROPERTY_ALIASES: Record<string, DslTextureChannel> = {
   'alpha-texture': 'alphaMap',
 };
 
-const CHANNEL_SRC_ALIASES: Record<string, DslTextureChannel> = {
+const CHANNEL_SRC_ALIASES: Record<string, XyzTextureChannel> = {
   'texture-src': 'map',
   'map-src': 'map',
   'color-texture-src': 'map',
@@ -25,7 +25,7 @@ const CHANNEL_SRC_ALIASES: Record<string, DslTextureChannel> = {
   'alpha-texture-src': 'alphaMap',
 };
 
-const CHANNEL_REPEAT_ALIASES: Record<string, DslTextureChannel | 'all'> = {
+const CHANNEL_REPEAT_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
   'texture-repeat': 'all',
   'map-repeat': 'map',
   'color-texture-repeat': 'map',
@@ -41,7 +41,7 @@ const CHANNEL_REPEAT_ALIASES: Record<string, DslTextureChannel | 'all'> = {
   'alpha-texture-repeat': 'alphaMap',
 };
 
-const CHANNEL_ROTATION_ALIASES: Record<string, DslTextureChannel | 'all'> = {
+const CHANNEL_ROTATION_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
   'texture-rotation': 'all',
   'map-rotation': 'map',
   'roughness-texture-rotation': 'roughnessMap',
@@ -51,7 +51,7 @@ const CHANNEL_ROTATION_ALIASES: Record<string, DslTextureChannel | 'all'> = {
   'alpha-texture-rotation': 'alphaMap',
 };
 
-const CHANNEL_OFFSET_ALIASES: Record<string, DslTextureChannel | 'all'> = {
+const CHANNEL_OFFSET_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
   'texture-offset': 'all',
   'map-offset': 'map',
   'roughness-texture-offset': 'roughnessMap',
@@ -61,7 +61,7 @@ const CHANNEL_OFFSET_ALIASES: Record<string, DslTextureChannel | 'all'> = {
   'alpha-texture-offset': 'alphaMap',
 };
 
-const CHANNEL_STRENGTH_ALIASES: Record<string, DslTextureChannel | 'all'> = {
+const CHANNEL_STRENGTH_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
   'texture-strength': 'all',
   'map-strength': 'map',
   'roughness-texture-strength': 'roughnessMap',
@@ -96,7 +96,7 @@ export const SUPPORTED_MATERIAL_KEYS = new Set([
   ...Object.keys(CHANNEL_OFFSET_ALIASES),
 ]);
 
-function cloneTexture(texture: DslTextureSpec): DslTextureSpec {
+function cloneTexture(texture: XyzTextureSpec): XyzTextureSpec {
   return {
     ...texture,
     ...(texture.repeat ? { repeat: [...texture.repeat] as [number, number] } : {}),
@@ -104,17 +104,17 @@ function cloneTexture(texture: DslTextureSpec): DslTextureSpec {
   };
 }
 
-function cloneTextures(textures: DslMaterialSpec['textures']): DslMaterialSpec['textures'] {
+function cloneTextures(textures: XyzMaterialSpec['textures']): XyzMaterialSpec['textures'] {
   if (!textures) {
     return undefined;
   }
 
   return Object.fromEntries(
     Object.entries(textures).map(([channel, texture]) => [channel, texture ? cloneTexture(texture) : texture]),
-  ) as DslMaterialSpec['textures'];
+  ) as XyzMaterialSpec['textures'];
 }
 
-function applyMaterialDefaults(material: DslMaterialSpec, defaults: Omit<DslMaterialSpec, 'diagnostics' | 'materialPreset'>): void {
+function applyMaterialDefaults(material: XyzMaterialSpec, defaults: Omit<XyzMaterialSpec, 'diagnostics' | 'materialPreset'>): void {
   material.color = defaults.color;
   material.metalness = defaults.metalness;
   material.roughness = defaults.roughness;
@@ -152,7 +152,7 @@ function parseNumberPair(property: string, value: string): { value?: [number, nu
   return { value: [numbers[0], numbers[1]] };
 }
 
-function ensureTexture(material: DslMaterialSpec, channel: DslTextureChannel): DslTextureSpec {
+function ensureTexture(material: XyzMaterialSpec, channel: XyzTextureChannel): XyzTextureSpec {
   material.textures = material.textures ?? {};
   material.textures[channel] = material.textures[channel] ?? {};
 
@@ -160,12 +160,12 @@ function ensureTexture(material: DslMaterialSpec, channel: DslTextureChannel): D
 }
 
 function applyToTextureChannels(
-  material: DslMaterialSpec,
-  channel: DslTextureChannel | 'all',
-  apply: (texture: DslTextureSpec) => void,
+  material: XyzMaterialSpec,
+  channel: XyzTextureChannel | 'all',
+  apply: (texture: XyzTextureSpec) => void,
 ): void {
   if (channel === 'all') {
-    const channels: DslTextureChannel[] = material.textures ? (Object.keys(material.textures) as DslTextureChannel[]) : ['map'];
+    const channels: XyzTextureChannel[] = material.textures ? (Object.keys(material.textures) as XyzTextureChannel[]) : ['map'];
     channels.forEach((textureChannel) => apply(ensureTexture(material, textureChannel)));
     return;
   }
@@ -173,7 +173,7 @@ function applyToTextureChannels(
   apply(ensureTexture(material, channel));
 }
 
-function textureValue(value: string): DslTextureSpec {
+function textureValue(value: string): XyzTextureSpec {
   if (value.startsWith('src:')) {
     return { src: value.slice('src:'.length).trim() };
   }
@@ -185,8 +185,8 @@ function textureValue(value: string): DslTextureSpec {
   return { preset: value };
 }
 
-export function parseMaterialDeclaration(declarations: DslPropertyDeclaration[]): DslMaterialSpec {
-  const material: DslMaterialSpec = { diagnostics: [] };
+export function parseMaterialDeclaration(declarations: XyzPropertyDeclaration[]): XyzMaterialSpec {
+  const material: XyzMaterialSpec = { diagnostics: [] };
   const presetDeclaration = declarations.find(({ property }) => property === 'material-preset');
   const semanticMaterial = declarations.find(({ property }) => property === 'material')?.value;
   const materialVariant = declarations.find(({ property }) => property === 'variant')?.value;

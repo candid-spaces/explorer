@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
 import { PLAYBACK_SPEED_OPTIONS } from '../transactions/streamTransactions';
-import { normalizeDslTransaction } from '../transactions/transactionDsl';
-import type { ActiveSecondaryTransactionStream, DslTransaction, RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
-import { DslEditor } from './DslEditor';
-import { DslTransactionControls } from './DslTransactionControls';
-import { DslTreeView } from './DslTreeView';
+import { normalizeXyzTransaction } from '../transactions/transactionXyz';
+import type { ActiveSecondaryTransactionStream, XyzTransaction, RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
+import { XyzEditor } from './XyzEditor';
+import { XyzTransactionControls } from './XyzTransactionControls';
+import { XyzTreeView } from './XyzTreeView';
 
 function describeAuthoringState(
   hasRemoteBaseline: boolean,
@@ -58,8 +58,8 @@ function describeEndpointSource(source: SecondaryKeyReference['endpointSource'])
   return source === 'node-url-address' ? 'node: url_address' : 'Default secondary endpoint';
 }
 
-export function transactionSummary(transaction: DslTransaction): string {
-  const normalizedTransaction = normalizeDslTransaction(transaction);
+export function transactionSummary(transaction: XyzTransaction): string {
+  const normalizedTransaction = normalizeXyzTransaction(transaction);
   const memo = normalizedTransaction.memo.trim();
   const parts = [
     normalizedTransaction.from ? `from ${normalizedTransaction.from}` : undefined,
@@ -77,13 +77,13 @@ function renderAuthoringStatus(
   authoringChangeSummary: { added: number; removed: number },
 ): ReactNode {
   if (!hasRemoteBaseline) {
-    return <em className="dsl-status-badge">Local sample</em>;
+    return <em className="xyz-status-badge">Local sample</em>;
   }
 
   if (remoteBaselineChanged && hasAuthoringEdits) {
     return (
       <>
-        <em className="dsl-status-badge dsl-status-badge-warning">Remote changed</em>
+        <em className="xyz-status-badge xyz-status-badge-warning">Remote changed</em>
         <span>{summarizeChanges(authoringChangeSummary)}</span>
       </>
     );
@@ -92,16 +92,16 @@ function renderAuthoringStatus(
   if (hasAuthoringEdits) {
     return (
       <>
-        <em className="dsl-status-badge dsl-status-badge-warning">Modified locally</em>
+        <em className="xyz-status-badge xyz-status-badge-warning">Modified locally</em>
         <span>{summarizeChanges(authoringChangeSummary)}</span>
       </>
     );
   }
 
-  return <em className="dsl-status-badge dsl-status-badge-success">Remote baseline loaded</em>;
+  return <em className="xyz-status-badge xyz-status-badge-success">Remote baseline loaded</em>;
 }
 
-interface DslDrawerProps {
+interface XyzDrawerProps {
   appMode: 'viewer' | 'editor';
   document: SpatialDocument;
   isOpen: boolean;
@@ -141,7 +141,7 @@ interface DslDrawerProps {
   onSelectNode?: (id: string) => void;
 }
 
-export function DslDrawer({
+export function XyzDrawer({
   appMode,
   document,
   isOpen,
@@ -179,12 +179,12 @@ export function DslDrawer({
   onLoadSecondaryHistory,
   selectedNodeId,
   onSelectNode,
-}: DslDrawerProps) {
+}: XyzDrawerProps) {
   const isEditorMode = appMode === 'editor';
   const secondaryTransactionStreamsByPublicKey = groupSecondaryTransactionStreams(secondaryTransactionStreams);
 
   return (
-    <aside className={`dsl-drawer dsl-drawer--${appMode} ${isOpen ? 'is-open' : ''}`}>
+    <aside className={`xyz-drawer xyz-drawer--${appMode} ${isOpen ? 'is-open' : ''}`}>
       <div className="mode-controls" aria-label="Application mode">
         <button
           className="mode-toggle"
@@ -208,7 +208,7 @@ export function DslDrawer({
             <p>Compose primitive geometry in a shared coordinate space.</p>
           </header>
 
-          <DslTransactionControls
+          <XyzTransactionControls
             publicKey={transactionPublicKey}
             publicKeyShareUrl={transactionPublicKeyShareUrl}
             range={transactionRange}
@@ -229,7 +229,7 @@ export function DslDrawer({
             onUseTip={onUseTransactionTip}
           />
 
-          <DslEditor
+          <XyzEditor
             actions={
               <button type="button" disabled={!hasRemoteBaseline || !hasAuthoringEdits} onClick={onResetToRemote}>
                 Reset to remote
@@ -250,7 +250,7 @@ export function DslDrawer({
           {mappedTransactionSource.trim().length > 0 ? (
             <details className="remote-baseline-reference">
               <summary>Original remote declarations</summary>
-              <label className="dsl-editor dsl-editor-readonly">
+              <label className="xyz-editor xyz-editor-readonly">
                 <span>Mapped spatial declarations</span>
                 <small>Current remote baseline used for reset.</small>
                 <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
@@ -435,7 +435,7 @@ export function DslDrawer({
             </details>
           ) : null}
 
-          <DslTreeView document={document} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
+          <XyzTreeView document={document} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
         </div>
       ) : null}
     </aside>

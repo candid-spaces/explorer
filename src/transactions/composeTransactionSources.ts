@@ -1,5 +1,5 @@
-import { parseDslDeclaration, parseDslDocument } from '../dsl/parser';
-import { canonicalNamespacePath } from '../dsl/pathParser';
+import { parseXyzDeclaration, parseXyzDocument } from '../xyz/parser';
+import { canonicalNamespacePath } from '../xyz/pathParser';
 
 export type TransactionSourceNamespacePolicy = 'append' | 'consume-primary-namespaces';
 
@@ -29,8 +29,8 @@ function declarationSources(declarations: readonly SecondaryTransactionSourceDec
   return declarations.map((declaration) => declaration.source.trim()).filter(Boolean);
 }
 
-function primaryDeclarationNamespaces(primaryDslSource: string): Set<string> {
-  const parsed = parseDslDocument(primaryDslSource);
+function primaryDeclarationNamespaces(primaryXyzSource: string): Set<string> {
+  const parsed = parseXyzDocument(primaryXyzSource);
   const namespaces = new Set<string>();
 
   (parsed.value ?? []).forEach((object) => {
@@ -51,7 +51,7 @@ function namespaceIsPrimaryConsumer(namespace: readonly string[], primaryNamespa
 }
 
 function secondaryConsumerLine(line: string, primaryNamespaces: ReadonlySet<string>): string | undefined {
-  const parsed = parseDslDeclaration(line);
+  const parsed = parseXyzDeclaration(line);
 
   if (!parsed.ok || !parsed.value || parsed.value.declarationOnly || !parsed.value.box) {
     return undefined;
@@ -69,12 +69,12 @@ function clampCursor(cursor: number | undefined, lineCount: number): number {
 }
 
 export function composeTransactionSources(
-  primaryDslSource: string,
+  primaryXyzSource: string,
   secondaryStreams: readonly ComposeTransactionSecondaryStream[],
   options: ComposeTransactionSourcesOptions = {},
 ): string {
-  const primary = primaryDslSource;
-  const primaryNamespaces = primaryDeclarationNamespaces(primaryDslSource);
+  const primary = primaryXyzSource;
+  const primaryNamespaces = primaryDeclarationNamespaces(primaryXyzSource);
   const policy = options.namespacePolicy ?? 'consume-primary-namespaces';
   const composedSecondarySources = secondaryStreams.flatMap((stream) => {
     const lines = declarationSources(stream.declarations);

@@ -1,4 +1,4 @@
-import type { DslTransaction, TransactionRange } from './types';
+import type { XyzTransaction, TransactionRange } from './types';
 
 export interface PublicKeyTransactionRequest {
   endpoint: string;
@@ -128,7 +128,7 @@ export function fetchPublicKeyTransactions({
   publicKey,
   range,
   signal,
-}: PublicKeyTransactionRequest): Promise<DslTransaction[]> {
+}: PublicKeyTransactionRequest): Promise<XyzTransaction[]> {
   if (!publicKey.trim()) {
     return Promise.resolve([]);
   }
@@ -150,8 +150,8 @@ export function fetchPublicKeyTransactions({
       const parsed = parseJsonMessage(event);
       const body = parsed?.body as {
         public_key?: string;
-        filter_blocks?: { transactions?: DslTransaction[] }[];
-        transactions?: DslTransaction[];
+        filter_blocks?: { transactions?: XyzTransaction[] }[];
+        transactions?: XyzTransaction[];
       } | undefined;
 
       if (parsed?.type !== 'public_key_transactions' || body?.public_key !== publicKey) {

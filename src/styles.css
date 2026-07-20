@@ -37,7 +37,7 @@ button {
   height: 100vh;
 }
 
-.dsl-drawer {
+.xyz-drawer {
   pointer-events: none;
   position: fixed;
   inset: 0 auto 0 0;
@@ -159,20 +159,20 @@ button {
   text-transform: uppercase;
 }
 
-.dsl-editor {
+.xyz-editor {
   display: grid;
   gap: 0.45rem;
   color: #dbeafe;
   font-weight: 700;
 }
 
-.dsl-editor small {
+.xyz-editor small {
   color: #bfdbfe;
   font-size: 0.72rem;
   font-weight: 500;
 }
 
-.dsl-editor textarea {
+.xyz-editor textarea {
   min-height: 13rem;
   resize: vertical;
   border: 1px solid rgb(147 197 253 / 28%);
@@ -190,7 +190,7 @@ button {
 }
 
 
-.dsl-editor-readonly textarea {
+.xyz-editor-readonly textarea {
   min-height: 8rem;
   border-color: rgb(34 197 94 / 35%);
   background: rgb(6 78 59 / 28%);
@@ -356,7 +356,7 @@ button {
   list-style: none;
 }
 
-.dsl-tree-view {
+.xyz-tree-view {
   margin-top: 1rem;
   border: 1px solid rgb(96 165 250 / 24%);
   border-radius: 1rem;
@@ -392,8 +392,8 @@ button {
   font-size: 0.72rem;
 }
 
-.dsl-tree-root,
-.dsl-tree-children {
+.xyz-tree-root,
+.xyz-tree-children {
   display: grid;
   gap: 0.45rem;
   margin: 0;
@@ -401,13 +401,13 @@ button {
   list-style: none;
 }
 
-.dsl-tree-children {
+.xyz-tree-children {
   position: relative;
   margin-left: 0.8rem;
   padding-left: 0.9rem;
 }
 
-.dsl-tree-children::before {
+.xyz-tree-children::before {
   position: absolute;
   top: 0;
   bottom: 0.2rem;
@@ -417,12 +417,12 @@ button {
   content: "";
 }
 
-.dsl-tree-item {
+.xyz-tree-item {
   display: grid;
   gap: 0.45rem;
 }
 
-.dsl-tree-row {
+.xyz-tree-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.45rem 0.55rem;
@@ -432,19 +432,19 @@ button {
   background: rgb(2 6 23 / 36%);
 }
 
-.dsl-tree-row.is-selected {
+.xyz-tree-row.is-selected {
   outline: 1px solid rgb(96 165 250 / 78%);
   background: rgb(37 99 235 / 22%);
   box-shadow: inset 0 0 0 1px rgb(191 219 254 / 12%);
 }
 
-.dsl-tree-toggle,
-.dsl-tree-spacer {
+.xyz-tree-toggle,
+.xyz-tree-spacer {
   width: 1.45rem;
   height: 1.45rem;
 }
 
-.dsl-tree-toggle {
+.xyz-tree-toggle {
   display: grid;
   place-items: center;
   border: 1px solid rgb(147 197 253 / 22%);
@@ -455,7 +455,7 @@ button {
   line-height: 1;
 }
 
-.dsl-tree-node-summary {
+.xyz-tree-node-summary {
   display: grid;
   min-width: 0;
   width: 100%;
@@ -469,28 +469,28 @@ button {
   text-align: left;
 }
 
-.dsl-tree-node-summary:hover strong,
-.dsl-tree-node-summary[aria-current='true'] strong {
+.xyz-tree-node-summary:hover strong,
+.xyz-tree-node-summary[aria-current='true'] strong {
   color: #bfdbfe;
 }
 
-.dsl-tree-node-summary strong {
+.xyz-tree-node-summary strong {
   overflow: hidden;
   color: #f8fafc;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dsl-tree-node-summary span,
-.dsl-tree-object-details {
+.xyz-tree-node-summary span,
+.xyz-tree-object-details {
   overflow-wrap: anywhere;
 }
 
-.dsl-tree-object-details {
+.xyz-tree-object-details {
   color: #93c5fd;
 }
 
-.dsl-tree-badges {
+.xyz-tree-badges {
   grid-column: 2;
   display: flex;
   flex-wrap: wrap;
@@ -499,7 +499,7 @@ button {
   min-width: 0;
 }
 
-.dsl-tree-badges em {
+.xyz-tree-badges em {
   max-width: 100%;
   border-radius: 999px;
   padding: 0.12rem 0.4rem;
@@ -510,7 +510,7 @@ button {
   overflow-wrap: anywhere;
 }
 
-.dsl-csg-summary {
+.xyz-csg-summary {
   display: grid;
   gap: 0.45rem;
   margin-bottom: 0.7rem;
@@ -520,13 +520,13 @@ button {
   background: rgb(2 6 23 / 28%);
 }
 
-.dsl-csg-summary h3 {
+.xyz-csg-summary h3 {
   margin: 0;
   color: #dbeafe;
   font-size: 0.8rem;
 }
 
-.dsl-csg-summary ul {
+.xyz-csg-summary ul {
   display: grid;
   gap: 0.45rem;
   margin: 0;
@@ -534,7 +534,7 @@ button {
   list-style: none;
 }
 
-.dsl-csg-summary li {
+.xyz-csg-summary li {
   display: grid;
   gap: 0.2rem;
   border-bottom: 1px solid rgb(148 163 184 / 14%);
@@ -543,16 +543,16 @@ button {
   font-size: 0.8rem;
 }
 
-.dsl-csg-summary li:last-child {
+.xyz-csg-summary li:last-child {
   border-bottom: 0;
   padding-bottom: 0;
 }
 
-.dsl-csg-summary strong {
+.xyz-csg-summary strong {
   color: #f8fafc;
 }
 
-.dsl-csg-summary em {
+.xyz-csg-summary em {
   width: max-content;
   border-radius: 999px;
   padding: 0.12rem 0.4rem;
@@ -753,7 +753,7 @@ button {
   white-space: nowrap;
 }
 
-.dsl-editor-heading {
+.xyz-editor-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -761,13 +761,13 @@ button {
   gap: 0.6rem;
 }
 
-.dsl-editor-actions {
+.xyz-editor-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
 }
 
-.dsl-editor-actions button {
+.xyz-editor-actions button {
   border: 1px solid rgb(147 197 253 / 22%);
   border-radius: 999px;
   padding: 0.3rem 0.6rem;
@@ -776,12 +776,12 @@ button {
   font-size: 0.72rem;
 }
 
-.dsl-editor-actions button:disabled {
+.xyz-editor-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.dsl-editor-status {
+.xyz-editor-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -791,7 +791,7 @@ button {
   font-weight: 500;
 }
 
-.dsl-status-badge {
+.xyz-status-badge {
   width: max-content;
   border-radius: 999px;
   padding: 0.14rem 0.48rem;
@@ -801,12 +801,12 @@ button {
   font-weight: 700;
 }
 
-.dsl-status-badge-success {
+.xyz-status-badge-success {
   background: rgb(22 163 74 / 22%);
   color: #bbf7d0;
 }
 
-.dsl-status-badge-warning {
+.xyz-status-badge-warning {
   background: rgb(217 119 6 / 22%);
   color: #fde68a;
 }
@@ -825,12 +825,12 @@ button {
   font-weight: 700;
 }
 
-.remote-baseline-reference .dsl-editor {
+.remote-baseline-reference .xyz-editor {
   margin-top: 0.75rem;
 }
 
-.dsl-editor-status,
-.dsl-editor-selected-line {
+.xyz-editor-status,
+.xyz-editor-selected-line {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
@@ -840,7 +840,7 @@ button {
   font-weight: 600;
 }
 
-.dsl-editor-selected-line {
+.xyz-editor-selected-line {
   width: max-content;
   max-width: 100%;
   border: 1px solid rgb(250 204 21 / 35%);
@@ -870,7 +870,7 @@ button {
 }
 
 .app-shell--viewer .selected-node-inspector,
-.dsl-drawer--viewer .drawer-panel {
+.xyz-drawer--viewer .drawer-panel {
   display: none;
 }
 
@@ -1039,7 +1039,7 @@ button {
 }
 
 @media (max-width: 640px) {
-  .dsl-drawer {
+  .xyz-drawer {
     padding: 0.65rem;
   }
 

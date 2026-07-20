@@ -5,11 +5,11 @@ import { parsePropertyDeclarations } from './propertyParser';
 import { parseReferenceDeclaration } from './referenceParser';
 import { parseTransformDeclaration } from './transformParser';
 import type {
-  DslContentSpec,
-  DslGeometrySpec,
-  DslMaterialSpec,
-  DslReferenceSpec,
-  DslTransformSpec,
+  XyzContentSpec,
+  XyzGeometrySpec,
+  XyzMaterialSpec,
+  XyzReferenceSpec,
+  XyzTransformSpec,
 } from './types';
 
 const SUPPORTED_OBJECT_PROPERTIES = new Set([
@@ -29,16 +29,16 @@ const SUPPORTED_OBJECT_PROPERTIES = new Set([
   'content-url-uri',
 ]);
 
-export interface DslObjectPropertiesSpec {
-  material: DslMaterialSpec;
-  geometry: DslGeometrySpec;
-  transform: DslTransformSpec;
-  reference: DslReferenceSpec;
-  content: DslContentSpec;
+export interface XyzObjectPropertiesSpec {
+  material: XyzMaterialSpec;
+  geometry: XyzGeometrySpec;
+  transform: XyzTransformSpec;
+  reference: XyzReferenceSpec;
+  content: XyzContentSpec;
   diagnostics: string[];
 }
 
-export function parseObjectProperties(source: string): DslObjectPropertiesSpec {
+export function parseObjectProperties(source: string): XyzObjectPropertiesSpec {
   const { declarations, diagnostics } = parsePropertyDeclarations(source);
   const material = parseMaterialDeclaration(declarations);
   const geometry = parseGeometryDeclaration(declarations);

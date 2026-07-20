@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeEndpoint } from './publicKeyTransactions';
 import { realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
-import { transactionsToDslSource } from './transactionDsl';
+import { transactionsToXyzSource } from './transactionXyz';
 
 function realtimeMessage(data: unknown): MessageEvent<string> {
   return new MessageEvent('message', { data: JSON.stringify(data) });
@@ -64,9 +64,9 @@ describe('realtimeTransactionsFromMessage', () => {
     }), 'secondary-key');
 
     expect(transactions).toHaveLength(2);
-    expect(transactionsToDslSource([transactions[0]], { publicKey: 'secondary-key' }).source)
+    expect(transactionsToXyzSource([transactions[0]], { publicKey: 'secondary-key' }).source)
       .toBe('"+2+4/+6+6/+4+3" : "geometry: box"');
-    expect(transactionsToDslSource([transactions[1]], { publicKey: 'secondary-key' }).rejected).toHaveLength(1);
+    expect(transactionsToXyzSource([transactions[1]], { publicKey: 'secondary-key' }).rejected).toHaveLength(1);
   });
 });
 

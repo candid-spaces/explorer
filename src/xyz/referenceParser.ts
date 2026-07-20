@@ -1,5 +1,5 @@
-import type { DslReferenceSpec } from './types';
-import type { DslPropertyDeclaration } from './propertyParser';
+import type { XyzReferenceSpec } from './types';
+import type { XyzPropertyDeclaration } from './propertyParser';
 import { canonicalNamespacePath, normalizeNamespacePath } from './pathParser';
 
 function parseBoolean(value: string): boolean | undefined {
@@ -17,8 +17,8 @@ function parseBoolean(value: string): boolean | undefined {
 }
 
 export function parseReferenceDeclaration(
-  declarations: DslPropertyDeclaration[],
-): DslReferenceSpec {
+  declarations: XyzPropertyDeclaration[],
+): XyzReferenceSpec {
   const declaration = declarations.find(({ property }) => property === 'ref');
   const scaleDeclaration = declarations.find(
     ({ property }) => property === 'ref-scale',

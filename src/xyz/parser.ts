@@ -1,6 +1,6 @@
-import type { AxisName, DslAxisSpec, DslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
+import type { AxisName, XyzAxisSpec, XyzBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
-import { parseDslPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
+import { parseXyzPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
 
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
 
@@ -8,15 +8,15 @@ export function parseCompactNumber(raw: string): number {
   return parsePathNumber(raw);
 }
 
-export function parseAxisSpec(raw: string, axis: AxisName): DslAxisSpec {
+export function parseAxisSpec(raw: string, axis: AxisName): XyzAxisSpec {
   return parsePathAxisSpec(raw, axis);
 }
 
-export function parseBoxSpec(source: string): DslBoxSpec {
+export function parseBoxSpec(source: string): XyzBoxSpec {
   return parsePathBoxSpec(source);
 }
 
-export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<SpatialObject> {
+export function parseXyzDeclaration(line: string, lineNumber = 1): ParseResult<SpatialObject> {
   const match = line.match(DECLARATION_PATTERN);
   const diagnostics: ParseDiagnostic[] = [];
 
@@ -34,7 +34,7 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
   }
 
   try {
-    const path = parseDslPath(match.groups.box);
+    const path = parseXyzPath(match.groups.box);
     const properties = parseObjectProperties(match.groups.properties);
 
     return {
@@ -66,7 +66,7 @@ export function parseDslDeclaration(line: string, lineNumber = 1): ParseResult<S
   }
 }
 
-export function parseDslDocument(source: string): ParseResult<SpatialObject[]> {
+export function parseXyzDocument(source: string): ParseResult<SpatialObject[]> {
   const objects: SpatialObject[] = [];
   const diagnostics: ParseDiagnostic[] = [];
 
@@ -75,7 +75,7 @@ export function parseDslDocument(source: string): ParseResult<SpatialObject[]> {
     .map((line, index) => ({ line, lineNumber: index + 1 }))
     .filter(({ line }) => line.trim().length > 0)
     .forEach(({ line, lineNumber }) => {
-      const result = parseDslDeclaration(line, lineNumber);
+      const result = parseXyzDeclaration(line, lineNumber);
 
       diagnostics.push(...result.diagnostics);
 

@@ -8,7 +8,7 @@ import {
   selectionTargetForNodeId,
 } from './selection';
 
-const OUTLET_DSL = `"Outlet/+3+4/+0+2/+1+20c":""
+const OUTLET_XYZ = `"Outlet/+3+4/+0+2/+1+20c":""
 "Outlet/Plate/+0+2/+0+3/+1+15c" : "color: 0xf2f2ee; roughness: 0.7; box-radius: 0.12"
 "Outlet/SlotL/+65c+18c/+150c+75c/+90c+40c" : "box-radius: 0.03; operation: subtraction"
 "Outlet/SlotR/+117c+18c/+150c+75c/+90c+40c" : "box-radius: 0.03; operation: subtraction"
@@ -17,7 +17,7 @@ const OUTLET_DSL = `"Outlet/+3+4/+0+2/+1+20c":""
 
 describe('selectionTargetForNodeId', () => {
   it('promotes rendered compound children to their editable root anchor', () => {
-    const document = createSpatialDocument(OUTLET_DSL);
+    const document = createSpatialDocument(OUTLET_XYZ);
     const plate = document.csgExpressions[0].base;
     const target = selectionTargetForNodeId(document.nodes, plate.id);
 
@@ -26,14 +26,14 @@ describe('selectionTargetForNodeId', () => {
   });
 
   it('returns the full hierarchy for rendered compound children', () => {
-    const document = createSpatialDocument(OUTLET_DSL);
+    const document = createSpatialDocument(OUTLET_XYZ);
     const plate = document.csgExpressions[0].base;
 
     expect(findNodePathById(document.nodes, plate.id).map((node) => node.namespacePath)).toEqual(['Outlet/', 'Outlet/Plate/']);
   });
 
   it('maps promoted container anchors back to a renderable scene highlight', () => {
-    const document = createSpatialDocument(OUTLET_DSL);
+    const document = createSpatialDocument(OUTLET_XYZ);
     const plate = document.csgExpressions[0].base;
     const root = selectionTargetForNodeId(document.nodes, plate.id);
 
@@ -41,7 +41,7 @@ describe('selectionTargetForNodeId', () => {
   });
 
   it('maps consumed boolean tools back to their rendered boolean base for highlighting', () => {
-    const document = createSpatialDocument(OUTLET_DSL);
+    const document = createSpatialDocument(OUTLET_XYZ);
     const plate = document.csgExpressions[0].base;
     const slot = document.csgExpressions[0].operations[0].tool;
 

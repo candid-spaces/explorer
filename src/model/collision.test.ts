@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { DslBoxSpec } from '../dsl/types';
+import type { XyzBoxSpec } from '../xyz/types';
 import type { SpatialNode } from './SpatialNode';
 import { assignUnionGroups, boundsFromBox, boundsFromTransformedBox } from './collision';
 import { degreesToRadians, transformFromBox } from './transform';
 
-function box(overrides: Partial<DslBoxSpec> = {}): DslBoxSpec {
+function box(overrides: Partial<XyzBoxSpec> = {}): XyzBoxSpec {
   return {
     source: '+0+4/+0+2/+0+2',
     x: 0,
@@ -17,7 +17,7 @@ function box(overrides: Partial<DslBoxSpec> = {}): DslBoxSpec {
   };
 }
 
-function node(id: string, nodeBox: DslBoxSpec, rotation: [number, number, number] = [0, 0, 0]): SpatialNode {
+function node(id: string, nodeBox: XyzBoxSpec, rotation: [number, number, number] = [0, 0, 0]): SpatialNode {
   const transform = transformFromBox(nodeBox, { rotation, diagnostics: [] });
 
   return {

@@ -2,7 +2,7 @@ import { Edges, RoundedBoxGeometry } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { MeshPhysicalMaterialParameters, MeshStandardMaterialParameters } from 'three';
 import type { SpatialGeometry } from '../model/geometry';
-import { normalizedDslStrength, normalizedRoundedBoxRadius } from './primitiveGeometry';
+import { normalizedXyzStrength, normalizedRoundedBoxRadius } from './primitiveGeometry';
 import type { SpatialNode } from '../model/SpatialNode';
 import { defaultBoxMaterial, unionHighlightMaterial } from './materials';
 import { resolveMaterialTextures } from './textureRegistry';
@@ -25,7 +25,7 @@ function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
       const radius = normalizedRoundedBoxRadius(geometry);
 
       if (radius > 0) {
-        const puff = normalizedDslStrength(geometry.puff) ?? 0;
+        const puff = normalizedXyzStrength(geometry.puff) ?? 0;
 
         return <RoundedBoxGeometry args={[1, 1, 1]} radius={radius} smoothness={8 + Math.round(puff * 8)} bevelSegments={4} />;
       }
@@ -38,7 +38,7 @@ function PrimitiveGeometry({ geometry }: { geometry: SpatialGeometry }) {
 }
 
 function textureBumpScale(node: SpatialNode): number | undefined {
-  const bumpStrength = normalizedDslStrength(node.material.textures?.bumpMap?.strength);
+  const bumpStrength = normalizedXyzStrength(node.material.textures?.bumpMap?.strength);
 
   return bumpStrength === undefined ? undefined : bumpStrength * 0.045;
 }
