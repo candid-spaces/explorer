@@ -17,7 +17,7 @@ import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/pu
 import { composeTransactionSources } from './transactions/composeTransactionSources';
 import { normalizeXyzTransactions, transactionsToXyzSource } from './transactions/transactionXyz';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
-import type { ActiveSecondaryTransactionStream, XyzTransaction, SecondaryKeyReference, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
+import type { ActiveSecondaryTransactionStream, XyzTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { useRealtimePublicKeyTransactions } from './transactions/useRealtimePublicKeyTransactions';
 import { XyzDrawer } from './ui/XyzDrawer';
@@ -92,6 +92,17 @@ function uniqueSecondaryReferences(references: readonly SecondaryKeyReference[])
   });
 
   return [...uniqueReferences.values()];
+}
+
+function referencesBySecondaryProjection(references: readonly SecondaryKeyReference[]): Map<string, SecondaryKeyReference[]> {
+  const grouped = new Map<string, SecondaryKeyReference[]>();
+
+  references.forEach((reference) => {
+    const key = streamKeyForSecondaryReference(reference);
+    grouped.set(key, [...(grouped.get(key) ?? []), reference]);
+  });
+
+  return grouped;
 }
 
 function normalizeActiveSecondaryStream(
@@ -495,6 +506,15 @@ export default function App() {
       currentTransactionRejectedDiagnostics: diagnosticsByStreamId.get(`${stream.publicKey}@@${stream.endpoint}`) ?? [],
     }));
   }, [secondaryTransactionOverlayStreams, secondaryTransactionStreams]);
+  const secondaryProjections = useMemo<SecondaryProjection[]>(() => {
+    const referencesByProjection = referencesBySecondaryProjection(transactionXyz.secondaryKeys);
+
+    return secondaryTransactionStreamsWithDiagnostics.map((stream) => ({
+      ...stream,
+      references: referencesByProjection.get(streamKeyForSecondaryReference(stream)) ?? [],
+      compositionPolicy: 'consume-primary-namespaces',
+    }));
+  }, [secondaryTransactionStreamsWithDiagnostics, transactionXyz.secondaryKeys]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
@@ -861,8 +881,7 @@ export default function App() {
         acceptedTransactionCount={transactionXyz.source ? transactionXyz.source.split('\n').filter(Boolean).length : 0}
         mappedTransactionSource={remoteBaselineSource}
         rejectedTransactions={transactionXyz.rejected}
-        secondaryKeyReferences={secondaryKeyReferences}
-        secondaryTransactionStreams={secondaryTransactionStreamsWithDiagnostics}
+        secondaryProjections={secondaryProjections}
         hasRemoteBaseline={hasRemoteBaseline}
         hasAuthoringEdits={hasAuthoringEdits}
         remoteBaselineChanged={remoteBaselineChanged}
