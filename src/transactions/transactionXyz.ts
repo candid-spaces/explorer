@@ -1,6 +1,6 @@
 import { parseXyzDocument } from '../xyz/parser';
 import type { ParseDiagnostic } from '../xyz/types';
-import type { XyzTransaction, PrimaryHistoricalBaselineXyz, RejectedTransaction } from './types';
+import type { XyzTransaction, PrimaryHistoricalBaselineXyz, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append either slash-prefixed
 // zero/equal filler or a terminal equals marker with optional zero filler on
@@ -10,6 +10,7 @@ import type { XyzTransaction, PrimaryHistoricalBaselineXyz, RejectedTransaction 
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
 const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0*=$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
+export const DEFAULT_SECONDARY_TRANSACTION_ENDPOINT = 'wss://ungallant-unimpeding-kade.ngrok-free.dev/000000b179a6172473845cbc913598edef179aabb31108324694ca1b12a19e32';
 
 function transactionFallbackId(transaction: XyzTransaction, index: number): string {
   return [transaction.time, trimTransactionPathFiller(transaction.to), transaction.series ?? 'none', index].join(':');
@@ -38,7 +39,10 @@ export function normalizeXyzTransaction(transaction: XyzTransaction): XyzTransac
 
   return {
     ...transaction,
-    to: trimTransactionPathFiller(destination),
+    // Base64 public keys can end in text that resembles terminal path filler
+    // (for example, "+1+10="). Keep them raw so node discovery can identify
+    // secondary-key references before any spatial-path normalization occurs.
+    to: secondaryPublicKeyCandidate(destination) ? destination : trimTransactionPathFiller(destination),
   };
 }
 
@@ -65,6 +69,67 @@ function memoToContentProperties(memo: string): string {
   }
 
   return `content-kind: text; content-text-uri: ${encodeXyzContentValue(memo)}`;
+}
+
+function secondaryPublicKeyCandidate(value: string): string | undefined {
+  const trimmed = value.trim();
+
+  const isBase64PublicKey = /^[A-Za-z0-9+/]{43}=$/.test(trimmed);
+  const isHexPublicKey = /^[A-Fa-f0-9]{64}$/.test(trimmed);
+
+  return isBase64PublicKey || isHexPublicKey ? trimmed : undefined;
+}
+
+function memoWithoutNodeProperty(memo: string): string {
+  const nodeIndex = memo.indexOf('node:');
+
+  return (nodeIndex >= 0 ? memo.slice(0, nodeIndex) : memo).trim();
+}
+
+function publicKeyFromMemo(memo: string): string | undefined {
+  const keyText = memoWithoutNodeProperty(memo)
+    .replace(/^public[- ]?key\s*:\s*/i, '')
+    .split(/[;\s]+/)
+    .find(Boolean);
+
+  return keyText ? secondaryPublicKeyCandidate(keyText) : undefined;
+}
+
+function endpointFromNodeMemoProperty(memo: string): string | undefined {
+  const nodeIndex = memo.indexOf('node:');
+
+  if (nodeIndex < 0) {
+    return undefined;
+  }
+
+  const endpoint = memo.slice(nodeIndex + 'node:'.length).trim().split(';')[0]?.trim();
+
+  return endpoint || undefined;
+}
+
+function secondaryKeyReferenceFromInvalidDeclaration(
+  path: string,
+  memo: string,
+  transactionId: string,
+  rawDestination = path,
+): SecondaryKeyReference | undefined {
+  const publicKey = secondaryPublicKeyCandidate(rawDestination)
+    ?? secondaryPublicKeyCandidate(path)
+    ?? publicKeyFromMemo(memo);
+
+  if (!publicKey) {
+    return undefined;
+  }
+
+  const nodeEndpoint = endpointFromNodeMemoProperty(memo);
+
+  return {
+    publicKey,
+    endpoint: nodeEndpoint ?? DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+    endpointSource: nodeEndpoint ? 'node-url-address' : 'default-secondary',
+    sourceTransactionId: transactionId,
+    memoPreview: previewMemo(`${publicKey}: ${memo}`),
+  };
 }
 
 function memoToXyzProperties(path: string, memo: string): string {
@@ -105,9 +170,10 @@ interface TransactionsToXyzSourceOptions {
 export function transactionsToXyzSource(
   transactions: readonly XyzTransaction[],
   options: TransactionsToXyzSourceOptions = {},
-): PrimaryHistoricalBaselineXyz {
+): PrimaryHistoricalBaselineXyz & { secondaryKeys: SecondaryKeyReference[] } {
   const accepted: string[] = [];
   const rejected: RejectedTransaction[] = [];
+  const secondaryKeys: SecondaryKeyReference[] = [];
   const publicKey = options.publicKey?.trim();
   transactions.forEach((transaction, index) => {
     if (publicKey && transaction.from !== publicKey) {
@@ -115,7 +181,14 @@ export function transactionsToXyzSource(
     }
 
     const memo = trimTransactionMemoFiller(transaction.memo ?? '');
-    const path = trimTransactionPathFiller(transaction.to ?? '');
+    const rawDestination = transaction.to ?? '';
+    const rawDestinationPublicKey = secondaryPublicKeyCandidate(rawDestination);
+    // A Base64 public key can end with a path-filler-looking suffix like /0=.
+    // Keep that raw destination intact for secondary-key references that carry
+    // the distinctive node: endpoint memo property.
+    const path = rawDestinationPublicKey && memo.includes('node:')
+      ? rawDestinationPublicKey
+      : trimTransactionPathFiller(rawDestination);
     const id = transactionFallbackId(transaction, index);
 
     if (!path) {
@@ -131,6 +204,18 @@ export function transactionsToXyzSource(
       return;
     }
 
+    const secondaryKey = secondaryKeyReferenceFromInvalidDeclaration(
+      path,
+      memo,
+      id,
+      rawDestination,
+    );
+
+    if (secondaryKey) {
+      secondaryKeys.push(secondaryKey);
+      return;
+    }
+
     const reasons = diagnosticsToReasons(parsed.diagnostics);
     rejected.push({
       id,
@@ -142,5 +227,6 @@ export function transactionsToXyzSource(
   return {
     source: accepted.join('\n'),
     rejected,
+    secondaryKeys,
   };
 }
