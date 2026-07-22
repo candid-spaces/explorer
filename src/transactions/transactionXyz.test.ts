@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
   normalizeXyzTransaction,
   normalizeXyzTransactions,
   transactionsToXyzSource,
@@ -143,6 +144,30 @@ describe('transactionsToXyzSource', () => {
     });
   });
 
+  it('normalizes transaction collections used by historical secondary streams', () => {
+    expect(normalizeXyzTransactions([
+      transaction('geometry: box', 0, '+2+4/+6+6/+4+300000000000000000000000000000000='),
+    ])).toMatchObject([
+      { to: '+2+4/+6+6/+4+3' },
+    ]);
+  });
+
+  it('preserves Base64 secondary-key destinations that resemble terminal axis filler', () => {
+    const secondaryPublicKey = `${'A'.repeat(38)}+1+10=`;
+    const transactions = normalizeXyzTransactions([
+      transaction('node: wss://secondary.example/ws', 0, secondaryPublicKey),
+    ]);
+    const result = transactionsToXyzSource(transactions, { endpoint: 'wss://primary.example/ws' });
+
+    expect(transactions[0]?.to).toBe(secondaryPublicKey);
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: 'wss://secondary.example/ws',
+      }),
+    ]);
+  });
+
   it('preserves text memo content ending with equals padding characters', () => {
     const result = transactionsToXyzSource([
       transaction('token==', 0, '+0+4/+0+2/+0+1'),
@@ -189,25 +214,83 @@ describe('transactionsToXyzSource', () => {
     expect(result.rejected).toEqual([]);
   });
 
-  it('reports public-key-looking invalid destinations as rejected transactions', () => {
-    const publicKeyLikeDestination = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+  it('returns secondary-key references from invalid paths with node memo properties', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
     const result = transactionsToXyzSource([
-      transaction('node: wss://ignored.example/ws', 5, publicKeyLikeDestination),
-    ]);
+      transaction(`node: wss://secondary.example/ws`, 3, secondaryPublicKey),
+    ], { endpoint: 'wss://primary.example/ws' });
 
     expect(result.source).toBe('');
-    expect(result.rejected).toHaveLength(1);
-    expect(result.rejected[0]?.memoPreview).toContain(publicKeyLikeDestination);
+    expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([
+      {
+        publicKey: secondaryPublicKey,
+        endpoint: 'wss://secondary.example/ws',
+        endpointSource: 'node-url-address',
+        sourceTransactionId: `103:${secondaryPublicKey}:none:0`,
+        memoPreview: `${secondaryPublicKey}: node: wss://secondary.example/ws`,
+      },
+    ]);
   });
 
-  it('keeps content fallback for valid spatial paths with public-key-looking memo text', () => {
-    const publicKeyLikeMemo = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+  it('uses the default secondary endpoint for secondary-key references without a node memo property', () => {
+    const secondaryPublicKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     const result = transactionsToXyzSource([
-      transaction(publicKeyLikeMemo, 5, '+0+4/+0+2/+0+1'),
+      transaction(secondaryPublicKey, 4, 'secondary-key-reference'),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+        endpointSource: 'default-secondary',
+      }),
+    ]);
+  });
+
+  it('uses the default secondary endpoint for empty node memo properties', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+    const result = transactionsToXyzSource([
+      transaction('node:   ', 5, secondaryPublicKey),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+        endpointSource: 'default-secondary',
+      }),
+    ]);
+  });
+
+  it('extracts secondary public keys from untrimmed destinations before path filler cleanup', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0=';
+    const result = transactionsToXyzSource([
+      transaction('node: wss://secondary.example/ws', 6, secondaryPublicKey),
+    ], { endpoint: 'wss://primary.example/ws' });
+
+    expect(result.source).toBe('');
+    expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([
+      expect.objectContaining({
+        publicKey: secondaryPublicKey,
+        endpoint: 'wss://secondary.example/ws',
+        endpointSource: 'node-url-address',
+      }),
+    ]);
+  });
+
+  it('keeps content fallback for valid spatial paths with secondary-looking memo text', () => {
+    const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+    const result = transactionsToXyzSource([
+      transaction(secondaryPublicKey, 5, '+0+4/+0+2/+0+1'),
     ], { endpoint: 'wss://primary.example/ws' });
 
     expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA%3D"');
     expect(result.rejected).toEqual([]);
+    expect(result.secondaryKeys).toEqual([]);
   });
 
   it('preserves transaction order for accepted transactions', () => {

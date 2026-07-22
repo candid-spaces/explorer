@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import type { TransactionRange } from '../transactions/types';
+import type { ActiveSecondaryTransactionStream, SecondaryKeyReference, TransactionRange } from '../transactions/types';
 
 interface XyzTransactionControlsProps {
   publicKey: string;
@@ -13,6 +13,9 @@ interface XyzTransactionControlsProps {
   transactionCount: number;
   acceptedCount: number;
   rejectedCount: number;
+  secondaryKeyCount: number;
+  secondaryKeyReferences: SecondaryKeyReference[];
+  secondaryTransactionStreams: ActiveSecondaryTransactionStream[];
   onPublicKeyChange: (publicKey: string) => void;
   onRangeChange: (range: TransactionRange) => void;
   onReload: () => void;
@@ -28,6 +31,10 @@ function clampHeight(value: number, max: number): number {
   return Math.min(Math.max(Math.round(value), 0), max);
 }
 
+function describeEndpointSource(source: SecondaryKeyReference['endpointSource']): string {
+  return source === 'node-url-address' ? 'node: url_address' : 'Default secondary endpoint';
+}
+
 export function XyzTransactionControls({
   publicKey,
   publicKeyShareUrl,
@@ -40,6 +47,9 @@ export function XyzTransactionControls({
   transactionCount,
   acceptedCount,
   rejectedCount,
+  secondaryKeyCount,
+  secondaryKeyReferences,
+  secondaryTransactionStreams,
   onPublicKeyChange,
   onRangeChange,
   onReload,
@@ -52,7 +62,18 @@ export function XyzTransactionControls({
 
   const lowerPercent = (lowerHeight / sliderMax) * 100;
   const upperPercent = (upperHeight / sliderMax) * 100;
-
+  const secondaryOutgoingCount = secondaryTransactionStreams.reduce((count, stream) => count + stream.transactions.length, 0);
+  const secondaryErrorCount = secondaryTransactionStreams.filter((stream) => stream.streamError).length;
+  const secondaryRejectedCount = secondaryTransactionStreams.reduce(
+    (count, stream) => count + stream.currentTransactionRejectedDiagnostics.length,
+    0,
+  );
+  const realtimeStatuses = Array.from(new Set(secondaryTransactionStreams.map((stream) => stream.realtimeStatus)));
+  const secondaryModeStatus = secondaryTransactionStreams.some((stream) => stream.replaying)
+    ? 'Playback running'
+    : secondaryTransactionStreams.some((stream) => stream.transactions.length > 0)
+      ? 'Playback paused'
+      : 'Realtime';
 
   function updateWindow(nextLower: number, nextUpper: number) {
     onRangeChange({
@@ -277,9 +298,60 @@ export function XyzTransactionControls({
       </details>
 
       <p className="transaction-status">
-        {transactionCount} fetched · {acceptedCount} mapped · {rejectedCount} rejected
+        {transactionCount} fetched · {acceptedCount} mapped · {secondaryKeyCount} secondary · {rejectedCount} rejected
       </p>
 
+      {secondaryKeyReferences.length > 0 ? (
+        <div className="secondary-overlay-summary" aria-label="Secondary overlay summary">
+          <strong>Secondary overlay</strong>
+          <dl>
+            <div>
+              <dt>Discovered keys</dt>
+              <dd>{secondaryKeyReferences.length}</dd>
+            </div>
+            <div>
+              <dt>Realtime status</dt>
+              <dd>{realtimeStatuses.length > 0 ? realtimeStatuses.join(', ') : 'connecting'}</dd>
+            </div>
+            <div>
+              <dt>Secondary transactions</dt>
+              <dd>{secondaryOutgoingCount} outgoing</dd>
+            </div>
+            <div>
+              <dt>Mode</dt>
+              <dd>{secondaryModeStatus}</dd>
+            </div>
+            <div>
+              <dt>Stream errors</dt>
+              <dd>{secondaryErrorCount}</dd>
+            </div>
+            <div>
+              <dt>Parsing rejections</dt>
+              <dd>{secondaryRejectedCount}</dd>
+            </div>
+          </dl>
+          <small>Only outgoing transactions are included in secondary streams; parsing rejections are reported separately.</small>
+          <ul>
+            {secondaryKeyReferences.map((reference) => {
+              const stream = secondaryTransactionStreams.find((candidate) => (
+                candidate.publicKey === reference.publicKey && candidate.endpoint === reference.endpoint
+              ));
+
+              return (
+                <li key={reference.sourceTransactionId}>
+                  <strong>{reference.publicKey}</strong>
+                  <span>{reference.endpoint || '(primary endpoint)'}</span>
+                  <small>
+                    {describeEndpointSource(reference.endpointSource)} · {stream?.realtimeStatus ?? 'connecting'} · {stream?.transactions.length ?? 0} outgoing
+                    {stream?.currentTransactionRejectedDiagnostics.length ? ` · ${stream.currentTransactionRejectedDiagnostics.length} parsing rejection${stream.currentTransactionRejectedDiagnostics.length === 1 ? '' : 's'}` : ''}
+                    {stream?.streamError ? ` · Error: ${stream.streamError}` : ''}
+                  </small>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
       {error ? <p className="transaction-error">{error}</p> : null}
       {tipError ? <p className="transaction-error">{tipError}</p> : null}
     </section>
