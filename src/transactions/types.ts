@@ -33,3 +33,28 @@ export interface RejectedTransaction {
   memoPreview: string;
   reasons: string[];
 }
+
+export type SecondaryEndpointSource = 'node-url-address' | 'default-secondary';
+
+export type SecondaryRealtimeStatus = 'connecting' | 'connected' | 'closed' | 'error';
+
+export interface DiscoveredSecondaryPublicKeyReference extends TransactionPublicKeyEndpoint {
+  endpointSource: SecondaryEndpointSource;
+  sourceTransactionId: string;
+  memoPreview: string;
+}
+
+export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEndpoint {
+  endpointSource: SecondaryEndpointSource;
+  realtimeStatus: SecondaryRealtimeStatus;
+  streamError?: string;
+  transactions: XyzTransaction[];
+  playbackIndex: number;
+  playbackSpeed: number;
+  replaying: boolean;
+  historyLoading?: boolean;
+  /** Diagnostics for the transaction selected by this stream's playback cursor. */
+  currentTransactionRejectedDiagnostics: RejectedTransaction[];
+}
+
+export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;

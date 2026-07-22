@@ -81,6 +81,12 @@ References must point to a namespace that has already been declared or instantia
 
 Spatial transaction validation can cap each memo/properties payload at 100 bytes, but the parser, document model, and renderer treat that as an upstream transport limit rather than a scene-rendering limit. A spatial transaction is a remote transaction whose path and memo/properties payload map into one spatial declaration. The renderer consumes the fully resolved declaration graph and has no practical limit on how many inherited properties a node may receive. Spatial transaction authors can therefore spread compact declarations across multiple 100-byte fields and use namespace inheritance to amortize verbose shared settings: a parent namespace declaration can carry material or geometry defaults, child namespaces can add texture or deformation defaults, and concrete instances can rely on the accumulated properties while only spending bytes on coordinates or local overrides.
 
+### Primary backgrounds and secondary projections
+
+The selected primary public key is loaded historically with `get_public_key_transactions` and establishes the background scene plus its declaration library. An outgoing primary transaction that is not a valid spatial declaration may instead reference a secondary public key. References support Base64-encoded or hexadecimal public keys, and may include a `node:` memo property to select a secondary endpoint; otherwise the client uses its designated secondary node.
+
+Each discovered secondary key has a persistent realtime `filter_add` subscription. The client accepts outgoing `push_transaction` and `filter_block` transactions from that key, keeps their received ordering stable, and renders one current transaction frame per secondary stream. Secondary frame declarations are composed after the primary source so they can consume the primary coordinate space and named declaration namespaces. Secondary namespace declarations and declarations outside namespaces supplied by the primary source are not composed, preventing projections from replacing the environmental background or adding an unrelated declaration library. Realtime filter, connection, parsing, and replay state are surfaced separately from primary transaction diagnostics.
+
 ## Coordinate system
 
 Spatial declarations use edge-based bounding-box placement:
