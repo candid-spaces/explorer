@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
   normalizeXyzTransaction,
   normalizeXyzTransactions,
   transactionToXyzCursorSource,
@@ -171,13 +170,12 @@ describe('transactionsToXyzSource', () => {
     const transactions = normalizeXyzTransactions([
       transaction('node: wss://secondary.example/ws', 0, secondaryPublicKey),
     ]);
-    const result = transactionsToXyzSource(transactions, { endpoint: 'wss://primary.example/ws' });
+    const result = transactionsToXyzSource(transactions);
 
     expect(transactions[0]?.to).toBe(secondaryPublicKey);
     expect(result.secondaryKeys).toEqual([
       expect.objectContaining({
         publicKey: secondaryPublicKey,
-        endpoint: 'wss://secondary.example/ws',
       }),
     ]);
   });
@@ -228,53 +226,47 @@ describe('transactionsToXyzSource', () => {
     expect(result.rejected).toEqual([]);
   });
 
-  it('returns secondary-key references from invalid paths with node memo properties', () => {
+  it('discovers secondary public keys without using node memo properties as endpoints', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
     const result = transactionsToXyzSource([
       transaction(`node: wss://secondary.example/ws`, 3, secondaryPublicKey),
-    ], { endpoint: 'wss://primary.example/ws' });
+    ]);
 
     expect(result.source).toBe('');
     expect(result.rejected).toEqual([]);
     expect(result.secondaryKeys).toEqual([
       {
         publicKey: secondaryPublicKey,
-        endpoint: 'wss://secondary.example/ws',
-        endpointSource: 'node-url-address',
         sourceTransactionId: `103:${secondaryPublicKey}:none:0`,
         memoPreview: `${secondaryPublicKey}: node: wss://secondary.example/ws`,
       },
     ]);
   });
 
-  it('uses the default secondary endpoint for secondary-key references without a node memo property', () => {
+  it('discovers secondary-key references without an endpoint', () => {
     const secondaryPublicKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     const result = transactionsToXyzSource([
       transaction(secondaryPublicKey, 4, 'secondary-key-reference'),
-    ], { endpoint: 'wss://primary.example/ws' });
+    ]);
 
     expect(result.source).toBe('');
     expect(result.rejected).toEqual([]);
     expect(result.secondaryKeys).toEqual([
       expect.objectContaining({
         publicKey: secondaryPublicKey,
-        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
-        endpointSource: 'default-secondary',
       }),
     ]);
   });
 
-  it('uses the default secondary endpoint for empty node memo properties', () => {
+  it('does not retain endpoint data from empty node memo properties', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
     const result = transactionsToXyzSource([
       transaction('node:   ', 5, secondaryPublicKey),
-    ], { endpoint: 'wss://primary.example/ws' });
+    ]);
 
     expect(result.secondaryKeys).toEqual([
       expect.objectContaining({
         publicKey: secondaryPublicKey,
-        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
-        endpointSource: 'default-secondary',
       }),
     ]);
   });
@@ -283,15 +275,13 @@ describe('transactionsToXyzSource', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/0=';
     const result = transactionsToXyzSource([
       transaction('node: wss://secondary.example/ws', 6, secondaryPublicKey),
-    ], { endpoint: 'wss://primary.example/ws' });
+    ]);
 
     expect(result.source).toBe('');
     expect(result.rejected).toEqual([]);
     expect(result.secondaryKeys).toEqual([
       expect.objectContaining({
         publicKey: secondaryPublicKey,
-        endpoint: 'wss://secondary.example/ws',
-        endpointSource: 'node-url-address',
       }),
     ]);
   });
@@ -300,7 +290,7 @@ describe('transactionsToXyzSource', () => {
     const secondaryPublicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
     const result = transactionsToXyzSource([
       transaction(secondaryPublicKey, 5, '+0+4/+0+2/+0+1'),
-    ], { endpoint: 'wss://primary.example/ws' });
+    ]);
 
     expect(result.source).toBe('"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA%3D"');
     expect(result.rejected).toEqual([]);

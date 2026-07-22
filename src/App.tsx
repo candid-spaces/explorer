@@ -15,7 +15,7 @@ import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
-import { normalizeXyzTransaction, normalizeXyzTransactions, transactionToXyzCursorSource, transactionsToXyzSource } from './transactions/transactionXyz';
+import { DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, normalizeXyzTransaction, normalizeXyzTransactions, transactionToXyzCursorSource, transactionsToXyzSource } from './transactions/transactionXyz';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, OriginatingPrimaryCursor, XyzTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
@@ -77,8 +77,8 @@ function countLines(source: string): Map<string, number> {
   return counts;
 }
 
-function streamKeyForSecondaryReference(reference: Pick<SecondaryKeyReference, 'publicKey' | 'endpoint'>): string {
-  return `${reference.publicKey}@@${reference.endpoint}`;
+function streamKeyForSecondaryReference(reference: Pick<SecondaryKeyReference, 'publicKey'>): string {
+  return reference.publicKey;
 }
 
 function uniqueSecondaryReferences(references: readonly SecondaryKeyReference[]): SecondaryKeyReference[] {
@@ -133,7 +133,7 @@ function normalizeActiveSecondaryStream(
       ? stream.originatingCursor
       : {
         publicKey: originatingPublicKey,
-        endpoint: reference.endpoint,
+        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
         transactions: [],
         realtimeStatus: 'connecting',
       },
@@ -184,7 +184,7 @@ function SecondaryRealtimeSubscription({
   onStatusChange,
 }: SecondaryRealtimeSubscriptionProps) {
   useRealtimePublicKeyTransactions({
-    endpoint: reference.endpoint,
+    endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
     publicKey: reference.publicKey,
     onTransaction: (transaction) => onTransaction(reference, transaction),
     onError: (error) => onError(reference, error),
@@ -192,7 +192,7 @@ function SecondaryRealtimeSubscription({
   });
 
   useRealtimePublicKeyTransactions({
-    endpoint: reference.endpoint,
+    endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
     publicKey: originatingPublicKey,
     onTransaction: (transaction) => onOriginatingTransaction(reference, transaction),
     onError: (error) => onError(reference, error),
@@ -341,7 +341,7 @@ export default function App() {
   }, [appMode]);
 
   const transactionXyz = useMemo(
-    () => transactionsToXyzSource(transactions, { publicKey: transactionPublicKey, endpoint: DEFAULT_TRANSACTION_ENDPOINT }),
+    () => transactionsToXyzSource(transactions, { publicKey: transactionPublicKey }),
     [transactions, transactionPublicKey],
   );
   const primaryRemoteBaselineSource = transactionXyz.source;
@@ -438,9 +438,9 @@ export default function App() {
   }, [setActiveSecondaryTransactions, transactionPublicKey]);
 
   useEffect(() => {
-    const invalidReference = secondaryKeyReferences.find((reference) => endpointValidationError(reference.endpoint) !== undefined);
-    setSecondaryTransactionError(invalidReference
-      ? `Invalid secondary endpoint for ${invalidReference.publicKey}: ${endpointValidationError(invalidReference.endpoint)}`
+    const endpointError = endpointValidationError(DEFAULT_SECONDARY_TRANSACTION_ENDPOINT);
+    setSecondaryTransactionError(endpointError
+      ? `Invalid shared secondary endpoint: ${endpointError}`
       : undefined);
 
     if (secondaryKeyReferences.length === 0) {
@@ -454,7 +454,7 @@ export default function App() {
 
       secondaryKeyReferences.forEach((reference) => {
         const streamKey = streamKeyForSecondaryReference(reference);
-        const validationError = endpointValidationError(reference.endpoint);
+        const validationError = endpointError;
         const current = normalizeActiveSecondaryStream(nextStreams[streamKey], reference, transactionPublicKey.trim());
 
         nextStreams[streamKey] = validationError
@@ -466,10 +466,9 @@ export default function App() {
     });
   }, [secondaryKeyReferences, setActiveSecondaryTransactions, transactionPublicKey]);
 
-  const validSecondaryKeyReferences = useMemo(
-    () => secondaryKeyReferences.filter((reference) => endpointValidationError(reference.endpoint) === undefined),
-    [secondaryKeyReferences],
-  );
+  const validSecondaryKeyReferences = endpointValidationError(DEFAULT_SECONDARY_TRANSACTION_ENDPOINT) === undefined
+    ? secondaryKeyReferences
+    : [];
 
   useEffect(() => {
     const replayingStreams = Object.values(activeSecondaryTransactions).filter((stream) => stream.replaying);
@@ -522,8 +521,7 @@ export default function App() {
   const secondaryTransactionStreams = useMemo<ActiveSecondaryTransactionStream[]>(() => Object.values(activeSecondaryTransactions)
     .map(({ reference, transactions: secondaryTransactions, playbackIndex, playbackSpeed, replaying, realtimeStatus, streamError, historyLoading, originatingCursor }) => ({
       publicKey: reference.publicKey,
-      endpoint: reference.endpoint,
-      endpointSource: reference.endpointSource,
+      endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
       transactions: secondaryTransactions,
       playbackIndex,
       playbackSpeed: normalizePlaybackSpeed(playbackSpeed),
@@ -534,7 +532,7 @@ export default function App() {
       currentTransactionRejectedDiagnostics: [],
       originatingCursor: originatingCursor ?? {
         publicKey: transactionPublicKey.trim(),
-        endpoint: reference.endpoint,
+        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
         transactions: [],
         realtimeStatus: 'connecting',
       },
@@ -545,7 +543,6 @@ export default function App() {
       const currentTransaction = currentPlaybackTransaction(secondaryTransactions, playbackIndex);
       const xyzResult = transactionsToXyzSource(currentTransaction ? [currentTransaction] : [], {
         publicKey,
-        endpoint,
       });
 
       return {
@@ -642,8 +639,8 @@ export default function App() {
   const selectedNodeCanEdit = selectedNodeLineNumber !== undefined && canEditDeclarationLine(authoringSource, selectedNodeLineNumber);
 
 
-  const handleSecondaryReplay = useCallback((publicKey: string, endpoint: string) => {
-    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+  const handleSecondaryReplay = useCallback((publicKey: string) => {
+    const streamKey = streamKeyForSecondaryReference({ publicKey });
 
     setActiveSecondaryTransactions((streams) => {
       const stream = streams[streamKey];
@@ -665,8 +662,8 @@ export default function App() {
     });
   }, [setActiveSecondaryTransactions]);
 
-  const handleSecondaryPlaybackToggle = useCallback((publicKey: string, endpoint: string) => {
-    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+  const handleSecondaryPlaybackToggle = useCallback((publicKey: string) => {
+    const streamKey = streamKeyForSecondaryReference({ publicKey });
 
     setActiveSecondaryTransactions((streams) => {
       const stream = streams[streamKey];
@@ -691,10 +688,9 @@ export default function App() {
 
   const handleSecondaryPlaybackSpeedChange = useCallback((
     publicKey: string,
-    endpoint: string,
     playbackSpeed: number,
   ) => {
-    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+    const streamKey = streamKeyForSecondaryReference({ publicKey });
 
     setActiveSecondaryTransactions((streams) => {
       const stream = streams[streamKey];
@@ -732,10 +728,9 @@ export default function App() {
 
   const handleSecondaryPlaybackSeek = useCallback((
     publicKey: string,
-    endpoint: string,
     playbackIndex: number,
   ) => {
-    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+    const streamKey = streamKeyForSecondaryReference({ publicKey });
 
     setActiveSecondaryTransactions((streams) => {
       const stream = streams[streamKey];
@@ -757,8 +752,8 @@ export default function App() {
     });
   }, [setActiveSecondaryTransactions]);
 
-  const handleLoadSecondaryHistory = useCallback((publicKey: string, endpoint: string) => {
-    const streamKey = streamKeyForSecondaryReference({ publicKey, endpoint });
+  const handleLoadSecondaryHistory = useCallback((publicKey: string) => {
+    const streamKey = streamKeyForSecondaryReference({ publicKey });
     const controller = new AbortController();
 
     setActiveSecondaryTransactions((streams) => {
@@ -776,11 +771,11 @@ export default function App() {
 
     const originatingPublicKey = transactionPublicKey.trim();
     const originatingHistory = originatingPublicKey
-      ? fetchPublicKeyTransactions({ endpoint, publicKey: originatingPublicKey, range: transactionRange, signal: controller.signal })
+      ? fetchPublicKeyTransactions({ endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, publicKey: originatingPublicKey, range: transactionRange, signal: controller.signal })
       : Promise.resolve([]);
 
     Promise.all([
-      fetchPublicKeyTransactions({ endpoint, publicKey, range: transactionRange, signal: controller.signal }),
+      fetchPublicKeyTransactions({ endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, publicKey, range: transactionRange, signal: controller.signal }),
       originatingHistory,
     ])
       .then(([historicalTransactions, originatingTransactions]) => {
