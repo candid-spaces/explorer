@@ -3,6 +3,7 @@ import {
   DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
   normalizeXyzTransaction,
   normalizeXyzTransactions,
+  transactionToXyzCursorSource,
   transactionsToXyzSource,
   trimTransactionMemoFiller,
   trimTransactionPathFiller,
@@ -21,6 +22,19 @@ function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from
 }
 
 describe('transactionsToXyzSource', () => {
+  it('maps the current originating-key transaction into a secondary-chain cursor declaration', () => {
+    const cursor = transactionToXyzCursorSource(
+      transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'originating-key'),
+      'originating-key',
+    );
+
+    expect(cursor).toBe('"+4+1/+2+1/+0+1" : "color: cyan"');
+    expect(transactionToXyzCursorSource(
+      transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'another-key'),
+      'originating-key',
+    )).toBe('');
+  });
+
   it('builds valid XYZ coordinate declarations from transaction path and memo properties', () => {
     const result = transactionsToXyzSource([
       transaction('geometry: box', 0, '+0+1/+0+1/+0+1'),

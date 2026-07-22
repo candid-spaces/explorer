@@ -230,3 +230,15 @@ export function transactionsToXyzSource(
     secondaryKeys,
   };
 }
+
+/**
+ * Maps the newest primary-key transaction observed on a secondary chain into
+ * the declaration rendered as that chain's scene cursor.
+ */
+export function transactionToXyzCursorSource(transaction: XyzTransaction | undefined, publicKey: string): string {
+  if (!transaction || !publicKey.trim()) {
+    return '';
+  }
+
+  return transactionsToXyzSource([transaction], { publicKey }).source;
+}
