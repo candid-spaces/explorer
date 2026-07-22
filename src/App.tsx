@@ -192,12 +192,22 @@ export default function App() {
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
 
   useEffect(() => {
-    setActiveSecondaryTransactions((streams) => Object.fromEntries(
-      Object.entries(streams).map(([streamKey, stream]) => [
-        streamKey,
-        stream.historyLoading ? { ...stream, historyLoading: false } : stream,
-      ]),
-    ));
+    setActiveSecondaryTransactions((streams) => {
+      const playbackStartedAtMs = Date.now();
+
+      return Object.fromEntries(Object.entries(streams).map(([streamKey, stream]) => {
+        const playbackBaseTransactionTime = stream.replaying
+          ? stream.transactions[clampPlaybackIndex(stream.playbackIndex, stream.transactions.length)]?.time
+          : undefined;
+
+        return [streamKey, {
+          ...stream,
+          historyLoading: false,
+          playbackStartedAtMs: stream.replaying ? playbackStartedAtMs : undefined,
+          playbackBaseTransactionTime,
+        }];
+      }));
+    });
   }, [setActiveSecondaryTransactions]);
 
   const transactionPublicKeyShareUrl = useMemo(() => {
