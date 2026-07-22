@@ -171,16 +171,16 @@ function SecondaryRealtimeSubscription({
 
 interface PrimaryRealtimeSubscriptionProps {
   publicKey: string;
-  onTransaction: (transaction: XyzTransaction) => void;
+  onInventory: () => void;
   onError: (error: Error) => void;
 }
 
-/** Uses the same resilient filter subscription as secondary overlays. */
-function PrimaryRealtimeSubscription({ publicKey, onTransaction, onError }: PrimaryRealtimeSubscriptionProps) {
+/** Uses the shared filter socket, but only reacts to confirmed block inventory. */
+function PrimaryRealtimeSubscription({ publicKey, onInventory, onError }: PrimaryRealtimeSubscriptionProps) {
   useRealtimePublicKeyTransactions({
     endpoint: DEFAULT_TRANSACTION_ENDPOINT,
     publicKey,
-    onTransaction,
+    onInventory,
     onError,
   });
 
@@ -208,13 +208,8 @@ export default function App() {
   const [tipError, setTipError] = useState<string | undefined>();
   const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyz-active-secondary-transaction-streams', {});
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
-  const [primaryRealtimeTransactions, setPrimaryRealtimeTransactions] = useState<XyzTransaction[]>([]);
   const [primaryRealtimeError, setPrimaryRealtimeError] = useState<string | undefined>();
-
-  useEffect(() => {
-    setPrimaryRealtimeTransactions([]);
-    setPrimaryRealtimeError(undefined);
-  }, [transactionPublicKey]);
+  const [primaryInventoryRefreshKey, setPrimaryInventoryRefreshKey] = useState(0);
 
   useEffect(() => {
     setActiveSecondaryTransactions((streams) => {
@@ -258,21 +253,13 @@ export default function App() {
     endpoint: DEFAULT_TRANSACTION_ENDPOINT,
     publicKey: transactionPublicKey,
     range: transactionRange,
+    refreshKey: primaryInventoryRefreshKey,
   });
-  const transactions = useMemo(() => sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(
-    normalizeXyzTransactions(historicalTransactions),
-    primaryRealtimeTransactions,
-  )), [historicalTransactions, primaryRealtimeTransactions]);
-  const handlePrimaryRealtimeTransaction = useCallback((transaction: XyzTransaction) => {
-    setPrimaryRealtimeError(undefined);
-    setPrimaryRealtimeTransactions((current) => sortTransactionsByTimeStable(
-      mergeHistoricalStreamTransactions(current, [transaction]),
-    ));
-  }, []);
+  const transactions = historicalTransactions;
   const handlePrimaryRealtimeError = useCallback((error: Error) => {
     setPrimaryRealtimeError(error.message);
   }, []);
-  const loadTipHeight = useCallback(() => {
+  const loadTipHeight = useCallback((onTipLoaded?: () => void) => {
     const controller = new AbortController();
     setTipLoading(true);
     setTipError(undefined);
@@ -286,6 +273,7 @@ export default function App() {
           endHeight: Math.min(range.endHeight, height),
           limit: DEFAULT_TRANSACTION_RANGE.limit,
         }));
+        onTipLoaded?.();
       })
       .catch((caught: unknown) => {
         if (caught instanceof DOMException && caught.name === 'AbortError') {
@@ -302,6 +290,14 @@ export default function App() {
 
     return () => controller.abort();
   }, []);
+
+  const handlePrimaryInventory = useCallback(() => {
+    // inv_block only announces confirmed chain activity. Refresh the tip and
+    // history together; push_transaction messages intentionally do not alter
+    // the primary scene.
+    setPrimaryRealtimeError(undefined);
+    loadTipHeight(() => setPrimaryInventoryRefreshKey((key) => key + 1));
+  }, [loadTipHeight]);
 
   useEffect(() => loadTipHeight(), [loadTipHeight]);
 
@@ -815,7 +811,7 @@ export default function App() {
         <PrimaryRealtimeSubscription
           key={transactionPublicKey.trim()}
           publicKey={transactionPublicKey}
-          onTransaction={handlePrimaryRealtimeTransaction}
+          onInventory={handlePrimaryInventory}
           onError={handlePrimaryRealtimeError}
         />
       ) : null}

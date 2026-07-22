@@ -11,7 +11,8 @@ const SUSTAINED_RECONNECT_ATTEMPTS = Number.MAX_SAFE_INTEGER;
 interface UseRealtimePublicKeyTransactionsOptions {
   endpoint: string;
   publicKey: string;
-  onTransaction: (transaction: XyzTransaction) => void;
+  onTransaction?: (transaction: XyzTransaction) => void;
+  onInventory?: () => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: SecondaryRealtimeStatus) => void;
 }
@@ -39,6 +40,7 @@ export function useRealtimePublicKeyTransactions({
   endpoint,
   publicKey,
   onTransaction,
+  onInventory,
   onError,
   onStatusChange,
 }: UseRealtimePublicKeyTransactionsOptions) {
@@ -46,8 +48,8 @@ export function useRealtimePublicKeyTransactions({
   const normalizedEndpoint = useMemo(() => normalizeEndpoint(endpoint), [endpoint]);
   const [shouldConnect, setShouldConnect] = useState(false);
   const [inventorySequence, setInventorySequence] = useState(0);
-  const callbacksRef = useRef({ onTransaction, onError, onStatusChange });
-  callbacksRef.current = { onTransaction, onError, onStatusChange };
+  const callbacksRef = useRef({ onTransaction, onInventory, onError, onStatusChange });
+  callbacksRef.current = { onTransaction, onInventory, onError, onStatusChange };
 
   // Defer the initial connection until after the component has committed. This
   // avoids opening then immediately closing a socket during React StrictMode's
@@ -71,6 +73,7 @@ export function useRealtimePublicKeyTransactions({
       // matching filter_block without maintaining separate socket machinery.
       if (isInvBlockMessage(event)) {
         setInventorySequence((sequence) => sequence + 1);
+        callbacksRef.current.onInventory?.();
         return;
       }
 
@@ -82,7 +85,7 @@ export function useRealtimePublicKeyTransactions({
       }
 
       realtimeTransactionsFromMessage(event, watchedPublicKey).forEach((transaction) => {
-        callbacksRef.current.onTransaction(transaction);
+        callbacksRef.current.onTransaction?.(transaction);
       });
     },
     // react-use-websocket owns reconnects after transport errors and unclean
