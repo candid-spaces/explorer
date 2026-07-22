@@ -7,9 +7,11 @@ interface UsePublicKeyTransactionsOptions {
   endpoint: string;
   publicKey: string;
   range: TransactionRange;
+  /** Changes when an external chain notification requires a history refresh. */
+  refreshKey?: number;
 }
 
-export function usePublicKeyTransactions({ endpoint, publicKey, range }: UsePublicKeyTransactionsOptions) {
+export function usePublicKeyTransactions({ endpoint, publicKey, range, refreshKey }: UsePublicKeyTransactionsOptions) {
   const [transactions, setTransactions] = useState<XyzTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -48,7 +50,7 @@ export function usePublicKeyTransactions({ endpoint, publicKey, range }: UsePubl
       });
 
     return () => controller.abort();
-  }, [endpoint, publicKey, range, reloadToken]);
+  }, [endpoint, publicKey, range, refreshKey, reloadToken]);
 
   return { transactions, loading, error, reload };
 }

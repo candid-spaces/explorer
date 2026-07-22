@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { normalizeEndpoint } from './publicKeyTransactions';
-import { realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
+import { isInvBlockMessage, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
 import type { XyzTransaction, SecondaryRealtimeStatus } from './types';
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
@@ -11,7 +11,8 @@ const SUSTAINED_RECONNECT_ATTEMPTS = Number.MAX_SAFE_INTEGER;
 interface UseRealtimePublicKeyTransactionsOptions {
   endpoint: string;
   publicKey: string;
-  onTransaction: (transaction: XyzTransaction) => void;
+  onTransaction?: (transaction: XyzTransaction) => void;
+  onInventory?: () => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: SecondaryRealtimeStatus) => void;
 }
@@ -39,14 +40,16 @@ export function useRealtimePublicKeyTransactions({
   endpoint,
   publicKey,
   onTransaction,
+  onInventory,
   onError,
   onStatusChange,
 }: UseRealtimePublicKeyTransactionsOptions) {
   const watchedPublicKey = publicKey.trim();
   const normalizedEndpoint = useMemo(() => normalizeEndpoint(endpoint), [endpoint]);
   const [shouldConnect, setShouldConnect] = useState(false);
-  const callbacksRef = useRef({ onTransaction, onError, onStatusChange });
-  callbacksRef.current = { onTransaction, onError, onStatusChange };
+  const [inventorySequence, setInventorySequence] = useState(0);
+  const callbacksRef = useRef({ onTransaction, onInventory, onError, onStatusChange });
+  callbacksRef.current = { onTransaction, onInventory, onError, onStatusChange };
 
   // Defer the initial connection until after the component has committed. This
   // avoids opening then immediately closing a socket during React StrictMode's
@@ -65,6 +68,15 @@ export function useRealtimePublicKeyTransactions({
     ),
     shouldReconnect: () => true,
     onMessage: (event) => {
+      // A node announces new blocks with inv_block. Re-send our interest filter
+      // so both primary declarations and secondary overlays receive the next
+      // matching filter_block without maintaining separate socket machinery.
+      if (isInvBlockMessage(event)) {
+        setInventorySequence((sequence) => sequence + 1);
+        callbacksRef.current.onInventory?.();
+        return;
+      }
+
       const filterError = realtimeFilterResultError(event);
 
       if (filterError) {
@@ -73,15 +85,11 @@ export function useRealtimePublicKeyTransactions({
       }
 
       realtimeTransactionsFromMessage(event, watchedPublicKey).forEach((transaction) => {
-        callbacksRef.current.onTransaction(transaction);
+        callbacksRef.current.onTransaction?.(transaction);
       });
     },
-    onError: () => {
-      callbacksRef.current.onError?.(new Error('Unable to communicate with realtime transaction endpoint.'));
-    },
-    onClose: (event) => {
-      callbacksRef.current.onError?.(realtimeCloseError(event));
-    },
+    // react-use-websocket owns reconnects after transport errors and unclean
+    // closes. Only a server-reported filter_result is actionable here.
   }, Boolean(watchedPublicKey) && shouldConnect);
 
   useEffect(() => {
@@ -99,7 +107,7 @@ export function useRealtimePublicKeyTransactions({
       type: 'filter_add',
       body: { public_keys: [watchedPublicKey] },
     }, false);
-  }, [readyState, sendJsonMessage, watchedPublicKey]);
+  }, [inventorySequence, readyState, sendJsonMessage, watchedPublicKey]);
 
   return { readyState };
 }

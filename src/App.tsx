@@ -169,6 +169,24 @@ function SecondaryRealtimeSubscription({
   return null;
 }
 
+interface PrimaryRealtimeSubscriptionProps {
+  publicKey: string;
+  onInventory: () => void;
+  onError: (error: Error) => void;
+}
+
+/** Uses the shared filter socket, but only reacts to confirmed block inventory. */
+function PrimaryRealtimeSubscription({ publicKey, onInventory, onError }: PrimaryRealtimeSubscriptionProps) {
+  useRealtimePublicKeyTransactions({
+    endpoint: DEFAULT_TRANSACTION_ENDPOINT,
+    publicKey,
+    onInventory,
+    onError,
+  });
+
+  return null;
+}
+
 export default function App() {
   const [authoringSource, setAuthoringSource] = useState(INITIAL_XYZ);
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
@@ -190,6 +208,8 @@ export default function App() {
   const [tipError, setTipError] = useState<string | undefined>();
   const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyz-active-secondary-transaction-streams', {});
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
+  const [primaryRealtimeError, setPrimaryRealtimeError] = useState<string | undefined>();
+  const [primaryInventoryRefreshKey, setPrimaryInventoryRefreshKey] = useState(0);
 
   useEffect(() => {
     setActiveSecondaryTransactions((streams) => {
@@ -225,7 +245,7 @@ export default function App() {
   }, [setTransactionPublicKey]);
 
   const {
-    transactions,
+    transactions: historicalTransactions,
     loading: transactionsLoading,
     error: transactionError,
     reload: reloadTransactions,
@@ -233,8 +253,13 @@ export default function App() {
     endpoint: DEFAULT_TRANSACTION_ENDPOINT,
     publicKey: transactionPublicKey,
     range: transactionRange,
+    refreshKey: primaryInventoryRefreshKey,
   });
-  const loadTipHeight = useCallback(() => {
+  const transactions = historicalTransactions;
+  const handlePrimaryRealtimeError = useCallback((error: Error) => {
+    setPrimaryRealtimeError(error.message);
+  }, []);
+  const loadTipHeight = useCallback((onTipLoaded?: () => void) => {
     const controller = new AbortController();
     setTipLoading(true);
     setTipError(undefined);
@@ -248,6 +273,7 @@ export default function App() {
           endHeight: Math.min(range.endHeight, height),
           limit: DEFAULT_TRANSACTION_RANGE.limit,
         }));
+        onTipLoaded?.();
       })
       .catch((caught: unknown) => {
         if (caught instanceof DOMException && caught.name === 'AbortError') {
@@ -264,6 +290,14 @@ export default function App() {
 
     return () => controller.abort();
   }, []);
+
+  const handlePrimaryInventory = useCallback(() => {
+    // inv_block only announces confirmed chain activity. Refresh the tip and
+    // history together; push_transaction messages intentionally do not alter
+    // the primary scene.
+    setPrimaryRealtimeError(undefined);
+    loadTipHeight(() => setPrimaryInventoryRefreshKey((key) => key + 1));
+  }, [loadTipHeight]);
 
   useEffect(() => loadTipHeight(), [loadTipHeight]);
 
@@ -773,6 +807,14 @@ export default function App() {
 
   return (
     <main className={`app-shell app-shell--${appMode}`}>
+      {transactionPublicKey.trim() ? (
+        <PrimaryRealtimeSubscription
+          key={transactionPublicKey.trim()}
+          publicKey={transactionPublicKey}
+          onInventory={handlePrimaryInventory}
+          onError={handlePrimaryRealtimeError}
+        />
+      ) : null}
       {validSecondaryKeyReferences.map((reference) => (
         <SecondaryRealtimeSubscription
           key={streamKeyForSecondaryReference(reference)}
@@ -811,7 +853,7 @@ export default function App() {
         transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}
         transactionsLoading={transactionsLoading}
-        transactionError={transactionError ?? secondaryTransactionError}
+        transactionError={transactionError ?? primaryRealtimeError ?? secondaryTransactionError}
         tipHeight={tipHeight}
         tipLoading={tipLoading}
         tipError={tipError}
