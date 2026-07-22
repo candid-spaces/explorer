@@ -14,6 +14,11 @@ type FilterResultMessageBody = {
   error?: unknown;
 };
 
+/** True when a peer announces a block, which is the protocol's cue to refresh a filter. */
+export function isInvBlockMessage(event: MessageEvent<string>): boolean {
+  return parseJsonMessage(event)?.type === 'inv_block';
+}
+
 /**
  * Extracts outgoing transactions for a public key from one Cruzbit realtime
  * message. WebSocket lifecycle and reconnection are owned by react-use-websocket.

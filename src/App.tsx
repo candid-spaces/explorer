@@ -169,6 +169,24 @@ function SecondaryRealtimeSubscription({
   return null;
 }
 
+interface PrimaryRealtimeSubscriptionProps {
+  publicKey: string;
+  onTransaction: (transaction: XyzTransaction) => void;
+  onError: (error: Error) => void;
+}
+
+/** Uses the same resilient filter subscription as secondary overlays. */
+function PrimaryRealtimeSubscription({ publicKey, onTransaction, onError }: PrimaryRealtimeSubscriptionProps) {
+  useRealtimePublicKeyTransactions({
+    endpoint: DEFAULT_TRANSACTION_ENDPOINT,
+    publicKey,
+    onTransaction,
+    onError,
+  });
+
+  return null;
+}
+
 export default function App() {
   const [authoringSource, setAuthoringSource] = useState(INITIAL_XYZ);
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
@@ -190,6 +208,13 @@ export default function App() {
   const [tipError, setTipError] = useState<string | undefined>();
   const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyz-active-secondary-transaction-streams', {});
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
+  const [primaryRealtimeTransactions, setPrimaryRealtimeTransactions] = useState<XyzTransaction[]>([]);
+  const [primaryRealtimeError, setPrimaryRealtimeError] = useState<string | undefined>();
+
+  useEffect(() => {
+    setPrimaryRealtimeTransactions([]);
+    setPrimaryRealtimeError(undefined);
+  }, [transactionPublicKey]);
 
   useEffect(() => {
     setActiveSecondaryTransactions((streams) => {
@@ -225,7 +250,7 @@ export default function App() {
   }, [setTransactionPublicKey]);
 
   const {
-    transactions,
+    transactions: historicalTransactions,
     loading: transactionsLoading,
     error: transactionError,
     reload: reloadTransactions,
@@ -234,6 +259,19 @@ export default function App() {
     publicKey: transactionPublicKey,
     range: transactionRange,
   });
+  const transactions = useMemo(() => sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(
+    normalizeXyzTransactions(historicalTransactions),
+    primaryRealtimeTransactions,
+  )), [historicalTransactions, primaryRealtimeTransactions]);
+  const handlePrimaryRealtimeTransaction = useCallback((transaction: XyzTransaction) => {
+    setPrimaryRealtimeError(undefined);
+    setPrimaryRealtimeTransactions((current) => sortTransactionsByTimeStable(
+      mergeHistoricalStreamTransactions(current, [transaction]),
+    ));
+  }, []);
+  const handlePrimaryRealtimeError = useCallback((error: Error) => {
+    setPrimaryRealtimeError(error.message);
+  }, []);
   const loadTipHeight = useCallback(() => {
     const controller = new AbortController();
     setTipLoading(true);
@@ -773,6 +811,14 @@ export default function App() {
 
   return (
     <main className={`app-shell app-shell--${appMode}`}>
+      {transactionPublicKey.trim() ? (
+        <PrimaryRealtimeSubscription
+          key={transactionPublicKey.trim()}
+          publicKey={transactionPublicKey}
+          onTransaction={handlePrimaryRealtimeTransaction}
+          onError={handlePrimaryRealtimeError}
+        />
+      ) : null}
       {validSecondaryKeyReferences.map((reference) => (
         <SecondaryRealtimeSubscription
           key={streamKeyForSecondaryReference(reference)}
@@ -811,7 +857,7 @@ export default function App() {
         transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}
         transactionsLoading={transactionsLoading}
-        transactionError={transactionError ?? secondaryTransactionError}
+        transactionError={transactionError ?? primaryRealtimeError ?? secondaryTransactionError}
         tipHeight={tipHeight}
         tipLoading={tipLoading}
         tipError={tipError}

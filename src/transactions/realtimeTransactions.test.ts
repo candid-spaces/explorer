@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeEndpoint } from './publicKeyTransactions';
-import { realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
+import { isInvBlockMessage, realtimeCloseError, realtimeFilterResultError, realtimeTransactionsFromMessage } from './realtimeTransactions';
 import { transactionsToXyzSource } from './transactionXyz';
 
 function realtimeMessage(data: unknown): MessageEvent<string> {
@@ -67,6 +67,13 @@ describe('realtimeTransactionsFromMessage', () => {
     expect(transactionsToXyzSource([transactions[0]], { publicKey: 'secondary-key' }).source)
       .toBe('"+2+4/+6+6/+4+3" : "geometry: box"');
     expect(transactionsToXyzSource([transactions[1]], { publicKey: 'secondary-key' }).rejected).toHaveLength(1);
+  });
+});
+
+describe('isInvBlockMessage', () => {
+  it('identifies block inventory announcements without treating other messages as inventory', () => {
+    expect(isInvBlockMessage(realtimeMessage({ type: 'inv_block', body: { block_ids: ['block-id'] } }))).toBe(true);
+    expect(isInvBlockMessage(realtimeMessage({ type: 'filter_block', body: {} }))).toBe(false);
   });
 });
 
