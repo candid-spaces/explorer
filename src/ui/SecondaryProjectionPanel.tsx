@@ -59,6 +59,7 @@ export function SecondaryProjectionPanel({
                 <div><dt>Endpoint</dt><dd>{projection.endpoint}</dd></div>
                 <div><dt>Connection</dt><dd>{projection.realtimeStatus}</dd></div>
                 <div><dt>Rendering</dt><dd>Current frame · primary namespaces only</dd></div>
+                <div><dt>Primary cursor</dt><dd>{projection.originatingCursor.publicKey || 'No originating key'} · {projection.originatingCursor.transactions.length} secondary-node frame{projection.originatingCursor.transactions.length === 1 ? '' : 's'}</dd></div>
                 <div><dt>Discovered from</dt><dd>{projection.references.length} primary transaction{projection.references.length === 1 ? '' : 's'}</dd></div>
               </dl>
               {projection.streamError ? <p className="transaction-error">{projection.streamError}</p> : null}
