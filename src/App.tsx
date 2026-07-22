@@ -168,18 +168,14 @@ function summarizeLineChanges(originalSource: string, nextSource: string): LineC
 
 interface SecondaryRealtimeSubscriptionProps {
   reference: SecondaryKeyReference;
-  originatingPublicKey: string;
   onTransaction: (reference: SecondaryKeyReference, transaction: XyzTransaction) => void;
-  onOriginatingTransaction: (reference: SecondaryKeyReference, transaction: XyzTransaction) => void;
   onError: (reference: SecondaryKeyReference, error: Error) => void;
   onStatusChange: (reference: SecondaryKeyReference, status: SecondaryRealtimeStatus) => void;
 }
 
 function SecondaryRealtimeSubscription({
   reference,
-  originatingPublicKey,
   onTransaction,
-  onOriginatingTransaction,
   onError,
   onStatusChange,
 }: SecondaryRealtimeSubscriptionProps) {
@@ -191,12 +187,29 @@ function SecondaryRealtimeSubscription({
     onStatusChange: (status) => onStatusChange(reference, status),
   });
 
+  return null;
+}
+
+interface OriginatingCursorRealtimeSubscriptionProps {
+  publicKey: string;
+  onTransaction: (transaction: XyzTransaction) => void;
+  onError: (error: Error) => void;
+  onStatusChange: (status: SecondaryRealtimeStatus) => void;
+}
+
+/** Subscribes once to the primary cursor on the shared secondary overlay node. */
+function OriginatingCursorRealtimeSubscription({
+  publicKey,
+  onTransaction,
+  onError,
+  onStatusChange,
+}: OriginatingCursorRealtimeSubscriptionProps) {
   useRealtimePublicKeyTransactions({
     endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
-    publicKey: originatingPublicKey,
-    onTransaction: (transaction) => onOriginatingTransaction(reference, transaction),
-    onError: (error) => onError(reference, error),
-    onStatusChange: (status) => onStatusChange(reference, status),
+    publicKey,
+    onTransaction,
+    onError,
+    onStatusChange,
   });
 
   return null;
@@ -370,8 +383,7 @@ export default function App() {
     });
   }, [setActiveSecondaryTransactions, transactionPublicKey]);
 
-  const handleOriginatingCursorTransaction = useCallback((reference: SecondaryKeyReference, transaction: XyzTransaction) => {
-    const streamKey = streamKeyForSecondaryReference(reference);
+  const handleOriginatingCursorTransaction = useCallback((transaction: XyzTransaction) => {
     const publicKey = transactionPublicKey.trim();
 
     if (!publicKey || transaction.from !== publicKey) {
@@ -379,16 +391,33 @@ export default function App() {
     }
 
     setActiveSecondaryTransactions((streams) => {
-      const current = normalizeActiveSecondaryStream(streams[streamKey], reference, publicKey);
-      const cursor = current.originatingCursor!;
-      const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(cursor.transactions, [normalizeXyzTransaction(transaction)]));
+      return Object.fromEntries(Object.entries(streams).map(([streamKey, stream]) => {
+        const cursor = stream.originatingCursor;
 
-      return {
-        ...streams,
-        [streamKey]: { ...current, originatingCursor: { ...cursor, transactions, streamError: undefined } },
-      };
+        if (!cursor || cursor.publicKey !== publicKey) {
+          return [streamKey, stream];
+        }
+
+        const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(cursor.transactions, [normalizeXyzTransaction(transaction)]));
+        return [streamKey, { ...stream, originatingCursor: { ...cursor, transactions, streamError: undefined } }];
+      }));
     });
   }, [setActiveSecondaryTransactions, transactionPublicKey]);
+
+  const handleOriginatingCursorStatusChange = useCallback((realtimeStatus: SecondaryRealtimeStatus) => {
+    setActiveSecondaryTransactions((streams) => Object.fromEntries(Object.entries(streams).map(([streamKey, stream]) => [streamKey, {
+      ...stream,
+      originatingCursor: stream.originatingCursor && {
+        ...stream.originatingCursor,
+        realtimeStatus,
+        streamError: realtimeStatus === 'connected' ? undefined : stream.originatingCursor.streamError,
+      },
+    }])));
+  }, [setActiveSecondaryTransactions]);
+
+  const handleOriginatingCursorError = useCallback((error: Error) => {
+    setSecondaryTransactionError(error.message);
+  }, []);
 
   const handleSecondaryRealtimeStatusChange = useCallback((
     reference: SecondaryKeyReference,
@@ -561,7 +590,7 @@ export default function App() {
       currentTransactionRejectedDiagnostics: diagnosticsByStreamId.get(`${stream.publicKey}@@${stream.endpoint}`) ?? [],
     }));
   }, [secondaryTransactionOverlayStreams, secondaryTransactionStreams]);
-  const originatingCursorSources = useMemo(() => secondaryTransactionStreams
+  const originatingCursorSources = useMemo(() => [...new Set(secondaryTransactionStreams
     .flatMap((stream) => {
       const transaction = stream.originatingCursor.transactions.at(-1);
 
@@ -571,7 +600,7 @@ export default function App() {
 
       return [transactionToXyzCursorSource(transaction, stream.originatingCursor.publicKey)];
     })
-    .filter(Boolean), [secondaryTransactionStreams]);
+    .filter(Boolean))], [secondaryTransactionStreams]);
   const secondaryProjections = useMemo<SecondaryProjection[]>(() => {
     const referencesByProjection = referencesBySecondaryProjection(transactionXyz.secondaryKeys);
 
@@ -933,13 +962,20 @@ export default function App() {
           onError={handlePrimaryRealtimeError}
         />
       ) : null}
+      {transactionPublicKey.trim() && validSecondaryKeyReferences.length > 0 ? (
+        <OriginatingCursorRealtimeSubscription
+          key={transactionPublicKey.trim()}
+          publicKey={transactionPublicKey.trim()}
+          onTransaction={handleOriginatingCursorTransaction}
+          onError={handleOriginatingCursorError}
+          onStatusChange={handleOriginatingCursorStatusChange}
+        />
+      ) : null}
       {validSecondaryKeyReferences.map((reference) => (
         <SecondaryRealtimeSubscription
           key={streamKeyForSecondaryReference(reference)}
           reference={reference}
-          originatingPublicKey={transactionPublicKey.trim()}
           onTransaction={handleSecondaryRealtimeTransaction}
-          onOriginatingTransaction={handleOriginatingCursorTransaction}
           onError={handleSecondaryRealtimeError}
           onStatusChange={handleSecondaryRealtimeStatusChange}
         />
