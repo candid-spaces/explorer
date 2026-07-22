@@ -80,31 +80,13 @@ function secondaryPublicKeyCandidate(value: string): string | undefined {
   return isBase64PublicKey || isHexPublicKey ? trimmed : undefined;
 }
 
-function memoWithoutNodeProperty(memo: string): string {
-  const nodeIndex = memo.indexOf('node:');
-
-  return (nodeIndex >= 0 ? memo.slice(0, nodeIndex) : memo).trim();
-}
-
 function publicKeyFromMemo(memo: string): string | undefined {
-  const keyText = memoWithoutNodeProperty(memo)
+  const keyText = memo
     .replace(/^public[- ]?key\s*:\s*/i, '')
     .split(/[;\s]+/)
     .find(Boolean);
 
   return keyText ? secondaryPublicKeyCandidate(keyText) : undefined;
-}
-
-function endpointFromNodeMemoProperty(memo: string): string | undefined {
-  const nodeIndex = memo.indexOf('node:');
-
-  if (nodeIndex < 0) {
-    return undefined;
-  }
-
-  const endpoint = memo.slice(nodeIndex + 'node:'.length).trim().split(';')[0]?.trim();
-
-  return endpoint || undefined;
 }
 
 function secondaryKeyReferenceFromInvalidDeclaration(
@@ -121,12 +103,8 @@ function secondaryKeyReferenceFromInvalidDeclaration(
     return undefined;
   }
 
-  const nodeEndpoint = endpointFromNodeMemoProperty(memo);
-
   return {
     publicKey,
-    endpoint: nodeEndpoint ?? DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
-    endpointSource: nodeEndpoint ? 'node-url-address' : 'default-secondary',
     sourceTransactionId: transactionId,
     memoPreview: previewMemo(`${publicKey}: ${memo}`),
   };
@@ -164,7 +142,6 @@ function parseValidXyz(source: string) {
 
 interface TransactionsToXyzSourceOptions {
   publicKey?: string;
-  endpoint?: string;
 }
 
 export function transactionsToXyzSource(
@@ -185,7 +162,7 @@ export function transactionsToXyzSource(
     const rawDestinationPublicKey = secondaryPublicKeyCandidate(rawDestination);
     // A Base64 public key can end with a path-filler-looking suffix like /0=.
     // Keep that raw destination intact for secondary-key references that carry
-    // the distinctive node: endpoint memo property.
+    // a node: memo property.
     const path = rawDestinationPublicKey && memo.includes('node:')
       ? rawDestinationPublicKey
       : trimTransactionPathFiller(rawDestination);

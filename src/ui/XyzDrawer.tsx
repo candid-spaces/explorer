@@ -111,11 +111,11 @@ interface XyzDrawerProps {
   onTransactionRangeChange: (range: TransactionRange) => void;
   onReloadTransactions: () => void;
   onUseTransactionTip: () => void;
-  onSecondaryReplay: (publicKey: string, endpoint: string) => void;
-  onSecondaryPlaybackToggle: (publicKey: string, endpoint: string) => void;
-  onSecondaryPlaybackSpeedChange: (publicKey: string, endpoint: string, playbackSpeed: number) => void;
-  onSecondaryPlaybackSeek: (publicKey: string, endpoint: string, playbackIndex: number) => void;
-  onLoadSecondaryHistory: (publicKey: string, endpoint: string) => void;
+  onSecondaryReplay: (publicKey: string) => void;
+  onSecondaryPlaybackToggle: (publicKey: string) => void;
+  onSecondaryPlaybackSpeedChange: (publicKey: string, playbackSpeed: number) => void;
+  onSecondaryPlaybackSeek: (publicKey: string, playbackIndex: number) => void;
+  onLoadSecondaryHistory: (publicKey: string) => void;
   selectedNodeId?: string;
   onSelectNode?: (id: string) => void;
 }

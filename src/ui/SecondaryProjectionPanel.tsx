@@ -4,15 +4,11 @@ import type { SecondaryProjection, XyzTransaction } from '../transactions/types'
 
 interface SecondaryProjectionPanelProps {
   projections: SecondaryProjection[];
-  onReplay: (publicKey: string, endpoint: string) => void;
-  onPlaybackToggle: (publicKey: string, endpoint: string) => void;
-  onPlaybackSpeedChange: (publicKey: string, endpoint: string, playbackSpeed: number) => void;
-  onPlaybackSeek: (publicKey: string, endpoint: string, playbackIndex: number) => void;
-  onLoadHistory: (publicKey: string, endpoint: string) => void;
-}
-
-function endpointSourceLabel(source: SecondaryProjection['endpointSource']): string {
-  return source === 'node-url-address' ? 'Explicit endpoint' : 'Default endpoint';
+  onReplay: (publicKey: string) => void;
+  onPlaybackToggle: (publicKey: string) => void;
+  onPlaybackSpeedChange: (publicKey: string, playbackSpeed: number) => void;
+  onPlaybackSeek: (publicKey: string, playbackIndex: number) => void;
+  onLoadHistory: (publicKey: string) => void;
 }
 
 function statusLabel(projection: SecondaryProjection): string {
@@ -64,25 +60,25 @@ export function SecondaryProjectionPanel({
               </dl>
               {projection.streamError ? <p className="transaction-error">{projection.streamError}</p> : null}
               <div className="secondary-projection-primary-actions">
-                <button type="button" disabled={projection.historyLoading} onClick={() => onLoadHistory(projection.publicKey, projection.endpoint)}>
+                <button type="button" disabled={projection.historyLoading} onClick={() => onLoadHistory(projection.publicKey)}>
                   {projection.historyLoading ? 'Loading history…' : projection.transactions.length ? 'Refresh history' : 'Load history'}
                 </button>
-                {projection.transactions.length > 0 ? <button type="button" onClick={() => onReplay(projection.publicKey, projection.endpoint)}>Replay from start</button> : null}
+                {projection.transactions.length > 0 ? <button type="button" onClick={() => onReplay(projection.publicKey)}>Replay from start</button> : null}
               </div>
               {projection.transactions.length > 0 ? (
                 <details className="secondary-projection-details">
                   <summary>Playback details</summary>
                   <div className="secondary-projection-controls">
-                    <button type="button" disabled={!projection.replaying && projection.playbackIndex >= projection.transactions.length - 1} onClick={() => onPlaybackToggle(projection.publicKey, projection.endpoint)}>{projection.replaying ? 'Pause' : 'Play'}</button>
-                    <label>Speed<select value={projection.playbackSpeed} onChange={(event) => onPlaybackSpeedChange(projection.publicKey, projection.endpoint, Number(event.target.value))}>{PLAYBACK_SPEED_OPTIONS.map((speed) => <option key={speed} value={speed}>{speed}x</option>)}</select></label>
-                    <label>Frame<input type="range" min={0} max={Math.max(projection.transactions.length - 1, 0)} value={projection.playbackIndex} onChange={(event) => onPlaybackSeek(projection.publicKey, projection.endpoint, Number(event.target.value))} /></label>
+                    <button type="button" disabled={!projection.replaying && projection.playbackIndex >= projection.transactions.length - 1} onClick={() => onPlaybackToggle(projection.publicKey)}>{projection.replaying ? 'Pause' : 'Play'}</button>
+                    <label>Speed<select value={projection.playbackSpeed} onChange={(event) => onPlaybackSpeedChange(projection.publicKey, Number(event.target.value))}>{PLAYBACK_SPEED_OPTIONS.map((speed) => <option key={speed} value={speed}>{speed}x</option>)}</select></label>
+                    <label>Frame<input type="range" min={0} max={Math.max(projection.transactions.length - 1, 0)} value={projection.playbackIndex} onChange={(event) => onPlaybackSeek(projection.publicKey, Number(event.target.value))} /></label>
                   </div>
                   <ol className="secondary-projection-history">{projection.transactions.map((transaction, index) => <li key={`${transaction.signature ?? 'transaction'}-${transaction.time}-${index}`}><time>{new Date(transaction.time * 1000).toLocaleString()}</time><span>{transactionSummary(transaction)}</span></li>)}</ol>
                 </details>
               ) : null}
               <details className="secondary-projection-details">
                 <summary>Discovery details</summary>
-                <p>{endpointSourceLabel(projection.endpointSource)}: {projection.endpoint}</p>
+                <p>Shared secondary overlay node: {projection.endpoint}</p>
                 <ul>{projection.references.map((reference) => <li key={reference.sourceTransactionId}><strong>{reference.sourceTransactionId}</strong><span>{reference.memoPreview || '(empty memo)'}</span></li>)}</ul>
               </details>
               {projection.currentTransactionRejectedDiagnostics.length > 0 ? <details className="secondary-projection-details"><summary>Current-frame parsing diagnostics ({projection.currentTransactionRejectedDiagnostics.length})</summary><ul>{projection.currentTransactionRejectedDiagnostics.map((rejection) => <li key={rejection.id}>{rejection.reasons.join(' ')}</li>)}</ul></details> : null}

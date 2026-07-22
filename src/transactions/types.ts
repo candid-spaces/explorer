@@ -34,18 +34,15 @@ export interface RejectedTransaction {
   reasons: string[];
 }
 
-export type SecondaryEndpointSource = 'node-url-address' | 'default-secondary';
-
 export type SecondaryRealtimeStatus = 'connecting' | 'connected' | 'closed' | 'error';
 
-export interface DiscoveredSecondaryPublicKeyReference extends TransactionPublicKeyEndpoint {
-  endpointSource: SecondaryEndpointSource;
+/** A secondary public key discovered in a primary transaction. */
+export interface DiscoveredSecondaryPublicKeyReference extends Pick<TransactionPublicKeyEndpoint, 'publicKey'> {
   sourceTransactionId: string;
   memoPreview: string;
 }
 
 export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEndpoint {
-  endpointSource: SecondaryEndpointSource;
   realtimeStatus: SecondaryRealtimeStatus;
   streamError?: string;
   transactions: XyzTransaction[];
@@ -71,7 +68,7 @@ export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;
 
 /** A subscribed source projected into the primary spatial document. */
 export interface SecondaryProjection extends ActiveSecondaryTransactionStream {
-  /** Every primary transaction that discovered this unique key/endpoint pair. */
+  /** Every primary transaction that discovered this unique key. */
   references: SecondaryKeyReference[];
   /** Secondary declarations only render when they consume a primary namespace. */
   compositionPolicy: 'consume-primary-namespaces';
