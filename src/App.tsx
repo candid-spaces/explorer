@@ -190,6 +190,16 @@ export default function App() {
   const [tipError, setTipError] = useState<string | undefined>();
   const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyz-active-secondary-transaction-streams', {});
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
+
+  useEffect(() => {
+    setActiveSecondaryTransactions((streams) => Object.fromEntries(
+      Object.entries(streams).map(([streamKey, stream]) => [
+        streamKey,
+        stream.historyLoading ? { ...stream, historyLoading: false } : stream,
+      ]),
+    ));
+  }, [setActiveSecondaryTransactions]);
+
   const transactionPublicKeyShareUrl = useMemo(() => {
     if (typeof window === 'undefined') {
       return undefined;
