@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
-import { PLAYBACK_SPEED_OPTIONS } from '../transactions/streamTransactions';
+import type { RejectedTransaction, SecondaryProjection, TransactionRange } from '../transactions/types';
 import { normalizeXyzTransaction } from '../transactions/transactionXyz';
-import type { ActiveSecondaryTransactionStream, XyzTransaction, RejectedTransaction, SecondaryKeyReference, TransactionRange } from '../transactions/types';
 import { XyzEditor } from './XyzEditor';
 import { XyzTransactionControls } from './XyzTransactionControls';
+import { SecondaryProjectionPanel } from './SecondaryProjectionPanel';
 import { XyzTreeView } from './XyzTreeView';
 
 function describeAuthoringState(
@@ -42,32 +42,12 @@ function summarizeChanges({ added, removed }: { added: number; removed: number }
   return parts.length > 0 ? parts.join(' · ') : 'No line changes';
 }
 
-function groupSecondaryTransactionStreams(
-  streams: readonly ActiveSecondaryTransactionStream[],
-): Map<string, ActiveSecondaryTransactionStream[]> {
-  const grouped = new Map<string, ActiveSecondaryTransactionStream[]>();
-
-  streams.forEach((stream) => {
-    grouped.set(stream.publicKey, [...(grouped.get(stream.publicKey) ?? []), stream]);
-  });
-
-  return grouped;
-}
-
-function describeEndpointSource(source: SecondaryKeyReference['endpointSource']): string {
-  return source === 'node-url-address' ? 'node: url_address' : 'Default secondary endpoint';
-}
-
-export function transactionSummary(transaction: XyzTransaction): string {
-  const normalizedTransaction = normalizeXyzTransaction(transaction);
-  const memo = normalizedTransaction.memo.trim();
-  const parts = [
-    normalizedTransaction.from ? `from ${normalizedTransaction.from}` : undefined,
-    `to ${normalizedTransaction.to}`,
-    memo ? `memo ${memo}` : undefined,
-  ].filter(Boolean);
-
-  return parts.join(' · ');
+// Kept exported for the drawer's existing focused summary tests.
+export function transactionSummary(transaction: import('../transactions/types').XyzTransaction): string {
+  const normalized = normalizeXyzTransaction(transaction);
+  return [normalized.from ? `from ${normalized.from}` : undefined, `to ${normalized.to}`, normalized.memo.trim() ? `memo ${normalized.memo.trim()}` : undefined]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function renderAuthoringStatus(
@@ -119,8 +99,7 @@ interface XyzDrawerProps {
   acceptedTransactionCount: number;
   mappedTransactionSource: string;
   rejectedTransactions: RejectedTransaction[];
-  secondaryKeyReferences: SecondaryKeyReference[];
-  secondaryTransactionStreams: ActiveSecondaryTransactionStream[];
+  secondaryProjections: SecondaryProjection[];
   hasRemoteBaseline: boolean;
   hasAuthoringEdits: boolean;
   remoteBaselineChanged: boolean;
@@ -159,8 +138,7 @@ export function XyzDrawer({
   acceptedTransactionCount,
   mappedTransactionSource,
   rejectedTransactions,
-  secondaryKeyReferences,
-  secondaryTransactionStreams,
+  secondaryProjections,
   hasRemoteBaseline,
   hasAuthoringEdits,
   remoteBaselineChanged,
@@ -181,8 +159,6 @@ export function XyzDrawer({
   onSelectNode,
 }: XyzDrawerProps) {
   const isEditorMode = appMode === 'editor';
-  const secondaryTransactionStreamsByPublicKey = groupSecondaryTransactionStreams(secondaryTransactionStreams);
-
   return (
     <aside className={`xyz-drawer xyz-drawer--${appMode} ${isOpen ? 'is-open' : ''}`}>
       <div className="mode-controls" aria-label="Application mode">
@@ -220,9 +196,7 @@ export function XyzDrawer({
             transactionCount={transactionCount}
             acceptedCount={acceptedTransactionCount}
             rejectedCount={rejectedTransactions.length}
-            secondaryKeyCount={secondaryKeyReferences.length}
-            secondaryKeyReferences={secondaryKeyReferences}
-            secondaryTransactionStreams={secondaryTransactionStreams}
+            secondaryProjectionCount={secondaryProjections.length}
             onPublicKeyChange={onTransactionPublicKeyChange}
             onRangeChange={onTransactionRangeChange}
             onReload={onReloadTransactions}
@@ -258,150 +232,14 @@ export function XyzDrawer({
             </details>
           ) : null}
 
-          {secondaryKeyReferences.length > 0 ? (
-            <details className="secondary-key-references" aria-label="Secondary key transaction references" open>
-              <summary>Secondary key references ({secondaryKeyReferences.length})</summary>
-              <ul>
-                {secondaryKeyReferences.map((reference) => (
-                  <li key={reference.sourceTransactionId}>
-                    <strong>{reference.publicKey}</strong>
-                    <dl>
-                      <div>
-                        <dt>Endpoint</dt>
-                        <dd>{reference.endpoint || '(none)'}</dd>
-                      </div>
-                      <div>
-                        <dt>Endpoint source</dt>
-                        <dd>{describeEndpointSource(reference.endpointSource)}</dd>
-                      </div>
-                      <div>
-                        <dt>Source transaction</dt>
-                        <dd>{reference.sourceTransactionId}</dd>
-                      </div>
-                      <div>
-                        <dt>Memo</dt>
-                        <dd>{reference.memoPreview || '(empty memo)'}</dd>
-                      </div>
-                    </dl>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
-
-          {secondaryTransactionStreams.length > 0 ? (
-            <details className="secondary-transaction-streams" aria-label="Secondary transaction streams" open>
-              <summary>Secondary transaction streams ({secondaryTransactionStreams.length})</summary>
-              <ul>
-                {[...secondaryTransactionStreamsByPublicKey.entries()].map(([publicKey, streams]) => (
-                  <li key={publicKey}>
-                    <strong>{publicKey}</strong>
-                    <ul>
-                      {streams.map((stream) => (
-                        <li key={`${stream.publicKey}-${stream.endpoint}`}>
-                          <span className="secondary-transaction-stream-endpoint">{stream.endpoint || '(primary endpoint)'}</span>
-                          <dl className="secondary-transaction-stream-state">
-                            <div>
-                              <dt>Endpoint source</dt>
-                              <dd>{describeEndpointSource(stream.endpointSource)}</dd>
-                            </div>
-                            <div>
-                              <dt>Realtime</dt>
-                              <dd>{stream.realtimeStatus}</dd>
-                            </div>
-                            <div>
-                              <dt>Outgoing</dt>
-                              <dd>{stream.transactions.length}</dd>
-                            </div>
-                            <div>
-                              <dt>Parsing rejections</dt>
-                              <dd>{stream.currentTransactionRejectedDiagnostics.length}</dd>
-                            </div>
-                            <div>
-                              <dt>Mode</dt>
-                              <dd>{stream.replaying ? 'Playback' : stream.transactions.length > 0 ? 'Playback paused' : 'Realtime'}</dd>
-                            </div>
-                          </dl>
-                          {stream.streamError ? <p className="transaction-error">{stream.streamError}</p> : null}
-                          {stream.currentTransactionRejectedDiagnostics.length > 0 ? (
-                            <details className="diagnostics secondary-transaction-diagnostics" open>
-                              <summary>Rejected while parsing current outgoing transaction</summary>
-                              <ul>
-                                {stream.currentTransactionRejectedDiagnostics.map((rejection) => (
-                                  <li key={rejection.id}>
-                                    <strong>{rejection.id}:</strong> {rejection.memoPreview || '(empty memo)'}
-                                    <ul>
-                                      {rejection.reasons.map((reason) => <li key={reason}>{reason}</li>)}
-                                    </ul>
-                                  </li>
-                                ))}
-                              </ul>
-                            </details>
-                          ) : null}
-                          <small className="secondary-transaction-filter-note">Non-outgoing transactions are intentionally filtered and are not parsing rejections.</small>
-                          <div className="secondary-transaction-stream-actions">
-                            <button type="button" disabled={stream.transactions.length === 0} onClick={() => onSecondaryReplay(stream.publicKey, stream.endpoint)}>
-                              Replay
-                            </button>
-                            <button type="button" disabled={stream.transactions.length === 0 || (!stream.replaying && stream.playbackIndex >= stream.transactions.length - 1)} onClick={() => onSecondaryPlaybackToggle(stream.publicKey, stream.endpoint)}>
-                              {stream.replaying ? 'Pause' : 'Play'}
-                            </button>
-                            <label>
-                              Playback speed
-                              <select
-                                value={stream.playbackSpeed}
-                                onChange={(event) => onSecondaryPlaybackSpeedChange(
-                                  stream.publicKey,
-                                  stream.endpoint,
-                                  Number(event.target.value),
-                                )}
-                              >
-                                {PLAYBACK_SPEED_OPTIONS.map((speed) => (
-                                  <option key={speed} value={speed}>{speed}x</option>
-                                ))}
-                              </select>
-                            </label>
-                            <label>
-                              Historical frame
-                              <input
-                                type="range"
-                                min={0}
-                                max={Math.max(stream.transactions.length - 1, 0)}
-                                step={1}
-                                value={stream.playbackIndex}
-                                disabled={stream.transactions.length === 0}
-                                onChange={(event) => onSecondaryPlaybackSeek(
-                                  stream.publicKey,
-                                  stream.endpoint,
-                                  Number(event.target.value),
-                                )}
-                              />
-                            </label>
-                            <button type="button" disabled={stream.historyLoading} onClick={() => onLoadSecondaryHistory(stream.publicKey, stream.endpoint)}>
-                              {stream.historyLoading ? 'Loading history…' : 'Load historical range'}
-                            </button>
-                            <span>{stream.transactions.length > 0 ? stream.playbackIndex + 1 : 0}/{stream.transactions.length} frame</span>
-                          </div>
-                          {stream.transactions.length > 0 ? (
-                            <ol>
-                              {stream.transactions.map((transaction, index) => (
-                                <li key={`${transaction.time}-${transaction.series ?? 'none'}-${transaction.nonce ?? index}`}>
-                                  <time>{new Date(transaction.time * 1000).toLocaleString()}</time>
-                                  <span>{transactionSummary(transaction)}</span>
-                                </li>
-                              ))}
-                            </ol>
-                          ) : (
-                            <p>Listening for transactions…</p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
+          <SecondaryProjectionPanel
+            projections={secondaryProjections}
+            onReplay={onSecondaryReplay}
+            onPlaybackToggle={onSecondaryPlaybackToggle}
+            onPlaybackSpeedChange={onSecondaryPlaybackSpeedChange}
+            onPlaybackSeek={onSecondaryPlaybackSeek}
+            onLoadHistory={onLoadSecondaryHistory}
+          />
 
 
           {document.diagnostics.length > 0 ? (

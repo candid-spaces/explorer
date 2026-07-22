@@ -58,3 +58,11 @@ export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEn
 }
 
 export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;
+
+/** A subscribed source projected into the primary spatial document. */
+export interface SecondaryProjection extends ActiveSecondaryTransactionStream {
+  /** Every primary transaction that discovered this unique key/endpoint pair. */
+  references: SecondaryKeyReference[];
+  /** Secondary declarations only render when they consume a primary namespace. */
+  compositionPolicy: 'consume-primary-namespaces';
+}
