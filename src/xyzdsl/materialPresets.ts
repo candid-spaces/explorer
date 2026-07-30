@@ -1,5 +1,5 @@
 import { MATERIAL_PRESET_ALIASES, resolveSemanticMaterial } from './materialCatalog';
-import type { XyzMaterialSpec } from './types';
+import type { XyzDslMaterialSpec } from './types';
 
 export type MaterialPresetName = keyof typeof MATERIAL_PRESET_ALIASES;
 
@@ -21,12 +21,12 @@ export const MATERIAL_PRESETS = Object.fromEntries(
 
     return [name, material ?? {}];
   }),
-) as Record<string, Omit<XyzMaterialSpec, 'diagnostics' | 'materialPreset'>>;
+) as Record<string, Omit<XyzDslMaterialSpec, 'diagnostics' | 'materialPreset'>>;
 
 export function materialPresetNames(): string[] {
   return Object.keys(MATERIAL_PRESET_ALIASES);
 }
 
-export function materialPresetFor(name: string): Omit<XyzMaterialSpec, 'diagnostics' | 'materialPreset'> | undefined {
+export function materialPresetFor(name: string): Omit<XyzDslMaterialSpec, 'diagnostics' | 'materialPreset'> | undefined {
   return MATERIAL_PRESETS[name as MaterialPresetName];
 }

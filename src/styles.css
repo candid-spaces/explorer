@@ -37,7 +37,7 @@ button {
   height: 100vh;
 }
 
-.xyz-drawer {
+.xyzdsl-drawer {
   pointer-events: none;
   position: fixed;
   inset: 0 auto 0 0;
@@ -159,20 +159,20 @@ button {
   text-transform: uppercase;
 }
 
-.xyz-editor {
+.xyzdsl-editor {
   display: grid;
   gap: 0.45rem;
   color: #dbeafe;
   font-weight: 700;
 }
 
-.xyz-editor small {
+.xyzdsl-editor small {
   color: #bfdbfe;
   font-size: 0.72rem;
   font-weight: 500;
 }
 
-.xyz-editor textarea {
+.xyzdsl-editor textarea {
   min-height: 13rem;
   resize: vertical;
   border: 1px solid rgb(147 197 253 / 28%);
@@ -190,7 +190,7 @@ button {
 }
 
 
-.xyz-editor-readonly textarea {
+.xyzdsl-editor-readonly textarea {
   min-height: 8rem;
   border-color: rgb(34 197 94 / 35%);
   background: rgb(6 78 59 / 28%);
@@ -404,7 +404,7 @@ button {
   list-style: none;
 }
 
-.xyz-tree-view {
+.xyzdsl-tree-view {
   margin-top: 1rem;
   border: 1px solid rgb(96 165 250 / 24%);
   border-radius: 1rem;
@@ -440,8 +440,8 @@ button {
   font-size: 0.72rem;
 }
 
-.xyz-tree-root,
-.xyz-tree-children {
+.xyzdsl-tree-root,
+.xyzdsl-tree-children {
   display: grid;
   gap: 0.45rem;
   margin: 0;
@@ -449,13 +449,13 @@ button {
   list-style: none;
 }
 
-.xyz-tree-children {
+.xyzdsl-tree-children {
   position: relative;
   margin-left: 0.8rem;
   padding-left: 0.9rem;
 }
 
-.xyz-tree-children::before {
+.xyzdsl-tree-children::before {
   position: absolute;
   top: 0;
   bottom: 0.2rem;
@@ -465,12 +465,12 @@ button {
   content: "";
 }
 
-.xyz-tree-item {
+.xyzdsl-tree-item {
   display: grid;
   gap: 0.45rem;
 }
 
-.xyz-tree-row {
+.xyzdsl-tree-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.45rem 0.55rem;
@@ -480,19 +480,19 @@ button {
   background: rgb(2 6 23 / 36%);
 }
 
-.xyz-tree-row.is-selected {
+.xyzdsl-tree-row.is-selected {
   outline: 1px solid rgb(96 165 250 / 78%);
   background: rgb(37 99 235 / 22%);
   box-shadow: inset 0 0 0 1px rgb(191 219 254 / 12%);
 }
 
-.xyz-tree-toggle,
-.xyz-tree-spacer {
+.xyzdsl-tree-toggle,
+.xyzdsl-tree-spacer {
   width: 1.45rem;
   height: 1.45rem;
 }
 
-.xyz-tree-toggle {
+.xyzdsl-tree-toggle {
   display: grid;
   place-items: center;
   border: 1px solid rgb(147 197 253 / 22%);
@@ -503,7 +503,7 @@ button {
   line-height: 1;
 }
 
-.xyz-tree-node-summary {
+.xyzdsl-tree-node-summary {
   display: grid;
   min-width: 0;
   width: 100%;
@@ -517,28 +517,28 @@ button {
   text-align: left;
 }
 
-.xyz-tree-node-summary:hover strong,
-.xyz-tree-node-summary[aria-current='true'] strong {
+.xyzdsl-tree-node-summary:hover strong,
+.xyzdsl-tree-node-summary[aria-current='true'] strong {
   color: #bfdbfe;
 }
 
-.xyz-tree-node-summary strong {
+.xyzdsl-tree-node-summary strong {
   overflow: hidden;
   color: #f8fafc;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.xyz-tree-node-summary span,
-.xyz-tree-object-details {
+.xyzdsl-tree-node-summary span,
+.xyzdsl-tree-object-details {
   overflow-wrap: anywhere;
 }
 
-.xyz-tree-object-details {
+.xyzdsl-tree-object-details {
   color: #93c5fd;
 }
 
-.xyz-tree-badges {
+.xyzdsl-tree-badges {
   grid-column: 2;
   display: flex;
   flex-wrap: wrap;
@@ -547,7 +547,7 @@ button {
   min-width: 0;
 }
 
-.xyz-tree-badges em {
+.xyzdsl-tree-badges em {
   max-width: 100%;
   border-radius: 999px;
   padding: 0.12rem 0.4rem;
@@ -558,7 +558,7 @@ button {
   overflow-wrap: anywhere;
 }
 
-.xyz-csg-summary {
+.xyzdsl-csg-summary {
   display: grid;
   gap: 0.45rem;
   margin-bottom: 0.7rem;
@@ -568,13 +568,13 @@ button {
   background: rgb(2 6 23 / 28%);
 }
 
-.xyz-csg-summary h3 {
+.xyzdsl-csg-summary h3 {
   margin: 0;
   color: #dbeafe;
   font-size: 0.8rem;
 }
 
-.xyz-csg-summary ul {
+.xyzdsl-csg-summary ul {
   display: grid;
   gap: 0.45rem;
   margin: 0;
@@ -582,7 +582,7 @@ button {
   list-style: none;
 }
 
-.xyz-csg-summary li {
+.xyzdsl-csg-summary li {
   display: grid;
   gap: 0.2rem;
   border-bottom: 1px solid rgb(148 163 184 / 14%);
@@ -591,16 +591,16 @@ button {
   font-size: 0.8rem;
 }
 
-.xyz-csg-summary li:last-child {
+.xyzdsl-csg-summary li:last-child {
   border-bottom: 0;
   padding-bottom: 0;
 }
 
-.xyz-csg-summary strong {
+.xyzdsl-csg-summary strong {
   color: #f8fafc;
 }
 
-.xyz-csg-summary em {
+.xyzdsl-csg-summary em {
   width: max-content;
   border-radius: 999px;
   padding: 0.12rem 0.4rem;
@@ -801,7 +801,7 @@ button {
   white-space: nowrap;
 }
 
-.xyz-editor-heading {
+.xyzdsl-editor-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -809,13 +809,13 @@ button {
   gap: 0.6rem;
 }
 
-.xyz-editor-actions {
+.xyzdsl-editor-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
 }
 
-.xyz-editor-actions button {
+.xyzdsl-editor-actions button {
   border: 1px solid rgb(147 197 253 / 22%);
   border-radius: 999px;
   padding: 0.3rem 0.6rem;
@@ -824,12 +824,12 @@ button {
   font-size: 0.72rem;
 }
 
-.xyz-editor-actions button:disabled {
+.xyzdsl-editor-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.xyz-editor-status {
+.xyzdsl-editor-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -839,7 +839,7 @@ button {
   font-weight: 500;
 }
 
-.xyz-status-badge {
+.xyzdsl-status-badge {
   width: max-content;
   border-radius: 999px;
   padding: 0.14rem 0.48rem;
@@ -849,12 +849,12 @@ button {
   font-weight: 700;
 }
 
-.xyz-status-badge-success {
+.xyzdsl-status-badge-success {
   background: rgb(22 163 74 / 22%);
   color: #bbf7d0;
 }
 
-.xyz-status-badge-warning {
+.xyzdsl-status-badge-warning {
   background: rgb(217 119 6 / 22%);
   color: #fde68a;
 }
@@ -873,12 +873,12 @@ button {
   font-weight: 700;
 }
 
-.remote-baseline-reference .xyz-editor {
+.remote-baseline-reference .xyzdsl-editor {
   margin-top: 0.75rem;
 }
 
-.xyz-editor-status,
-.xyz-editor-selected-line {
+.xyzdsl-editor-status,
+.xyzdsl-editor-selected-line {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
@@ -888,7 +888,7 @@ button {
   font-weight: 600;
 }
 
-.xyz-editor-selected-line {
+.xyzdsl-editor-selected-line {
   width: max-content;
   max-width: 100%;
   border: 1px solid rgb(250 204 21 / 35%);
@@ -918,7 +918,7 @@ button {
 }
 
 .app-shell--viewer .selected-node-inspector,
-.xyz-drawer--viewer .drawer-panel {
+.xyzdsl-drawer--viewer .drawer-panel {
   display: none;
 }
 
@@ -1087,7 +1087,7 @@ button {
 }
 
 @media (max-width: 640px) {
-  .xyz-drawer {
+  .xyzdsl-drawer {
     padding: 0.65rem;
   }
 

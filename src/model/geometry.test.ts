@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { XyzBoxSpec, XyzGeometrySpec } from '../xyz/types';
+import type { XyzDslBoxSpec, XyzDslGeometrySpec } from '../xyzdsl/types';
 import { geometryFromBox } from './geometry';
 
-const box: XyzBoxSpec = {
+const box: XyzDslBoxSpec = {
   source: '+2+4/+7+6/+0+10c',
   x: 2,
   y: 7,
@@ -12,7 +12,7 @@ const box: XyzBoxSpec = {
   depth: 0.1,
 };
 
-function spec(kind: XyzGeometrySpec['kind']): XyzGeometrySpec {
+function spec(kind: XyzDslGeometrySpec['kind']): XyzDslGeometrySpec {
   return { kind, diagnostics: [] };
 }
 

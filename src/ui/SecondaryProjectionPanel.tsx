@@ -1,6 +1,6 @@
 import { PLAYBACK_SPEED_OPTIONS } from '../transactions/streamTransactions';
-import { normalizeXyzTransaction } from '../transactions/transactionXyz';
-import type { SecondaryProjection, XyzTransaction } from '../transactions/types';
+import { normalizeXyzDslTransaction } from '../transactions/transactionXyzDsl';
+import type { SecondaryProjection, XyzDslTransaction } from '../transactions/types';
 
 interface SecondaryProjectionPanelProps {
   projections: SecondaryProjection[];
@@ -19,8 +19,8 @@ function statusLabel(projection: SecondaryProjection): string {
   return projection.realtimeStatus === 'connected' ? 'Listening live' : projection.realtimeStatus;
 }
 
-function transactionSummary(transaction: XyzTransaction): string {
-  const normalized = normalizeXyzTransaction(transaction);
+function transactionSummary(transaction: XyzDslTransaction): string {
+  const normalized = normalizeXyzDslTransaction(transaction);
   return [normalized.from ? `from ${normalized.from}` : undefined, `to ${normalized.to}`, normalized.memo.trim() || '(empty memo)']
     .filter(Boolean)
     .join(' · ');

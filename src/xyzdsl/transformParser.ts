@@ -1,5 +1,5 @@
-import type { XyzTransformSpec } from './types';
-import type { XyzPropertyDeclaration } from './propertyParser';
+import type { XyzDslTransformSpec } from './types';
+import type { XyzDslPropertyDeclaration } from './propertyParser';
 
 const ROTATION_PROPERTIES = new Set(['rotation', 'rotate']);
 const ROTATION_COMPONENT_COUNT = 3;
@@ -8,8 +8,8 @@ function degreesToRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
-export function parseTransformDeclaration(declarations: XyzPropertyDeclaration[]): XyzTransformSpec {
-  const transform: XyzTransformSpec = { rotation: [0, 0, 0], diagnostics: [] };
+export function parseTransformDeclaration(declarations: XyzDslPropertyDeclaration[]): XyzDslTransformSpec {
+  const transform: XyzDslTransformSpec = { rotation: [0, 0, 0], diagnostics: [] };
   const declaration = declarations.find(({ property }) => ROTATION_PROPERTIES.has(property));
 
   if (!declaration) {

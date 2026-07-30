@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBoxSpec, parseCompactNumber, parseXyzDocument } from './parser';
+import { parseBoxSpec, parseCompactNumber, parseXyzDslDocument } from './parser';
 
 const EXAMPLE = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
 "+2+4/+7+6/+0+10c" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
@@ -70,9 +70,9 @@ describe('parseBoxSpec', () => {
   });
 });
 
-describe('parseXyzDocument', () => {
+describe('parseXyzDslDocument', () => {
   it('parses composed object declarations with geometry and material properties', () => {
-    const result = parseXyzDocument(EXAMPLE);
+    const result = parseXyzDslDocument(EXAMPLE);
 
     expect(result.ok).toBe(true);
     expect(result.value).toHaveLength(3);
@@ -86,7 +86,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses namespaced world-space instances and namespace declarations', () => {
-    const result = parseXyzDocument(`"Sofa/+7+4/+0+3/+0+2" : "color: brown"
+    const result = parseXyzDslDocument(`"Sofa/+7+4/+0+3/+0+2" : "color: brown"
 "Table/Leg/" : "geometry: cylinder"
 "Table/Leg/+1+2/+0+7/+0+1" : ""`);
 
@@ -102,7 +102,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('allows Base64 namespace segments before X/Y/Z coordinates except slash delimiters', () => {
-    const result = parseXyzDocument(`"0abc/abc+123/+1+2/+0+7/+0+1" : ""
+    const result = parseXyzDslDocument(`"0abc/abc+123/+1+2/+0+7/+0+1" : ""
 "abc/AbC123+/" : "geometry: sphere"`);
 
     expect(result.ok).toBe(true);
@@ -113,9 +113,9 @@ describe('parseXyzDocument', () => {
   });
 
   it('rejects namespace characters outside the slash-delimited unpadded Base64 subset', () => {
-    const underscoreResult = parseXyzDocument('"Room_Name/+0+1/+0+1/+0+1" : ""');
-    const paddingResult = parseXyzDocument('"Room=/+0+1/+0+1/+0+1" : ""');
-    const leadingPlusResult = parseXyzDocument('"+Room/+0+1/+0+1/+0+1" : ""');
+    const underscoreResult = parseXyzDslDocument('"Room_Name/+0+1/+0+1/+0+1" : ""');
+    const paddingResult = parseXyzDslDocument('"Room=/+0+1/+0+1/+0+1" : ""');
+    const leadingPlusResult = parseXyzDslDocument('"+Room/+0+1/+0+1/+0+1" : ""');
 
     expect(underscoreResult.ok).toBe(false);
     expect(underscoreResult.diagnostics[0].message).toBe(
@@ -132,7 +132,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('does not classify plus-containing non-numeric namespace segments as axes', () => {
-    const result = parseXyzDocument('"Ab+Cd/+0+1/+0+1/+0+1" : ""');
+    const result = parseXyzDslDocument('"Ab+Cd/+0+1/+0+1/+0+1" : ""');
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].namespace).toEqual(['Ab+Cd']);
@@ -140,7 +140,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses text content declarations', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: Hello%20world"',
     );
 
@@ -150,7 +150,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses and validates URL content declarations', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+2/+0+1" : "content-kind: url; content-url-uri: https%3A%2F%2Fexample.com%2Fview%3Fx%3D1"',
     );
 
@@ -160,7 +160,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports unsupported URL content schemes', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+2/+0+1" : "content-kind: url; content-url: javascript:alert(1)"',
     );
 
@@ -169,7 +169,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses ref declarations and reports missing reference targets', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/; ref-scale: true"',
     );
 
@@ -179,7 +179,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports invalid ref-scale booleans', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"Seat/+3+5/+0+3/+0+15" : "ref: Sofa/; ref-scale: maybe"',
     );
 
@@ -190,7 +190,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports legacy leading-zero path numbers in axis values', () => {
-    const result = parseXyzDocument('"+0+004/+0+2/+0+3" : ""');
+    const result = parseXyzDslDocument('"+0+004/+0+2/+0+3" : ""');
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics[0].message).toBe(
@@ -199,7 +199,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('rejects partial namespaced axis groups', () => {
-    const result = parseXyzDocument('"Table/+1+2/+0+3" : ""');
+    const result = parseXyzDslDocument('"Table/+1+2/+0+3" : ""');
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics[0].message).toBe(
@@ -207,8 +207,8 @@ describe('parseXyzDocument', () => {
     );
   });
 
-  it('parses rotation declarations as XYZ degree triples converted to radians', () => {
-    const result = parseXyzDocument(
+  it('parses rotation declarations as XYZDSL degree triples converted to radians', () => {
+    const result = parseXyzDslDocument(
       '\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, 90, 180\"',
     );
 
@@ -219,7 +219,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports malformed rotation triples', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '\"+0+1/+0+2/+0+3\" : \"geometry: box; rotation: 0, nope, 0\"',
     );
 
@@ -231,7 +231,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses box-radius as a box geometry modifier', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+2/+0+3" : "box-radius: 0.15; color: orange"',
     );
 
@@ -242,7 +242,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports invalid box-radius values', () => {
-    const result = parseXyzDocument('"+0+4/+0+2/+0+3" : "box-radius: nope"');
+    const result = parseXyzDslDocument('"+0+4/+0+2/+0+3" : "box-radius: nope"');
 
     expect(result.ok).toBe(false);
     expect(result.value?.[0].geometry['box-radius']).toBeUndefined();
@@ -250,7 +250,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports box-radius on non-box geometry', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+2/+0+3" : "geometry: sphere; box-radius: 0.15"',
     );
 
@@ -263,7 +263,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses texture material and puff declarations', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"Sofa/Cushion/+0+4/+0+1/+0+3" : "color: 0xf5f3ef; roughness: 0.88; material-preset: upholstery.fabric; bump-texture-strength: 2; puff: 5"',
     );
 
@@ -276,7 +276,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports removed compact material properties as unsupported', () => {
-    const result = parseXyzDocument('"+0+4/+0+1/+0+3" : "fabric: 3; puff: -1"');
+    const result = parseXyzDslDocument('"+0+4/+0+1/+0+3" : "fabric: 3; puff: -1"');
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics.map(({ message }) => message)).toEqual([
@@ -286,7 +286,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses material presets and generic texture declarations', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+1/+0+3" : "material-preset: upholstery.fabric; texture: wood.oak; texture-repeat: 2, 3; bump-texture: bump.noise; bump-texture-strength: 4; texture-offset: 0.25 0.5; texture-rotation: 1.57"',
     );
 
@@ -309,7 +309,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses semantic material declarations into renderer defaults', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+1/+0+3" : "material: wood; grain: walnut; pattern: linear; finish: glossy; texture-scale: 3 1; bump: 4; reflectivity: 0.6"',
     );
 
@@ -328,7 +328,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('preserves generic texture transforms on textureless semantic defaults', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+1/+0+3" : "material-preset: plastic.matte; texture-repeat: 3 1; texture: wood.oak"',
     );
 
@@ -341,7 +341,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('supports stone, glass, and leather semantic material families', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       [
         '"+0+4/+0+1/+0+3" : "material: stone; variant: marble; pattern: vein; finish: polished"',
         '"+5+4/+0+1/+0+3" : "material: glass; variant: frosted; pattern: reeded"',
@@ -367,7 +367,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('parses custom image texture sources separately from preset textures', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+4/+0+1/+0+3" : "texture-src: /textures/custom.png; normal-texture-src: /textures/custom-normal.png; normal-texture-repeat: 1 2"',
     );
 
@@ -381,27 +381,27 @@ describe('parseXyzDocument', () => {
 
 
   it('parses boolean composition geometry operations', () => {
-    const result = parseXyzDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: subtraction"');
+    const result = parseXyzDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: subtraction"');
 
     expect(result.value?.[0].geometry.operation).toBe('subtraction');
   });
 
   it('reports unsupported boolean composition operations', () => {
-    const result = parseXyzDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: drill"');
+    const result = parseXyzDslDocument('"+0+4/+0+4/+0+4" : "geometry: cylinder; operation: drill"');
 
     expect(result.value?.[0].geometry.operation).toBeUndefined();
     expect(result.diagnostics[0].message).toContain('Unsupported operation "drill"');
   });
 
   it('defaults to box geometry when geometry is omitted', () => {
-    const result = parseXyzDocument('"+0+1/+0+2/+0+3" : "color: red"');
+    const result = parseXyzDslDocument('"+0+1/+0+2/+0+3" : "color: red"');
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].geometry.kind).toBe('box');
   });
 
   it('falls back to box geometry and reports unsupported geometry values', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+1/+0+2/+0+3" : "geometry: torus; color: red"',
     );
 
@@ -413,7 +413,7 @@ describe('parseXyzDocument', () => {
   });
 
   it('reports unsupported non-material and non-geometry properties once', () => {
-    const result = parseXyzDocument(
+    const result = parseXyzDslDocument(
       '"+0+1/+0+2/+0+3" : "foo: bar; geometry: box"',
     );
 

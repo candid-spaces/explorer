@@ -1,9 +1,9 @@
 import { materialPresetFor, materialPresetNames } from './materialPresets';
 import { resolveSemanticMaterial } from './materialCatalog';
-import type { XyzMaterialSpec, XyzTextureChannel, XyzTextureSpec } from './types';
-import type { XyzPropertyDeclaration } from './propertyParser';
+import type { XyzDslMaterialSpec, XyzDslTextureChannel, XyzDslTextureSpec } from './types';
+import type { XyzDslPropertyDeclaration } from './propertyParser';
 
-const CHANNEL_PROPERTY_ALIASES: Record<string, XyzTextureChannel> = {
+const CHANNEL_PROPERTY_ALIASES: Record<string, XyzDslTextureChannel> = {
   texture: 'map',
   map: 'map',
   'color-texture': 'map',
@@ -14,7 +14,7 @@ const CHANNEL_PROPERTY_ALIASES: Record<string, XyzTextureChannel> = {
   'alpha-texture': 'alphaMap',
 };
 
-const CHANNEL_SRC_ALIASES: Record<string, XyzTextureChannel> = {
+const CHANNEL_SRC_ALIASES: Record<string, XyzDslTextureChannel> = {
   'texture-src': 'map',
   'map-src': 'map',
   'color-texture-src': 'map',
@@ -25,7 +25,7 @@ const CHANNEL_SRC_ALIASES: Record<string, XyzTextureChannel> = {
   'alpha-texture-src': 'alphaMap',
 };
 
-const CHANNEL_REPEAT_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
+const CHANNEL_REPEAT_ALIASES: Record<string, XyzDslTextureChannel | 'all'> = {
   'texture-repeat': 'all',
   'map-repeat': 'map',
   'color-texture-repeat': 'map',
@@ -41,7 +41,7 @@ const CHANNEL_REPEAT_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
   'alpha-texture-repeat': 'alphaMap',
 };
 
-const CHANNEL_ROTATION_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
+const CHANNEL_ROTATION_ALIASES: Record<string, XyzDslTextureChannel | 'all'> = {
   'texture-rotation': 'all',
   'map-rotation': 'map',
   'roughness-texture-rotation': 'roughnessMap',
@@ -51,7 +51,7 @@ const CHANNEL_ROTATION_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
   'alpha-texture-rotation': 'alphaMap',
 };
 
-const CHANNEL_OFFSET_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
+const CHANNEL_OFFSET_ALIASES: Record<string, XyzDslTextureChannel | 'all'> = {
   'texture-offset': 'all',
   'map-offset': 'map',
   'roughness-texture-offset': 'roughnessMap',
@@ -61,7 +61,7 @@ const CHANNEL_OFFSET_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
   'alpha-texture-offset': 'alphaMap',
 };
 
-const CHANNEL_STRENGTH_ALIASES: Record<string, XyzTextureChannel | 'all'> = {
+const CHANNEL_STRENGTH_ALIASES: Record<string, XyzDslTextureChannel | 'all'> = {
   'texture-strength': 'all',
   'map-strength': 'map',
   'roughness-texture-strength': 'roughnessMap',
@@ -96,7 +96,7 @@ export const SUPPORTED_MATERIAL_KEYS = new Set([
   ...Object.keys(CHANNEL_OFFSET_ALIASES),
 ]);
 
-function cloneTexture(texture: XyzTextureSpec): XyzTextureSpec {
+function cloneTexture(texture: XyzDslTextureSpec): XyzDslTextureSpec {
   return {
     ...texture,
     ...(texture.repeat ? { repeat: [...texture.repeat] as [number, number] } : {}),
@@ -104,17 +104,17 @@ function cloneTexture(texture: XyzTextureSpec): XyzTextureSpec {
   };
 }
 
-function cloneTextures(textures: XyzMaterialSpec['textures']): XyzMaterialSpec['textures'] {
+function cloneTextures(textures: XyzDslMaterialSpec['textures']): XyzDslMaterialSpec['textures'] {
   if (!textures) {
     return undefined;
   }
 
   return Object.fromEntries(
     Object.entries(textures).map(([channel, texture]) => [channel, texture ? cloneTexture(texture) : texture]),
-  ) as XyzMaterialSpec['textures'];
+  ) as XyzDslMaterialSpec['textures'];
 }
 
-function applyMaterialDefaults(material: XyzMaterialSpec, defaults: Omit<XyzMaterialSpec, 'diagnostics' | 'materialPreset'>): void {
+function applyMaterialDefaults(material: XyzDslMaterialSpec, defaults: Omit<XyzDslMaterialSpec, 'diagnostics' | 'materialPreset'>): void {
   material.color = defaults.color;
   material.metalness = defaults.metalness;
   material.roughness = defaults.roughness;
@@ -152,7 +152,7 @@ function parseNumberPair(property: string, value: string): { value?: [number, nu
   return { value: [numbers[0], numbers[1]] };
 }
 
-function ensureTexture(material: XyzMaterialSpec, channel: XyzTextureChannel): XyzTextureSpec {
+function ensureTexture(material: XyzDslMaterialSpec, channel: XyzDslTextureChannel): XyzDslTextureSpec {
   material.textures = material.textures ?? {};
   material.textures[channel] = material.textures[channel] ?? {};
 
@@ -160,12 +160,12 @@ function ensureTexture(material: XyzMaterialSpec, channel: XyzTextureChannel): X
 }
 
 function applyToTextureChannels(
-  material: XyzMaterialSpec,
-  channel: XyzTextureChannel | 'all',
-  apply: (texture: XyzTextureSpec) => void,
+  material: XyzDslMaterialSpec,
+  channel: XyzDslTextureChannel | 'all',
+  apply: (texture: XyzDslTextureSpec) => void,
 ): void {
   if (channel === 'all') {
-    const channels: XyzTextureChannel[] = material.textures ? (Object.keys(material.textures) as XyzTextureChannel[]) : ['map'];
+    const channels: XyzDslTextureChannel[] = material.textures ? (Object.keys(material.textures) as XyzDslTextureChannel[]) : ['map'];
     channels.forEach((textureChannel) => apply(ensureTexture(material, textureChannel)));
     return;
   }
@@ -173,7 +173,7 @@ function applyToTextureChannels(
   apply(ensureTexture(material, channel));
 }
 
-function textureValue(value: string): XyzTextureSpec {
+function textureValue(value: string): XyzDslTextureSpec {
   if (value.startsWith('src:')) {
     return { src: value.slice('src:'.length).trim() };
   }
@@ -185,8 +185,8 @@ function textureValue(value: string): XyzTextureSpec {
   return { preset: value };
 }
 
-export function parseMaterialDeclaration(declarations: XyzPropertyDeclaration[]): XyzMaterialSpec {
-  const material: XyzMaterialSpec = { diagnostics: [] };
+export function parseMaterialDeclaration(declarations: XyzDslPropertyDeclaration[]): XyzDslMaterialSpec {
+  const material: XyzDslMaterialSpec = { diagnostics: [] };
   const presetDeclaration = declarations.find(({ property }) => property === 'material-preset');
   const semanticMaterial = declarations.find(({ property }) => property === 'material')?.value;
   const materialVariant = declarations.find(({ property }) => property === 'variant')?.value;

@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
 import type { RejectedTransaction, SecondaryProjection, TransactionRange } from '../transactions/types';
-import { normalizeXyzTransaction } from '../transactions/transactionXyz';
-import { XyzEditor } from './XyzEditor';
-import { XyzTransactionControls } from './XyzTransactionControls';
+import { normalizeXyzDslTransaction } from '../transactions/transactionXyzDsl';
+import { XyzDslEditor } from './XyzDslEditor';
+import { XyzDslTransactionControls } from './XyzDslTransactionControls';
 import { SecondaryProjectionPanel } from './SecondaryProjectionPanel';
-import { XyzTreeView } from './XyzTreeView';
+import { XyzDslTreeView } from './XyzDslTreeView';
 
 function describeAuthoringState(
   hasRemoteBaseline: boolean,
@@ -43,8 +43,8 @@ function summarizeChanges({ added, removed }: { added: number; removed: number }
 }
 
 // Kept exported for the drawer's existing focused summary tests.
-export function transactionSummary(transaction: import('../transactions/types').XyzTransaction): string {
-  const normalized = normalizeXyzTransaction(transaction);
+export function transactionSummary(transaction: import('../transactions/types').XyzDslTransaction): string {
+  const normalized = normalizeXyzDslTransaction(transaction);
   return [normalized.from ? `from ${normalized.from}` : undefined, `to ${normalized.to}`, normalized.memo.trim() ? `memo ${normalized.memo.trim()}` : undefined]
     .filter(Boolean)
     .join(' · ');
@@ -57,13 +57,13 @@ function renderAuthoringStatus(
   authoringChangeSummary: { added: number; removed: number },
 ): ReactNode {
   if (!hasRemoteBaseline) {
-    return <em className="xyz-status-badge">Local sample</em>;
+    return <em className="xyzdsl-status-badge">Local sample</em>;
   }
 
   if (remoteBaselineChanged && hasAuthoringEdits) {
     return (
       <>
-        <em className="xyz-status-badge xyz-status-badge-warning">Remote changed</em>
+        <em className="xyzdsl-status-badge xyzdsl-status-badge-warning">Remote changed</em>
         <span>{summarizeChanges(authoringChangeSummary)}</span>
       </>
     );
@@ -72,16 +72,16 @@ function renderAuthoringStatus(
   if (hasAuthoringEdits) {
     return (
       <>
-        <em className="xyz-status-badge xyz-status-badge-warning">Modified locally</em>
+        <em className="xyzdsl-status-badge xyzdsl-status-badge-warning">Modified locally</em>
         <span>{summarizeChanges(authoringChangeSummary)}</span>
       </>
     );
   }
 
-  return <em className="xyz-status-badge xyz-status-badge-success">Remote baseline loaded</em>;
+  return <em className="xyzdsl-status-badge xyzdsl-status-badge-success">Remote baseline loaded</em>;
 }
 
-interface XyzDrawerProps {
+interface XyzDslDrawerProps {
   appMode: 'viewer' | 'editor';
   document: SpatialDocument;
   isOpen: boolean;
@@ -120,7 +120,7 @@ interface XyzDrawerProps {
   onSelectNode?: (id: string) => void;
 }
 
-export function XyzDrawer({
+export function XyzDslDrawer({
   appMode,
   document,
   isOpen,
@@ -157,10 +157,10 @@ export function XyzDrawer({
   onLoadSecondaryHistory,
   selectedNodeId,
   onSelectNode,
-}: XyzDrawerProps) {
+}: XyzDslDrawerProps) {
   const isEditorMode = appMode === 'editor';
   return (
-    <aside className={`xyz-drawer xyz-drawer--${appMode} ${isOpen ? 'is-open' : ''}`}>
+    <aside className={`xyzdsl-drawer xyzdsl-drawer--${appMode} ${isOpen ? 'is-open' : ''}`}>
       <div className="mode-controls" aria-label="Application mode">
         <button
           className="mode-toggle"
@@ -184,7 +184,7 @@ export function XyzDrawer({
             <p>Compose primitive geometry in a shared coordinate space.</p>
           </header>
 
-          <XyzTransactionControls
+          <XyzDslTransactionControls
             publicKey={transactionPublicKey}
             publicKeyShareUrl={transactionPublicKeyShareUrl}
             range={transactionRange}
@@ -203,7 +203,7 @@ export function XyzDrawer({
             onUseTip={onUseTransactionTip}
           />
 
-          <XyzEditor
+          <XyzDslEditor
             actions={
               <button type="button" disabled={!hasRemoteBaseline || !hasAuthoringEdits} onClick={onResetToRemote}>
                 Reset to remote
@@ -224,7 +224,7 @@ export function XyzDrawer({
           {mappedTransactionSource.trim().length > 0 ? (
             <details className="remote-baseline-reference">
               <summary>Original remote declarations</summary>
-              <label className="xyz-editor xyz-editor-readonly">
+              <label className="xyzdsl-editor xyzdsl-editor-readonly">
                 <span>Mapped spatial declarations</span>
                 <small>Current remote baseline used for reset.</small>
                 <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
@@ -273,7 +273,7 @@ export function XyzDrawer({
             </details>
           ) : null}
 
-          <XyzTreeView document={document} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
+          <XyzDslTreeView document={document} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
         </div>
       ) : null}
     </aside>

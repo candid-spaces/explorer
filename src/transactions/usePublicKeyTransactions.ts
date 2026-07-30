@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchPublicKeyTransactions } from './publicKeyTransactions';
-import { normalizeXyzTransactions } from './transactionXyz';
-import type { XyzTransaction, TransactionRange } from './types';
+import { normalizeXyzDslTransactions } from './transactionXyzDsl';
+import type { XyzDslTransaction, TransactionRange } from './types';
 
 interface UsePublicKeyTransactionsOptions {
   endpoint: string;
@@ -12,7 +12,7 @@ interface UsePublicKeyTransactionsOptions {
 }
 
 export function usePublicKeyTransactions({ endpoint, publicKey, range, refreshKey }: UsePublicKeyTransactionsOptions) {
-  const [transactions, setTransactions] = useState<XyzTransaction[]>([]);
+  const [transactions, setTransactions] = useState<XyzDslTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [reloadToken, setReloadToken] = useState(0);
@@ -33,7 +33,7 @@ export function usePublicKeyTransactions({ endpoint, publicKey, range, refreshKe
 
     fetchPublicKeyTransactions({ endpoint, publicKey: publicKey.trim(), range, signal: controller.signal })
       .then((nextTransactions) => {
-        setTransactions(normalizeXyzTransactions(nextTransactions));
+        setTransactions(normalizeXyzDslTransactions(nextTransactions));
       })
       .catch((caught: unknown) => {
         if (caught instanceof DOMException && caught.name === 'AbortError') {

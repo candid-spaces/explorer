@@ -1,22 +1,22 @@
 import type {
-  XyzBoxSpec,
-  XyzContentSpec,
-  XyzGeometrySpec,
-  XyzMaterialSpec,
-  XyzTextureChannel,
-  XyzTextureSpec,
-  XyzTransformSpec,
+  XyzDslBoxSpec,
+  XyzDslContentSpec,
+  XyzDslGeometrySpec,
+  XyzDslMaterialSpec,
+  XyzDslTextureChannel,
+  XyzDslTextureSpec,
+  XyzDslTransformSpec,
   ParseDiagnostic,
   SpatialObject,
 } from './types';
 import { canonicalNamespacePath } from './pathParser';
 
 export interface ResolvedSpatialObject extends SpatialObject {
-  box: XyzBoxSpec;
-  material: XyzMaterialSpec;
-  geometry: XyzGeometrySpec;
-  transform: XyzTransformSpec;
-  content: XyzContentSpec;
+  box: XyzDslBoxSpec;
+  material: XyzDslMaterialSpec;
+  geometry: XyzDslGeometrySpec;
+  transform: XyzDslTransformSpec;
+  content: XyzDslContentSpec;
   namespacePath: string;
   parentNamespacePath: string;
   renderable: boolean;
@@ -25,14 +25,14 @@ export interface ResolvedSpatialObject extends SpatialObject {
 }
 
 interface ResolvedProperties {
-  material: XyzMaterialSpec;
-  geometry: XyzGeometrySpec;
-  transform: XyzTransformSpec;
-  content: XyzContentSpec;
+  material: XyzDslMaterialSpec;
+  geometry: XyzDslGeometrySpec;
+  transform: XyzDslTransformSpec;
+  content: XyzDslContentSpec;
 }
 
 
-function cloneTextureSpec(texture: XyzTextureSpec): XyzTextureSpec {
+function cloneTextureSpec(texture: XyzDslTextureSpec): XyzDslTextureSpec {
   return {
     ...texture,
     ...(texture.repeat ? { repeat: [...texture.repeat] as [number, number] } : {}),
@@ -41,12 +41,12 @@ function cloneTextureSpec(texture: XyzTextureSpec): XyzTextureSpec {
 }
 
 function mergeTextures(
-  base: XyzMaterialSpec['textures'],
-  override: XyzMaterialSpec['textures'],
-): XyzMaterialSpec['textures'] {
-  const merged: XyzMaterialSpec['textures'] = {};
+  base: XyzDslMaterialSpec['textures'],
+  override: XyzDslMaterialSpec['textures'],
+): XyzDslMaterialSpec['textures'] {
+  const merged: XyzDslMaterialSpec['textures'] = {};
 
-  (Object.keys(base ?? {}) as XyzTextureChannel[]).forEach((channel) => {
+  (Object.keys(base ?? {}) as XyzDslTextureChannel[]).forEach((channel) => {
     const texture = base?.[channel];
 
     if (texture) {
@@ -54,7 +54,7 @@ function mergeTextures(
     }
   });
 
-  (Object.keys(override ?? {}) as XyzTextureChannel[]).forEach((channel) => {
+  (Object.keys(override ?? {}) as XyzDslTextureChannel[]).forEach((channel) => {
     const baseTexture = merged[channel];
     const overrideTexture = override?.[channel];
 
@@ -77,9 +77,9 @@ const DEFAULT_PROPERTIES: ResolvedProperties = {
 };
 
 function mergeGeometry(
-  base: XyzGeometrySpec,
-  override: XyzGeometrySpec,
-): XyzGeometrySpec {
+  base: XyzDslGeometrySpec,
+  override: XyzDslGeometrySpec,
+): XyzDslGeometrySpec {
   if (!override.declared) {
     return { ...base, diagnostics: [] };
   }
@@ -103,7 +103,7 @@ function mergeGeometry(
   };
 }
 
-function mergeContent(base: XyzContentSpec, override: XyzContentSpec): XyzContentSpec {
+function mergeContent(base: XyzDslContentSpec, override: XyzDslContentSpec): XyzDslContentSpec {
   if (!override.kind) {
     return { ...base, diagnostics: [] };
   }
@@ -349,7 +349,7 @@ function mergeResolvedProperties(
   return mergeProperties(base, override);
 }
 
-function dimensionsFromBox(box: XyzBoxSpec): [number, number, number] {
+function dimensionsFromBox(box: XyzDslBoxSpec): [number, number, number] {
   return [box.width, box.height, box.depth];
 }
 
@@ -362,7 +362,7 @@ function dimensionsFromRootChildren(
   );
   const boxes = (rootChildren.length > 0 ? rootChildren : descendants)
     .map((descendant) => descendant.box)
-    .filter(Boolean) as XyzBoxSpec[];
+    .filter(Boolean) as XyzDslBoxSpec[];
 
   if (boxes.length === 0) {
     return undefined;
@@ -380,7 +380,7 @@ function dimensionsFromRootChildren(
 
 function scaleToFit(
   sourceDimensions: [number, number, number] | undefined,
-  targetBox: XyzBoxSpec,
+  targetBox: XyzDslBoxSpec,
 ): [number, number, number] | undefined {
   if (
     !sourceDimensions ||
@@ -396,7 +396,7 @@ function scaleToFit(
   ];
 }
 
-export function resolveXyzDocument(objects: SpatialObject[]): {
+export function resolveXyzDslDocument(objects: SpatialObject[]): {
   objects: ResolvedSpatialObject[];
   diagnostics: ParseDiagnostic[];
 } {

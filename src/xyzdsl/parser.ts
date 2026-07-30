@@ -1,6 +1,6 @@
-import type { AxisName, XyzAxisSpec, XyzBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
+import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
-import { parseXyzPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
+import { parseXyzDslPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
 
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
 
@@ -8,15 +8,15 @@ export function parseCompactNumber(raw: string): number {
   return parsePathNumber(raw);
 }
 
-export function parseAxisSpec(raw: string, axis: AxisName): XyzAxisSpec {
+export function parseAxisSpec(raw: string, axis: AxisName): XyzDslAxisSpec {
   return parsePathAxisSpec(raw, axis);
 }
 
-export function parseBoxSpec(source: string): XyzBoxSpec {
+export function parseBoxSpec(source: string): XyzDslBoxSpec {
   return parsePathBoxSpec(source);
 }
 
-export function parseXyzDeclaration(line: string, lineNumber = 1): ParseResult<SpatialObject> {
+export function parseXyzDslDeclaration(line: string, lineNumber = 1): ParseResult<SpatialObject> {
   const match = line.match(DECLARATION_PATTERN);
   const diagnostics: ParseDiagnostic[] = [];
 
@@ -34,7 +34,7 @@ export function parseXyzDeclaration(line: string, lineNumber = 1): ParseResult<S
   }
 
   try {
-    const path = parseXyzPath(match.groups.box);
+    const path = parseXyzDslPath(match.groups.box);
     const properties = parseObjectProperties(match.groups.properties);
 
     return {
@@ -66,7 +66,7 @@ export function parseXyzDeclaration(line: string, lineNumber = 1): ParseResult<S
   }
 }
 
-export function parseXyzDocument(source: string): ParseResult<SpatialObject[]> {
+export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]> {
   const objects: SpatialObject[] = [];
   const diagnostics: ParseDiagnostic[] = [];
 
@@ -75,7 +75,7 @@ export function parseXyzDocument(source: string): ParseResult<SpatialObject[]> {
     .map((line, index) => ({ line, lineNumber: index + 1 }))
     .filter(({ line }) => line.trim().length > 0)
     .forEach(({ line, lineNumber }) => {
-      const result = parseXyzDeclaration(line, lineNumber);
+      const result = parseXyzDslDeclaration(line, lineNumber);
 
       diagnostics.push(...result.diagnostics);
 
