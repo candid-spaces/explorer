@@ -1,4 +1,4 @@
-export interface XyzTransaction {
+export interface XyzDslTransaction {
   time: number;
   nonce?: number;
   from?: string;
@@ -23,7 +23,7 @@ export interface TransactionPublicKeyEndpoint {
 
 export interface PrimaryPublicKeyReference extends TransactionPublicKeyEndpoint {}
 
-export interface PrimaryHistoricalBaselineXyz {
+export interface PrimaryHistoricalBaselineXyzDsl {
   source: string;
   rejected: RejectedTransaction[];
 }
@@ -45,7 +45,7 @@ export interface DiscoveredSecondaryPublicKeyReference extends Pick<TransactionP
 export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEndpoint {
   realtimeStatus: SecondaryRealtimeStatus;
   streamError?: string;
-  transactions: XyzTransaction[];
+  transactions: XyzDslTransaction[];
   playbackIndex: number;
   playbackSpeed: number;
   replaying: boolean;
@@ -58,7 +58,7 @@ export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEn
 
 /** The originating primary key as observed by a particular secondary node. */
 export interface OriginatingPrimaryCursor extends TransactionPublicKeyEndpoint {
-  transactions: XyzTransaction[];
+  transactions: XyzDslTransaction[];
   realtimeStatus: SecondaryRealtimeStatus;
   streamError?: string;
   historyLoading?: boolean;

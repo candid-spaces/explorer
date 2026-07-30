@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import type { SpatialNode } from '../model/SpatialNode';
 
-interface XyzTreeViewProps {
+interface XyzDslTreeViewProps {
   document: SpatialDocument;
   selectedNodeId?: string;
   onSelectNode?: (id: string) => void;
@@ -68,24 +68,24 @@ function TreeItem({
   const csgLabel = node.csgExpressionId ? (node.csgConsumed ? `boolean tool ${node.csgExpressionId}` : node.csgExpressionId) : undefined;
 
   return (
-    <li className="xyz-tree-item">
-      <div className={`xyz-tree-row${isSelected ? ' is-selected' : ''}`}>
+    <li className="xyzdsl-tree-item">
+      <div className={`xyzdsl-tree-row${isSelected ? ' is-selected' : ''}`}>
         {hasChildren ? (
           <button
             aria-expanded={!isCollapsed}
             aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${displayName(node)}`}
-            className="xyz-tree-toggle"
+            className="xyzdsl-tree-toggle"
             type="button"
             onClick={() => onToggle(node.id)}
           >
             {isCollapsed ? '▸' : '▾'}
           </button>
         ) : (
-          <span className="xyz-tree-spacer" aria-hidden="true" />
+          <span className="xyzdsl-tree-spacer" aria-hidden="true" />
         )}
 
         <button
-          className="xyz-tree-node-summary"
+          className="xyzdsl-tree-node-summary"
           type="button"
           aria-current={isSelected ? 'true' : undefined}
           onClick={() => onSelectNode?.(node.id)}
@@ -96,14 +96,14 @@ function TreeItem({
             {node.box.y}, {node.box.z})
           </span>
           {node.renderable ? (
-            <span className="xyz-tree-object-details">
+            <span className="xyzdsl-tree-object-details">
               {geometryLabel(node)} bounding box: {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y},{' '}
               {node.box.z}); rotation: {rotationDegrees(node)}°
             </span>
           ) : null}
         </button>
 
-        <div className="xyz-tree-badges" aria-label="Spatial node metadata">
+        <div className="xyzdsl-tree-badges" aria-label="Spatial node metadata">
           {lineNumber ? <em>line {lineNumber}</em> : null}
           {node.renderable ? null : <em>container</em>}
           {reference ? <em>ref {reference}</em> : null}
@@ -114,7 +114,7 @@ function TreeItem({
       </div>
 
       {hasChildren && !isCollapsed ? (
-        <ul className="xyz-tree-children">
+        <ul className="xyzdsl-tree-children">
           {children.map((child) => (
             <TreeItem
               key={child.id}
@@ -131,7 +131,7 @@ function TreeItem({
   );
 }
 
-export function XyzTreeView({ document, selectedNodeId, onSelectNode }: XyzTreeViewProps) {
+export function XyzDslTreeView({ document, selectedNodeId, onSelectNode }: XyzDslTreeViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const nodeIds = useMemo(() => sortedTreeIds(document.nodes), [document.nodes]);
   const hasCollapsibleNodes = useMemo(() => hasNestedNodes(document.nodes), [document.nodes]);
@@ -159,7 +159,7 @@ export function XyzTreeView({ document, selectedNodeId, onSelectNode }: XyzTreeV
   }
 
   return (
-    <section className="xyz-tree-view" aria-label="Spatial declaration tree">
+    <section className="xyzdsl-tree-view" aria-label="Spatial declaration tree">
       <div className="section-heading-row">
         <h2>Definition tree</h2>
         {hasCollapsibleNodes ? (
@@ -179,7 +179,7 @@ export function XyzTreeView({ document, selectedNodeId, onSelectNode }: XyzTreeV
       ) : (
         <>
           {document.csgExpressions.length > 0 ? (
-            <div className="xyz-csg-summary" aria-label="Boolean composition summary">
+            <div className="xyzdsl-csg-summary" aria-label="Boolean composition summary">
               <h3>Boolean composition expressions</h3>
               <ul>
                 {document.csgExpressions.map((expression) => (
@@ -197,7 +197,7 @@ export function XyzTreeView({ document, selectedNodeId, onSelectNode }: XyzTreeV
             </div>
           ) : null}
 
-          <ul className="xyz-tree-root">
+          <ul className="xyzdsl-tree-root">
             {document.nodes.map((node) => (
               <TreeItem
                 key={node.id}

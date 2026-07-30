@@ -2,14 +2,14 @@
 
 ## Product goal
 
-The project renders realistic interior spatial compositions from a declarative Spatial Declaration Language. The default space is an XYZ corner scene: a floor on the X/Z plane, a back wall at Z = 0, and a side wall at X = 0. Users add fixtures, fittings, furniture, content cards, and primitive geometry by composing spatial declarations in the same shared world space.
+The project renders realistic interior spatial compositions from a declarative Spatial Declaration Language. The default space is an XYZDSL corner scene: a floor on the X/Z plane, a back wall at Z = 0, and a side wall at X = 0. Users add fixtures, fittings, furniture, content cards, and primitive geometry by composing spatial declarations in the same shared world space.
 
 The long-term model is intentionally DOM-like: spatial declarations compile into a neutral spatial document model, and the ThreeJS renderer consumes that document. This keeps parsing, layout, collision handling, and rendering independently extensible.
 
 
 ## Terminology
 
-- **Spatial Declaration Language**: the compact text authoring syntax for spatial paths and object properties. Internal parser modules still use `xyz` names for historical continuity.
+- **Spatial Declaration Language**: the compact text authoring syntax for spatial paths and object properties. Internal parser modules still use `xyzdsl` names for historical continuity.
 - **Spatial declaration**: one quoted path/property line in the authoring source.
 - **Spatial path**: a slash-delimited namespace plus an optional final X/Y/Z bounding box.
 - **Namespace declaration**: a spatial path ending in `/`; it does not render by itself and exists to provide inherited defaults.
@@ -150,7 +150,7 @@ This renders a right-side scaled sphere inside a 6 × 15 × 0.5 bounding box.
 
 ```txt
 src/
-  xyz/
+  xyzdsl/
     materialParser.ts
     parser.ts
     types.ts
@@ -166,8 +166,8 @@ src/
     SpatialPrimitive.tsx
     materials.ts
   ui/
-    XyzDrawer.tsx
-    XyzEditor.tsx
+    XyzDslDrawer.tsx
+    XyzDslEditor.tsx
     ObjectList.tsx
 ```
 

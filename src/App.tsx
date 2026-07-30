@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rotateDeclarationPath, updateDeclarationProperty } from './xyz/editXyzSource';
-import type { AxisName } from './xyz/types';
+import { canEditDeclarationLine, moveDeclarationPath, resizeDeclarationPath, rotateDeclarationPath, updateDeclarationProperty } from './xyzdsl/editXyzDslSource';
+import type { AxisName } from './xyzdsl/types';
 import { createSpatialDocument } from './model/createSpatialDocument';
 import type { SpatialNode } from './model/SpatialNode';
 import {
@@ -15,16 +15,16 @@ import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
-import { DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, normalizeXyzTransaction, normalizeXyzTransactions, transactionToXyzCursorSource, transactionsToXyzSource } from './transactions/transactionXyz';
+import { DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, normalizeXyzDslTransaction, normalizeXyzDslTransactions, transactionToXyzDslCursorSource, transactionsToXyzDslSource } from './transactions/transactionXyzDsl';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
-import type { ActiveSecondaryTransactionStream, OriginatingPrimaryCursor, XyzTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
+import type { ActiveSecondaryTransactionStream, OriginatingPrimaryCursor, XyzDslTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { useRealtimePublicKeyTransactions } from './transactions/useRealtimePublicKeyTransactions';
-import { XyzDrawer } from './ui/XyzDrawer';
+import { XyzDslDrawer } from './ui/XyzDslDrawer';
 import { SelectedNodeInspector } from './ui/SelectedNodeInspector';
 import { usePersistentState } from './ui/usePersistentState';
 
-const INITIAL_XYZ = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
+const INITIAL_XYZDSL = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
 "+2+4/+7+6/+0+10c" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
 "+7+6/+0+15/+0+50c" : "geometry: sphere; color: blue; metalness: 0.1; roughness: 0.2"
 
@@ -48,7 +48,7 @@ const SHARED_TRANSACTION_PUBLIC_KEY = readPublicKeyFromUrl();
 
 interface ActiveSecondaryTransactions {
   reference: SecondaryKeyReference;
-  transactions: XyzTransaction[];
+  transactions: XyzDslTransaction[];
   playbackIndex: number;
   playbackSpeed?: number;
   realtimeStatus: SecondaryRealtimeStatus;
@@ -112,7 +112,7 @@ function normalizeActiveSecondaryStream(
   originatingPublicKey = '',
 ): ActiveSecondaryTransactions {
   const transactions = outgoingTransactionsForPublicKey(
-    normalizeXyzTransactions(stream?.transactions ?? []),
+    normalizeXyzDslTransactions(stream?.transactions ?? []),
     reference.publicKey,
   );
   const defaultPlaybackIndex = transactions.length > 0 ? transactions.length - 1 : 0;
@@ -168,7 +168,7 @@ function summarizeLineChanges(originalSource: string, nextSource: string): LineC
 
 interface SecondaryRealtimeSubscriptionProps {
   reference: SecondaryKeyReference;
-  onTransaction: (reference: SecondaryKeyReference, transaction: XyzTransaction) => void;
+  onTransaction: (reference: SecondaryKeyReference, transaction: XyzDslTransaction) => void;
   onError: (reference: SecondaryKeyReference, error: Error) => void;
   onStatusChange: (reference: SecondaryKeyReference, status: SecondaryRealtimeStatus) => void;
 }
@@ -192,7 +192,7 @@ function SecondaryRealtimeSubscription({
 
 interface OriginatingCursorRealtimeSubscriptionProps {
   publicKey: string;
-  onTransaction: (transaction: XyzTransaction) => void;
+  onTransaction: (transaction: XyzDslTransaction) => void;
   onError: (error: Error) => void;
   onStatusChange: (status: SecondaryRealtimeStatus) => void;
 }
@@ -234,7 +234,7 @@ function PrimaryRealtimeSubscription({ publicKey, onInventory, onError }: Primar
 }
 
 export default function App() {
-  const [authoringSource, setAuthoringSource] = useState(INITIAL_XYZ);
+  const [authoringSource, setAuthoringSource] = useState(INITIAL_XYZDSL);
   const [remoteBaselineAppliedToEditor, setRemoteBaselineAppliedToEditor] = useState('');
   const latestRemoteBaselineRef = useRef('');
   const [appMode, setAppMode] = useState<'viewer' | 'editor'>('viewer');
@@ -244,7 +244,7 @@ export default function App() {
   const [selectedSceneHighlightNodeId, setSelectedSceneHighlightNodeId] = useState<string | undefined>();
   const [selectedLineNumber, setSelectedLineNumber] = useState<number | undefined>();
   const [transactionPublicKey, setTransactionPublicKey] = usePersistentState(
-    'xyz-transaction-public-key',
+    'xyzdsl-transaction-public-key',
     '',
     SHARED_TRANSACTION_PUBLIC_KEY,
   );
@@ -252,7 +252,7 @@ export default function App() {
   const [tipHeight, setTipHeight] = useState<number | undefined>();
   const [tipLoading, setTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | undefined>();
-  const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyz-active-secondary-transaction-streams', {});
+  const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyzdsl-active-secondary-transaction-streams', {});
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
   const [primaryRealtimeError, setPrimaryRealtimeError] = useState<string | undefined>();
   const [primaryInventoryRefreshKey, setPrimaryInventoryRefreshKey] = useState(0);
@@ -353,17 +353,17 @@ export default function App() {
     }
   }, [appMode]);
 
-  const transactionXyz = useMemo(
-    () => transactionsToXyzSource(transactions, { publicKey: transactionPublicKey }),
+  const transactionXyzDsl = useMemo(
+    () => transactionsToXyzDslSource(transactions, { publicKey: transactionPublicKey }),
     [transactions, transactionPublicKey],
   );
-  const primaryRemoteBaselineSource = transactionXyz.source;
+  const primaryRemoteBaselineSource = transactionXyzDsl.source;
   const secondaryKeyReferences = useMemo(
-    () => uniqueSecondaryReferences(transactionXyz.secondaryKeys),
-    [transactionXyz.secondaryKeys],
+    () => uniqueSecondaryReferences(transactionXyzDsl.secondaryKeys),
+    [transactionXyzDsl.secondaryKeys],
   );
 
-  const handleSecondaryRealtimeTransaction = useCallback((reference: SecondaryKeyReference, transaction: XyzTransaction) => {
+  const handleSecondaryRealtimeTransaction = useCallback((reference: SecondaryKeyReference, transaction: XyzDslTransaction) => {
     const streamKey = streamKeyForSecondaryReference(reference);
 
     setActiveSecondaryTransactions((streams) => {
@@ -383,7 +383,7 @@ export default function App() {
     });
   }, [setActiveSecondaryTransactions, transactionPublicKey]);
 
-  const handleOriginatingCursorTransaction = useCallback((transaction: XyzTransaction) => {
+  const handleOriginatingCursorTransaction = useCallback((transaction: XyzDslTransaction) => {
     const publicKey = transactionPublicKey.trim();
 
     if (!publicKey || transaction.from !== publicKey) {
@@ -398,7 +398,7 @@ export default function App() {
           return [streamKey, stream];
         }
 
-        const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(cursor.transactions, [normalizeXyzTransaction(transaction)]));
+        const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(cursor.transactions, [normalizeXyzDslTransaction(transaction)]));
         return [streamKey, { ...stream, originatingCursor: { ...cursor, transactions, streamError: undefined } }];
       }));
     });
@@ -570,19 +570,19 @@ export default function App() {
   const secondaryTransactionOverlayStreams = useMemo(() => secondaryTransactionStreams
     .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => {
       const currentTransaction = currentPlaybackTransaction(secondaryTransactions, playbackIndex);
-      const xyzResult = transactionsToXyzSource(currentTransaction ? [currentTransaction] : [], {
+      const xyzdslResult = transactionsToXyzDslSource(currentTransaction ? [currentTransaction] : [], {
         publicKey,
       });
 
       return {
         id: `${publicKey}@@${endpoint}`,
-        declarations: xyzResult.source,
-        xyzResult,
+        declarations: xyzdslResult.source,
+        xyzdslResult,
       };
     }), [secondaryTransactionStreams]);
   const secondaryTransactionStreamsWithDiagnostics = useMemo<ActiveSecondaryTransactionStream[]>(() => {
     const diagnosticsByStreamId = new Map(
-      secondaryTransactionOverlayStreams.map((stream) => [stream.id, stream.xyzResult.rejected]),
+      secondaryTransactionOverlayStreams.map((stream) => [stream.id, stream.xyzdslResult.rejected]),
     );
 
     return secondaryTransactionStreams.map((stream) => ({
@@ -598,23 +598,23 @@ export default function App() {
         return [];
       }
 
-      return [transactionToXyzCursorSource(transaction, stream.originatingCursor.publicKey)];
+      return [transactionToXyzDslCursorSource(transaction, stream.originatingCursor.publicKey)];
     })
     .filter(Boolean))], [secondaryTransactionStreams]);
   const secondaryProjections = useMemo<SecondaryProjection[]>(() => {
-    const referencesByProjection = referencesBySecondaryProjection(transactionXyz.secondaryKeys);
+    const referencesByProjection = referencesBySecondaryProjection(transactionXyzDsl.secondaryKeys);
 
     return secondaryTransactionStreamsWithDiagnostics.map((stream) => ({
       ...stream,
       references: referencesByProjection.get(streamKeyForSecondaryReference(stream)) ?? [],
       compositionPolicy: 'consume-primary-namespaces',
     }));
-  }, [secondaryTransactionStreamsWithDiagnostics, transactionXyz.secondaryKeys]);
+  }, [secondaryTransactionStreamsWithDiagnostics, transactionXyzDsl.secondaryKeys]);
   const remoteBaselineSource = primaryRemoteBaselineSource;
   const hasRemoteBaseline = remoteBaselineSource.trim().length > 0;
   const hasAuthoringEdits = hasRemoteBaseline
     ? authoringSource !== remoteBaselineAppliedToEditor
-    : authoringSource !== INITIAL_XYZ;
+    : authoringSource !== INITIAL_XYZDSL;
   const remoteBaselineChanged = hasRemoteBaseline && remoteBaselineSource !== remoteBaselineAppliedToEditor;
 
   useEffect(() => {
@@ -632,7 +632,7 @@ export default function App() {
 
     const currentHasEdits = remoteBaselineAppliedToEditor.trim().length > 0
       ? authoringSource !== remoteBaselineAppliedToEditor
-      : authoringSource !== INITIAL_XYZ;
+      : authoringSource !== INITIAL_XYZDSL;
 
     if (currentHasEdits) {
       return;
@@ -816,7 +816,7 @@ export default function App() {
           }
 
           const outgoingHistoricalTransactions = outgoingTransactionsForPublicKey(
-            normalizeXyzTransactions(historicalTransactions),
+            normalizeXyzDslTransactions(historicalTransactions),
             publicKey,
           );
           const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, outgoingHistoricalTransactions));
@@ -824,7 +824,7 @@ export default function App() {
           const cursorTransactions = cursor && cursor.publicKey === originatingPublicKey
             ? sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(
               cursor.transactions,
-              outgoingTransactionsForPublicKey(normalizeXyzTransactions(originatingTransactions), originatingPublicKey),
+              outgoingTransactionsForPublicKey(normalizeXyzDslTransactions(originatingTransactions), originatingPublicKey),
             ))
             : cursor?.transactions ?? [];
 
@@ -999,7 +999,7 @@ export default function App() {
           onRotate={rotateSelectedDeclaration}
         />
       ) : null}
-      <XyzDrawer
+      <XyzDslDrawer
         appMode={appMode}
         document={document}
         isOpen={drawerOpen}
@@ -1014,9 +1014,9 @@ export default function App() {
         tipLoading={tipLoading}
         tipError={tipError}
         transactionCount={transactions.length}
-        acceptedTransactionCount={transactionXyz.source ? transactionXyz.source.split('\n').filter(Boolean).length : 0}
+        acceptedTransactionCount={transactionXyzDsl.source ? transactionXyzDsl.source.split('\n').filter(Boolean).length : 0}
         mappedTransactionSource={remoteBaselineSource}
-        rejectedTransactions={transactionXyz.rejected}
+        rejectedTransactions={transactionXyzDsl.rejected}
         secondaryProjections={secondaryProjections}
         hasRemoteBaseline={hasRemoteBaseline}
         hasAuthoringEdits={hasAuthoringEdits}

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { XyzBoxSpec } from '../xyz/types';
+import type { XyzDslBoxSpec } from '../xyzdsl/types';
 import type { SpatialTransform } from './transform';
 import { composeTransforms, degreesToRadians, transformFromBox } from './transform';
 
-const box: XyzBoxSpec = {
+const box: XyzDslBoxSpec = {
   source: '+2+4/+7+6/+1+3',
   x: 2,
   y: 7,

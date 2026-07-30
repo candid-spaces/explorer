@@ -1,7 +1,7 @@
-import type { XyzContentSpec } from './types';
-import type { XyzPropertyDeclaration } from './propertyParser';
+import type { XyzDslContentSpec } from './types';
+import type { XyzDslPropertyDeclaration } from './propertyParser';
 
-function declarationValue(declarations: XyzPropertyDeclaration[], property: string): string | undefined {
+function declarationValue(declarations: XyzDslPropertyDeclaration[], property: string): string | undefined {
   return declarations.find((declaration) => declaration.property === property)?.value;
 }
 
@@ -22,7 +22,7 @@ function isSupportedHttpUrl(value: string): boolean {
   }
 }
 
-export function parseContentDeclaration(declarations: XyzPropertyDeclaration[]): XyzContentSpec {
+export function parseContentDeclaration(declarations: XyzDslPropertyDeclaration[]): XyzDslContentSpec {
   const kindDeclaration = declarationValue(declarations, 'content-kind');
   const textDeclaration = declarationValue(declarations, 'content-text');
   const encodedTextDeclaration = declarationValue(declarations, 'content-text-uri');

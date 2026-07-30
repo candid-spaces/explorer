@@ -13,9 +13,9 @@ import {
   scaledPlaybackElapsedSeconds,
   sortTransactionsByTimeStable,
 } from './streamTransactions';
-import type { XyzTransaction } from './types';
+import type { XyzDslTransaction } from './types';
 
-function transaction(overrides: Partial<XyzTransaction> = {}): XyzTransaction {
+function transaction(overrides: Partial<XyzDslTransaction> = {}): XyzDslTransaction {
   return {
     time: 100,
     series: 1,

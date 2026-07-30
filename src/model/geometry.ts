@@ -1,14 +1,14 @@
-import type { XyzBoxSpec, XyzCsgOperation, XyzGeometrySpec } from '../xyz/types';
+import type { XyzDslBoxSpec, XyzDslCsgOperation, XyzDslGeometrySpec } from '../xyzdsl/types';
 
 export interface SpatialGeometry {
-  kind: XyzGeometrySpec['kind'];
+  kind: XyzDslGeometrySpec['kind'];
   dimensions: [number, number, number];
   'box-radius'?: number;
   puff?: number;
-  operation?: XyzCsgOperation;
+  operation?: XyzDslCsgOperation;
 }
 
-export function geometryFromBox(box: XyzBoxSpec, spec: XyzGeometrySpec): SpatialGeometry {
+export function geometryFromBox(box: XyzDslBoxSpec, spec: XyzDslGeometrySpec): SpatialGeometry {
   return {
     kind: spec.kind,
     dimensions: [box.width, box.height, box.depth],

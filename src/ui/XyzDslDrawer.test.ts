@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { transactionSummary } from './XyzDrawer';
+import { transactionSummary } from './XyzDslDrawer';
 
 describe('transactionSummary', () => {
   it('does not display terminal path filler', () => {

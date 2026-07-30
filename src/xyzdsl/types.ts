@@ -1,12 +1,12 @@
 export type AxisName = 'x' | 'y' | 'z';
 
-export interface XyzAxisSpec {
+export interface XyzDslAxisSpec {
   axis: AxisName;
   offset: number;
   size: number;
 }
 
-export interface XyzBoxSpec {
+export interface XyzDslBoxSpec {
   source: string;
   x: number;
   y: number;
@@ -16,31 +16,31 @@ export interface XyzBoxSpec {
   depth: number;
 }
 
-export interface XyzPathSpec {
+export interface XyzDslPathSpec {
   source: string;
   namespace: string[];
-  box?: XyzBoxSpec;
+  box?: XyzDslBoxSpec;
   canonicalPath: string;
   isDeclarationOnly: boolean;
 }
 
-export type XyzGeometryKind = 'box' | 'cylinder' | 'cone' | 'sphere';
-export type XyzCsgOperation = 'union' | 'subtraction' | 'intersection';
+export type XyzDslGeometryKind = 'box' | 'cylinder' | 'cone' | 'sphere';
+export type XyzDslCsgOperation = 'union' | 'subtraction' | 'intersection';
 
-export interface XyzGeometrySpec {
-  kind: XyzGeometryKind;
+export interface XyzDslGeometrySpec {
+  kind: XyzDslGeometryKind;
   diagnostics: string[];
   declared?: boolean;
   kindDeclared?: boolean;
   'box-radius'?: number;
   puff?: number;
-  operation?: XyzCsgOperation;
+  operation?: XyzDslCsgOperation;
 }
 
 
-export type XyzTextureChannel = 'map' | 'roughnessMap' | 'normalMap' | 'bumpMap' | 'metalnessMap' | 'alphaMap';
+export type XyzDslTextureChannel = 'map' | 'roughnessMap' | 'normalMap' | 'bumpMap' | 'metalnessMap' | 'alphaMap';
 
-export interface XyzTextureSpec {
+export interface XyzDslTextureSpec {
   preset?: string;
   src?: string;
   repeat?: [number, number];
@@ -49,13 +49,13 @@ export interface XyzTextureSpec {
   strength?: number;
 }
 
-export interface XyzMaterialSpec {
+export interface XyzDslMaterialSpec {
   materialPreset?: string;
   semanticMaterial?: string;
   materialVariant?: string;
   materialPattern?: string;
   materialFinish?: string;
-  textures?: Partial<Record<XyzTextureChannel, XyzTextureSpec>>;
+  textures?: Partial<Record<XyzDslTextureChannel, XyzDslTextureSpec>>;
   color?: string | number;
   metalness?: number;
   roughness?: number;
@@ -67,18 +67,18 @@ export interface XyzMaterialSpec {
   diagnostics: string[];
 }
 
-export interface XyzTransformSpec {
+export interface XyzDslTransformSpec {
   rotation: [number, number, number];
   diagnostics: string[];
   declared?: boolean;
 }
 
-export type XyzContentSpec =
+export type XyzDslContentSpec =
   | { kind?: undefined; diagnostics: string[] }
   | { kind: 'text'; text: string; diagnostics: string[] }
   | { kind: 'url'; url: string; diagnostics: string[] };
 
-export interface XyzReferenceSpec {
+export interface XyzDslReferenceSpec {
   targetPath?: string;
   scale?: boolean;
   diagnostics: string[];
@@ -87,14 +87,14 @@ export interface XyzReferenceSpec {
 export interface SpatialObject {
   id: string;
   source: string;
-  path: XyzPathSpec;
+  path: XyzDslPathSpec;
   namespace: string[];
-  box?: XyzBoxSpec;
-  material: XyzMaterialSpec;
-  geometry: XyzGeometrySpec;
-  transform: XyzTransformSpec;
-  reference: XyzReferenceSpec;
-  content: XyzContentSpec;
+  box?: XyzDslBoxSpec;
+  material: XyzDslMaterialSpec;
+  geometry: XyzDslGeometrySpec;
+  transform: XyzDslTransformSpec;
+  reference: XyzDslReferenceSpec;
+  content: XyzDslContentSpec;
   declarationOnly: boolean;
   lineNumber: number;
   unionGroupId?: string;

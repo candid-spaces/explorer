@@ -61,10 +61,10 @@ The resolver should:
 
 ## Prototype registry
 
-Add a prototype abstraction in `src/xyz/resolveDocument.ts`:
+Add a prototype abstraction in `src/xyzdsl/resolveDocument.ts`:
 
 ```ts
-interface XyzPrototype {
+interface XyzDslPrototype {
   path: string;
   root: SpatialObject;
   descendants: SpatialObject[];
@@ -83,8 +83,8 @@ function isDescendantOf(candidate: SpatialObject, root: SpatialObject): boolean 
   );
 }
 
-function buildPrototypeRegistry(instances: SpatialObject[]): Map<string, XyzPrototype> {
-  const registry = new Map<string, XyzPrototype>();
+function buildPrototypeRegistry(instances: SpatialObject[]): Map<string, XyzDslPrototype> {
+  const registry = new Map<string, XyzDslPrototype>();
 
   instances.forEach((root) => {
     if (root.namespace.length === 0) {
@@ -131,10 +131,10 @@ A descendant box can be mapped with:
 
 ```ts
 function scaleBoxFromPrototypeRoot(
-  sourceBox: XyzBoxSpec,
-  prototypeRootBox: XyzBoxSpec,
-  targetRootBox: XyzBoxSpec,
-): XyzBoxSpec {
+  sourceBox: XyzDslBoxSpec,
+  prototypeRootBox: XyzDslBoxSpec,
+  targetRootBox: XyzDslBoxSpec,
+): XyzDslBoxSpec {
   const scaleX = targetRootBox.width / prototypeRootBox.width;
   const scaleY = targetRootBox.height / prototypeRootBox.height;
   const scaleZ = targetRootBox.depth / prototypeRootBox.depth;
@@ -164,7 +164,7 @@ A compound `ref` expansion should produce:
 Pseudo-code:
 
 ```ts
-function clonePrototypeForRef(refObject: SpatialObject, prototype: XyzPrototype): SpatialObject[] {
+function clonePrototypeForRef(refObject: SpatialObject, prototype: XyzDslPrototype): SpatialObject[] {
   const syntheticRootNamespace = [`ref-${refObject.lineNumber}`, ...prototype.root.namespace];
 
   const cloneOne = (source: SpatialObject, isRoot: boolean): SpatialObject => {

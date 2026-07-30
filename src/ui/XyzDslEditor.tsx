@@ -1,7 +1,7 @@
 import type { ChangeEvent, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 
-interface XyzEditorProps {
+interface XyzDslEditorProps {
   value: string;
   description: string;
   status?: ReactNode;
@@ -10,7 +10,7 @@ interface XyzEditorProps {
   onChange: (value: string) => void;
 }
 
-export function XyzEditor({ value, description, status, selectedLineNumber, actions, onChange }: XyzEditorProps) {
+export function XyzDslEditor({ value, description, status, selectedLineNumber, actions, onChange }: XyzDslEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -30,14 +30,14 @@ export function XyzEditor({ value, description, status, selectedLineNumber, acti
   }
 
   return (
-    <label className="xyz-editor">
-      <span className="xyz-editor-heading">
+    <label className="xyzdsl-editor">
+      <span className="xyzdsl-editor-heading">
         <span>Spatial declarations</span>
-        {actions ? <span className="xyz-editor-actions">{actions}</span> : null}
+        {actions ? <span className="xyzdsl-editor-actions">{actions}</span> : null}
       </span>
       <small>{description}</small>
-      {status ? <span className="xyz-editor-status">{status}</span> : null}
-      {selectedLineNumber ? <span className="xyz-editor-selected-line">Selected scene object: line {selectedLineNumber}</span> : null}
+      {status ? <span className="xyzdsl-editor-status">{status}</span> : null}
+      {selectedLineNumber ? <span className="xyzdsl-editor-selected-line">Selected scene object: line {selectedLineNumber}</span> : null}
       <textarea ref={textareaRef} spellCheck={false} value={value} wrap="off" onChange={handleChange} />
     </label>
   );

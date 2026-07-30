@@ -1,13 +1,13 @@
 import { parseJsonMessage } from './publicKeyTransactions';
-import { normalizeXyzTransaction } from './transactionXyz';
-import type { XyzTransaction } from './types';
+import { normalizeXyzDslTransaction } from './transactionXyzDsl';
+import type { XyzDslTransaction } from './types';
 
 type PushTransactionMessageBody = {
-  transaction?: XyzTransaction;
+  transaction?: XyzDslTransaction;
 };
 
 type FilterBlockMessageBody = {
-  transactions?: XyzTransaction[];
+  transactions?: XyzDslTransaction[];
 };
 
 type FilterResultMessageBody = {
@@ -23,7 +23,7 @@ export function isInvBlockMessage(event: MessageEvent<string>): boolean {
  * Extracts outgoing transactions for a public key from one Cruzbit realtime
  * message. WebSocket lifecycle and reconnection are owned by react-use-websocket.
  */
-export function realtimeTransactionsFromMessage(event: MessageEvent<string>, publicKey: string): XyzTransaction[] {
+export function realtimeTransactionsFromMessage(event: MessageEvent<string>, publicKey: string): XyzDslTransaction[] {
   const parsed = parseJsonMessage(event);
   const transactions = parsed?.type === 'push_transaction'
     ? [(parsed.body as PushTransactionMessageBody | undefined)?.transaction]
@@ -32,8 +32,8 @@ export function realtimeTransactionsFromMessage(event: MessageEvent<string>, pub
       : [];
 
   return transactions
-    .filter((transaction): transaction is XyzTransaction => transaction?.from === publicKey)
-    .map(normalizeXyzTransaction);
+    .filter((transaction): transaction is XyzDslTransaction => transaction?.from === publicKey)
+    .map(normalizeXyzDslTransaction);
 }
 
 /** Returns a server-side error reported while registering a realtime filter. */

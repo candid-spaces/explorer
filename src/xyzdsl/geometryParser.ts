@@ -1,11 +1,11 @@
-import type { XyzCsgOperation, XyzGeometryKind, XyzGeometrySpec } from './types';
-import type { XyzPropertyDeclaration } from './propertyParser';
+import type { XyzDslCsgOperation, XyzDslGeometryKind, XyzDslGeometrySpec } from './types';
+import type { XyzDslPropertyDeclaration } from './propertyParser';
 
-const SUPPORTED_GEOMETRY_KINDS = new Set<XyzGeometryKind>(['box', 'cylinder', 'cone', 'sphere']);
+const SUPPORTED_GEOMETRY_KINDS = new Set<XyzDslGeometryKind>(['box', 'cylinder', 'cone', 'sphere']);
 const COMPACT_GEOMETRY_STRENGTH_MAX = 5;
-const SUPPORTED_CSG_OPERATIONS = new Set<XyzCsgOperation>(['union', 'subtraction', 'intersection']);
+const SUPPORTED_CSG_OPERATIONS = new Set<XyzDslCsgOperation>(['union', 'subtraction', 'intersection']);
 
-function parseRoundedBoxRadius(declaration: XyzPropertyDeclaration): { value?: number; diagnostics: string[] } {
+function parseRoundedBoxRadius(declaration: XyzDslPropertyDeclaration): { value?: number; diagnostics: string[] } {
   const numericValue = Number(declaration.value);
 
   if (Number.isNaN(numericValue)) {
@@ -20,7 +20,7 @@ function parseRoundedBoxRadius(declaration: XyzPropertyDeclaration): { value?: n
 }
 
 function parseCompactGeometryStrength(
-  declaration: XyzPropertyDeclaration,
+  declaration: XyzDslPropertyDeclaration,
   propertyName: string,
 ): { value?: number; diagnostics: string[] } {
   const numericValue = Number(declaration.value);
@@ -36,20 +36,20 @@ function parseCompactGeometryStrength(
   return { value: numericValue, diagnostics: [] };
 }
 
-export function parseGeometryDeclaration(declarations: XyzPropertyDeclaration[]): XyzGeometrySpec {
-  const geometry: XyzGeometrySpec = { kind: 'box', diagnostics: [] };
+export function parseGeometryDeclaration(declarations: XyzDslPropertyDeclaration[]): XyzDslGeometrySpec {
+  const geometry: XyzDslGeometrySpec = { kind: 'box', diagnostics: [] };
   const declaration = declarations.find(({ property }) => property === 'geometry');
   const radiusDeclaration = declarations.find(({ property }) => property === 'box-radius');
   const puffDeclaration = declarations.find(({ property }) => property === 'puff');
   const operationDeclaration = declarations.find(({ property }) => property === 'operation');
 
   if (declaration) {
-    if (!SUPPORTED_GEOMETRY_KINDS.has(declaration.value as XyzGeometryKind)) {
+    if (!SUPPORTED_GEOMETRY_KINDS.has(declaration.value as XyzDslGeometryKind)) {
       geometry.diagnostics.push(`Unsupported geometry "${declaration.value}". Falling back to box geometry.`);
       geometry.declared = true;
       geometry.kindDeclared = true;
     } else {
-      geometry.kind = declaration.value as XyzGeometryKind;
+      geometry.kind = declaration.value as XyzDslGeometryKind;
       geometry.declared = true;
       geometry.kindDeclared = true;
     }
@@ -84,11 +84,11 @@ export function parseGeometryDeclaration(declarations: XyzPropertyDeclaration[])
   }
 
   if (operationDeclaration) {
-    if (!SUPPORTED_CSG_OPERATIONS.has(operationDeclaration.value as XyzCsgOperation)) {
+    if (!SUPPORTED_CSG_OPERATIONS.has(operationDeclaration.value as XyzDslCsgOperation)) {
       geometry.diagnostics.push(`Unsupported operation "${operationDeclaration.value}". Expected union, subtraction, or intersection.`);
     } else {
       geometry.declared = true;
-      geometry.operation = operationDeclaration.value as XyzCsgOperation;
+      geometry.operation = operationDeclaration.value as XyzDslCsgOperation;
     }
   }
 

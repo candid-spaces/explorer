@@ -1,6 +1,6 @@
-import { parseXyzDocument } from '../xyz/parser';
-import type { ParseDiagnostic } from '../xyz/types';
-import type { XyzTransaction, PrimaryHistoricalBaselineXyz, RejectedTransaction, SecondaryKeyReference } from './types';
+import { parseXyzDslDocument } from '../xyzdsl/parser';
+import type { ParseDiagnostic } from '../xyzdsl/types';
+import type { XyzDslTransaction, PrimaryHistoricalBaselineXyzDsl, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append either slash-prefixed
 // zero/equal filler or a terminal equals marker with optional zero filler on
@@ -12,7 +12,7 @@ const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0
 const MAX_MEMO_PREVIEW_LENGTH = 120;
 export const DEFAULT_SECONDARY_TRANSACTION_ENDPOINT = 'wss://ungallant-unimpeding-kade.ngrok-free.dev/000000b179a6172473845cbc913598edef179aabb31108324694ca1b12a19e32';
 
-function transactionFallbackId(transaction: XyzTransaction, index: number): string {
+function transactionFallbackId(transaction: XyzDslTransaction, index: number): string {
   return [transaction.time, trimTransactionPathFiller(transaction.to), transaction.series ?? 'none', index].join(':');
 }
 
@@ -34,7 +34,7 @@ export function trimTransactionMemoFiller(memo: string): string {
   return memo.trim();
 }
 
-export function normalizeXyzTransaction(transaction: XyzTransaction): XyzTransaction {
+export function normalizeXyzDslTransaction(transaction: XyzDslTransaction): XyzDslTransaction {
   const destination = transaction.to ?? '';
 
   return {
@@ -46,8 +46,8 @@ export function normalizeXyzTransaction(transaction: XyzTransaction): XyzTransac
   };
 }
 
-export function normalizeXyzTransactions(transactions: readonly XyzTransaction[]): XyzTransaction[] {
-  return transactions.map(normalizeXyzTransaction);
+export function normalizeXyzDslTransactions(transactions: readonly XyzDslTransaction[]): XyzDslTransaction[] {
+  return transactions.map(normalizeXyzDslTransaction);
 }
 
 function isPlainHttpUrlMemo(memo: string): boolean {
@@ -59,16 +59,16 @@ function isPlainHttpUrlMemo(memo: string): boolean {
   }
 }
 
-function encodeXyzContentValue(value: string): string {
+function encodeXyzDslContentValue(value: string): string {
   return encodeURIComponent(value);
 }
 
 function memoToContentProperties(memo: string): string {
   if (isPlainHttpUrlMemo(memo)) {
-    return `content-kind: url; content-url-uri: ${encodeXyzContentValue(memo)}`;
+    return `content-kind: url; content-url-uri: ${encodeXyzDslContentValue(memo)}`;
   }
 
-  return `content-kind: text; content-text-uri: ${encodeXyzContentValue(memo)}`;
+  return `content-kind: text; content-text-uri: ${encodeXyzDslContentValue(memo)}`;
 }
 
 function secondaryPublicKeyCandidate(value: string): string | undefined {
@@ -110,13 +110,13 @@ function secondaryKeyReferenceFromInvalidDeclaration(
   };
 }
 
-function memoToXyzProperties(path: string, memo: string): string {
+function memoToXyzDslProperties(path: string, memo: string): string {
   if (!memo) {
     return memo;
   }
 
-  const source = quoteXyzDeclaration(path, memo);
-  const { valid } = parseValidXyz(source);
+  const source = quoteXyzDslDeclaration(path, memo);
+  const { valid } = parseValidXyzDsl(source);
 
   return valid ? memo : memoToContentProperties(memo);
 }
@@ -125,12 +125,12 @@ function diagnosticsToReasons(diagnostics: readonly ParseDiagnostic[]): string[]
   return diagnostics.map((diagnostic) => `Line ${diagnostic.line}: ${diagnostic.message}`);
 }
 
-function quoteXyzDeclaration(path: string, properties: string): string {
+function quoteXyzDslDeclaration(path: string, properties: string): string {
   return `"${path}" : "${properties.replace(/"/g, '\\"')}"`;
 }
 
-function parseValidXyz(source: string) {
-  const parsed = parseXyzDocument(source);
+function parseValidXyzDsl(source: string) {
+  const parsed = parseXyzDslDocument(source);
   const objects = parsed.value ?? [];
   const hasInvalidObject = objects.some((object) => !object.declarationOnly && !object.box);
 
@@ -140,14 +140,14 @@ function parseValidXyz(source: string) {
   };
 }
 
-interface TransactionsToXyzSourceOptions {
+interface TransactionsToXyzDslSourceOptions {
   publicKey?: string;
 }
 
-export function transactionsToXyzSource(
-  transactions: readonly XyzTransaction[],
-  options: TransactionsToXyzSourceOptions = {},
-): PrimaryHistoricalBaselineXyz & { secondaryKeys: SecondaryKeyReference[] } {
+export function transactionsToXyzDslSource(
+  transactions: readonly XyzDslTransaction[],
+  options: TransactionsToXyzDslSourceOptions = {},
+): PrimaryHistoricalBaselineXyzDsl & { secondaryKeys: SecondaryKeyReference[] } {
   const accepted: string[] = [];
   const rejected: RejectedTransaction[] = [];
   const secondaryKeys: SecondaryKeyReference[] = [];
@@ -172,9 +172,9 @@ export function transactionsToXyzSource(
       return;
     }
 
-    const properties = memoToXyzProperties(path, memo);
-    const source = quoteXyzDeclaration(path, properties);
-    const { parsed, valid } = parseValidXyz(source);
+    const properties = memoToXyzDslProperties(path, memo);
+    const source = quoteXyzDslDeclaration(path, properties);
+    const { parsed, valid } = parseValidXyzDsl(source);
 
     if (valid) {
       accepted.push(source);
@@ -212,10 +212,10 @@ export function transactionsToXyzSource(
  * Maps the newest primary-key transaction observed on a secondary chain into
  * the declaration rendered as that chain's scene cursor.
  */
-export function transactionToXyzCursorSource(transaction: XyzTransaction | undefined, publicKey: string): string {
+export function transactionToXyzDslCursorSource(transaction: XyzDslTransaction | undefined, publicKey: string): string {
   if (!transaction || !publicKey.trim()) {
     return '';
   }
 
-  return transactionsToXyzSource([transaction], { publicKey }).source;
+  return transactionsToXyzDslSource([transaction], { publicKey }).source;
 }

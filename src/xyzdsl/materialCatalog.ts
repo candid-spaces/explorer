@@ -1,10 +1,10 @@
-import type { XyzMaterialSpec, XyzTextureSpec } from './types';
+import type { XyzDslMaterialSpec, XyzDslTextureSpec } from './types';
 
 export type SemanticMaterialFamily = keyof typeof MATERIAL_CATALOG;
 
-type TextureMap = NonNullable<XyzMaterialSpec['textures']>;
+type TextureMap = NonNullable<XyzDslMaterialSpec['textures']>;
 
-type MaterialDefaults = Omit<XyzMaterialSpec, 'diagnostics' | 'materialPreset'>;
+type MaterialDefaults = Omit<XyzDslMaterialSpec, 'diagnostics' | 'materialPreset'>;
 
 interface CatalogEntry {
   aliases?: string[];
@@ -17,7 +17,7 @@ interface CatalogEntry {
   defaultFinish?: string;
 }
 
-function texture(preset: string, repeat: [number, number], strength: number): XyzTextureSpec {
+function texture(preset: string, repeat: [number, number], strength: number): XyzDslTextureSpec {
   return { preset, repeat, strength };
 }
 

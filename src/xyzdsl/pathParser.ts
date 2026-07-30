@@ -1,5 +1,5 @@
 import { CENTIUNITS_PER_UNIT } from '../model/units';
-import type { AxisName, XyzAxisSpec, XyzBoxSpec, XyzPathSpec } from './types';
+import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, XyzDslPathSpec } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
 const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:c)?$/;
@@ -70,7 +70,7 @@ export function parsePathNumber(raw: string): number {
   return Number(raw);
 }
 
-export function parsePathAxisSpec(raw: string, axis: AxisName): XyzAxisSpec {
+export function parsePathAxisSpec(raw: string, axis: AxisName): XyzDslAxisSpec {
   const match = raw.match(AXIS_PATTERN);
 
   if (!match?.groups) {
@@ -87,7 +87,7 @@ export function parsePathAxisSpec(raw: string, axis: AxisName): XyzAxisSpec {
   return { axis, offset, size };
 }
 
-function parseBoxSegments(segments: readonly string[], source: string): XyzBoxSpec {
+function parseBoxSegments(segments: readonly string[], source: string): XyzDslBoxSpec {
   const [xAxis, yAxis, zAxis] = segments.map((segment, index) => parsePathAxisSpec(segment, AXES[index]));
 
   return {
@@ -101,7 +101,7 @@ function parseBoxSegments(segments: readonly string[], source: string): XyzBoxSp
   };
 }
 
-export function parsePathBoxSpec(source: string): XyzBoxSpec {
+export function parsePathBoxSpec(source: string): XyzDslBoxSpec {
   const segments = source.split('/');
 
   if (segments.length !== 3) {
@@ -123,7 +123,7 @@ export function canonicalNamespacePath(namespace: string[]): string {
   return namespace.length > 0 ? `${namespace.join('/')}/` : '';
 }
 
-export function parseXyzPath(source: string): XyzPathSpec {
+export function parseXyzDslPath(source: string): XyzDslPathSpec {
   const trimmed = source.trim();
 
   if (!trimmed) {

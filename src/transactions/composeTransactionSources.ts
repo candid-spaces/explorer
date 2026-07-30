@@ -1,5 +1,5 @@
-import { parseXyzDeclaration, parseXyzDocument } from '../xyz/parser';
-import { canonicalNamespacePath } from '../xyz/pathParser';
+import { parseXyzDslDeclaration, parseXyzDslDocument } from '../xyzdsl/parser';
+import { canonicalNamespacePath } from '../xyzdsl/pathParser';
 
 export type TransactionSourceNamespacePolicy = 'append' | 'consume-primary-namespaces';
 
@@ -29,8 +29,8 @@ function declarationSources(declarations: readonly SecondaryTransactionSourceDec
   return declarations.map((declaration) => declaration.source.trim()).filter(Boolean);
 }
 
-function primaryDeclarationNamespaces(primaryXyzSource: string): Set<string> {
-  const parsed = parseXyzDocument(primaryXyzSource);
+function primaryDeclarationNamespaces(primaryXyzDslSource: string): Set<string> {
+  const parsed = parseXyzDslDocument(primaryXyzDslSource);
   const namespaces = new Set<string>();
 
   (parsed.value ?? []).forEach((object) => {
@@ -51,7 +51,7 @@ function namespaceIsPrimaryConsumer(namespace: readonly string[], primaryNamespa
 }
 
 function secondaryConsumerLine(line: string, primaryNamespaces: ReadonlySet<string>): string | undefined {
-  const parsed = parseXyzDeclaration(line);
+  const parsed = parseXyzDslDeclaration(line);
 
   if (!parsed.ok || !parsed.value || parsed.value.declarationOnly || !parsed.value.box) {
     return undefined;
@@ -69,12 +69,12 @@ function clampCursor(cursor: number | undefined, lineCount: number): number {
 }
 
 export function composeTransactionSources(
-  primaryXyzSource: string,
+  primaryXyzDslSource: string,
   secondaryStreams: readonly ComposeTransactionSecondaryStream[],
   options: ComposeTransactionSourcesOptions = {},
 ): string {
-  const primary = primaryXyzSource;
-  const primaryNamespaces = primaryDeclarationNamespaces(primaryXyzSource);
+  const primary = primaryXyzDslSource;
+  const primaryNamespaces = primaryDeclarationNamespaces(primaryXyzDslSource);
   const policy = options.namespacePolicy ?? 'consume-primary-namespaces';
   const composedSecondarySources = secondaryStreams.flatMap((stream) => {
     const lines = declarationSources(stream.declarations);

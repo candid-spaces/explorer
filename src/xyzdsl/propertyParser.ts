@@ -1,11 +1,11 @@
-export interface XyzPropertyDeclaration {
+export interface XyzDslPropertyDeclaration {
   property: string;
   value: string;
   source: string;
 }
 
-export function parsePropertyDeclarations(source: string): { declarations: XyzPropertyDeclaration[]; diagnostics: string[] } {
-  const declarations: XyzPropertyDeclaration[] = [];
+export function parsePropertyDeclarations(source: string): { declarations: XyzDslPropertyDeclaration[]; diagnostics: string[] } {
+  const declarations: XyzDslPropertyDeclaration[] = [];
   const diagnostics: string[] = [];
 
   source

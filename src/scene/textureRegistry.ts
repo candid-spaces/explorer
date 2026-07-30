@@ -7,14 +7,14 @@ import {
   TextureLoader,
   type MeshPhysicalMaterialParameters,
 } from 'three';
-import type { XyzMaterialSpec, XyzTextureChannel, XyzTextureSpec } from '../xyz/types';
+import type { XyzDslMaterialSpec, XyzDslTextureChannel, XyzDslTextureSpec } from '../xyzdsl/types';
 
 const TEXTURE_SIZE = 64;
 const TEXTURE_STRENGTH_MAX = 5;
 const proceduralTextureCache = new Map<string, Texture>();
 const imageTextureCache = new Map<string, Texture>();
 
-const MATERIAL_PARAMETER_BY_CHANNEL: Record<XyzTextureChannel, keyof MeshPhysicalMaterialParameters> = {
+const MATERIAL_PARAMETER_BY_CHANNEL: Record<XyzDslTextureChannel, keyof MeshPhysicalMaterialParameters> = {
   map: 'map',
   roughnessMap: 'roughnessMap',
   normalMap: 'normalMap',
@@ -35,7 +35,7 @@ function strengthLevel(value: number | undefined): number {
   return Math.round(normalizedTextureStrength(value) * TEXTURE_STRENGTH_MAX);
 }
 
-function textureTransformKey(spec: XyzTextureSpec): string {
+function textureTransformKey(spec: XyzDslTextureSpec): string {
   return [
     spec.repeat?.join('x') ?? 'repeat-default',
     spec.offset?.join('x') ?? 'offset-default',
@@ -43,7 +43,7 @@ function textureTransformKey(spec: XyzTextureSpec): string {
   ].join(':');
 }
 
-function applyTextureTransform(texture: Texture, spec: XyzTextureSpec, defaultRepeat: [number, number]): Texture {
+function applyTextureTransform(texture: Texture, spec: XyzDslTextureSpec, defaultRepeat: [number, number]): Texture {
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
   texture.repeat.set(...(spec.repeat ?? defaultRepeat));
@@ -63,7 +63,7 @@ function applyTextureTransform(texture: Texture, spec: XyzTextureSpec, defaultRe
 
 function createDataTexture(
   key: string,
-  spec: XyzTextureSpec,
+  spec: XyzDslTextureSpec,
   defaultRepeat: [number, number],
   pixel: (x: number, y: number) => [number, number, number, number] | number,
 ): Texture {
@@ -96,7 +96,7 @@ function createDataTexture(
   return texture;
 }
 
-function fabricTexture(spec: XyzTextureSpec): Texture | undefined {
+function fabricTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = normalizedTextureStrength(spec.strength);
 
   if (strength <= 0) {
@@ -113,7 +113,7 @@ function fabricTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-function bumpTexture(spec: XyzTextureSpec): Texture | undefined {
+function bumpTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = normalizedTextureStrength(spec.strength);
 
   if (strength <= 0) {
@@ -129,7 +129,7 @@ function bumpTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-function woodTexture(spec: XyzTextureSpec): Texture | undefined {
+function woodTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = Math.max(normalizedTextureStrength(spec.strength), 0.35);
 
   return createDataTexture(`wood.oak:${strengthLevel(spec.strength)}`, spec, [2, 1], (x, y) => {
@@ -141,7 +141,7 @@ function woodTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-function linearWoodTexture(spec: XyzTextureSpec): Texture | undefined {
+function linearWoodTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = Math.max(normalizedTextureStrength(spec.strength), 0.35);
 
   return createDataTexture(`wood.linear:${strengthLevel(spec.strength)}`, spec, [3, 1], (x, y) => {
@@ -153,7 +153,7 @@ function linearWoodTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-function brushedMetalTexture(spec: XyzTextureSpec): Texture | undefined {
+function brushedMetalTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = Math.max(normalizedTextureStrength(spec.strength), 0.3);
 
   return createDataTexture(`metal.brushed:${strengthLevel(spec.strength)}`, spec, [8, 1], (x, y) => {
@@ -164,7 +164,7 @@ function brushedMetalTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-function noisyTexture(name: string, defaultRepeat: [number, number], base = 128): (spec: XyzTextureSpec) => Texture | undefined {
+function noisyTexture(name: string, defaultRepeat: [number, number], base = 128): (spec: XyzDslTextureSpec) => Texture | undefined {
   return (spec) => {
     const strength = Math.max(normalizedTextureStrength(spec.strength), 0.25);
 
@@ -178,7 +178,7 @@ function noisyTexture(name: string, defaultRepeat: [number, number], base = 128)
   };
 }
 
-function ceramicSpeckleTexture(spec: XyzTextureSpec): Texture | undefined {
+function ceramicSpeckleTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = Math.max(normalizedTextureStrength(spec.strength), 0.25);
 
   return createDataTexture(`ceramic.speckle:${strengthLevel(spec.strength)}`, spec, [4, 4], (x, y) => {
@@ -190,7 +190,7 @@ function ceramicSpeckleTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-function stoneVeinTexture(spec: XyzTextureSpec): Texture | undefined {
+function stoneVeinTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = Math.max(normalizedTextureStrength(spec.strength), 0.3);
 
   return createDataTexture(`stone.vein:${strengthLevel(spec.strength)}`, spec, [2, 2], (x, y) => {
@@ -203,7 +203,7 @@ function stoneVeinTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-function reededTexture(spec: XyzTextureSpec): Texture | undefined {
+function reededTexture(spec: XyzDslTextureSpec): Texture | undefined {
   const strength = Math.max(normalizedTextureStrength(spec.strength), 0.3);
 
   return createDataTexture(`glass.reeded:${strengthLevel(spec.strength)}`, spec, [8, 1], (x) => {
@@ -213,7 +213,7 @@ function reededTexture(spec: XyzTextureSpec): Texture | undefined {
   });
 }
 
-const PRESET_FACTORIES: Record<string, (spec: XyzTextureSpec) => Texture | undefined> = {
+const PRESET_FACTORIES: Record<string, (spec: XyzDslTextureSpec) => Texture | undefined> = {
   'fabric.weave': fabricTexture,
   'fabric.knit': noisyTexture('fabric.knit', [7, 7], 132),
   'fabric.corduroy': noisyTexture('fabric.corduroy', [5, 1], 130),
@@ -237,7 +237,7 @@ const PRESET_FACTORIES: Record<string, (spec: XyzTextureSpec) => Texture | undef
   'leather.smooth': noisyTexture('leather.smooth', [4, 4], 120),
 };
 
-function imageTexture(spec: XyzTextureSpec, channel: XyzTextureChannel): Texture | undefined {
+function imageTexture(spec: XyzDslTextureSpec, channel: XyzDslTextureChannel): Texture | undefined {
   if (!spec.src) {
     return undefined;
   }
@@ -270,7 +270,7 @@ function imageTexture(spec: XyzTextureSpec, channel: XyzTextureChannel): Texture
   return texture;
 }
 
-function textureForSpec(spec: XyzTextureSpec, channel: XyzTextureChannel): Texture | undefined {
+function textureForSpec(spec: XyzDslTextureSpec, channel: XyzDslTextureChannel): Texture | undefined {
   if (spec.src) {
     return imageTexture(spec, channel);
   }
@@ -282,10 +282,10 @@ function textureForSpec(spec: XyzTextureSpec, channel: XyzTextureChannel): Textu
   return PRESET_FACTORIES[spec.preset]?.(spec);
 }
 
-export function resolveMaterialTextures(material: XyzMaterialSpec): MeshPhysicalMaterialParameters {
+export function resolveMaterialTextures(material: XyzDslMaterialSpec): MeshPhysicalMaterialParameters {
   const parameters: MeshPhysicalMaterialParameters = {};
 
-  (Object.entries(material.textures ?? {}) as [XyzTextureChannel, XyzTextureSpec][]).forEach(([channel, spec]) => {
+  (Object.entries(material.textures ?? {}) as [XyzDslTextureChannel, XyzDslTextureSpec][]).forEach(([channel, spec]) => {
     const texture = textureForSpec(spec, channel);
 
     if (!texture) {

@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import type { TransactionRange } from '../transactions/types';
 
-interface XyzTransactionControlsProps {
+interface XyzDslTransactionControlsProps {
   publicKey: string;
   publicKeyShareUrl?: string;
   range: TransactionRange;
@@ -29,7 +29,7 @@ function clampHeight(value: number, max: number): number {
   return Math.min(Math.max(Math.round(value), 0), max);
 }
 
-export function XyzTransactionControls({
+export function XyzDslTransactionControls({
   publicKey,
   publicKeyShareUrl,
   range,
@@ -46,7 +46,7 @@ export function XyzTransactionControls({
   onRangeChange,
   onReload,
   onUseTip,
-}: XyzTransactionControlsProps) {
+}: XyzDslTransactionControlsProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const sliderMax = Math.max(tipHeight ?? 0, range.startHeight, range.endHeight, 1);
   const lowerHeight = Math.min(range.startHeight, range.endHeight);
