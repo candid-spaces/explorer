@@ -10,7 +10,7 @@ import type { XyzDslTransaction, PrimaryHistoricalBaselineXyzDsl, RejectedTransa
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
 const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0*=$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
-export const DEFAULT_SECONDARY_TRANSACTION_ENDPOINT = 'wss://ungallant-unimpeding-kade.ngrok-free.dev/000000b179a6172473845cbc913598edef179aabb31108324694ca1b12a19e32';
+export const DEFAULT_SECONDARY_TRANSACTION_ENDPOINT = 'wss://ungallant-unimpeding-kade.ngrok-free.dev/00000018133f9ecb5ff8779e659e6de64eb93e67a4eeed4a2d111d439db7f596';
 
 function transactionFallbackId(transaction: XyzDslTransaction, index: number): string {
   return [transaction.time, trimTransactionPathFiller(transaction.to), transaction.series ?? 'none', index].join(':');
