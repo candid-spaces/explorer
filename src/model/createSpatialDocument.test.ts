@@ -420,6 +420,21 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes.find((node) => node.namespacePath === 'SeatB/')?.material.color).toBe('blue');
   });
 
+  it('distinguishes historical namespace versions while resolving ref chains', () => {
+    const document = createSpatialDocument(`"A/+0+1/+0+1/+0+1" : "roughness: 0.25"
+"B/" : "ref: A/; color: green"
+"A/" : "ref: B/; metalness: 0.75"
+"X/+2+1/+0+1/+0+1" : "ref: A/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    const instance = document.renderNodes.find(
+      (node) => node.namespacePath === 'X/',
+    );
+    expect(instance?.material.color).toBe('green');
+    expect(instance?.material.roughness).toBe(0.25);
+    expect(instance?.material.metalness).toBe(0.75);
+  });
+
   it('snapshots overwritten compound descendants for existing refs', () => {
     const document = createSpatialDocument(`"Sofa/" : "color: brown"
 "Sofa/Cushion/+0+2/+0+1/+0+2" : "color: tan"

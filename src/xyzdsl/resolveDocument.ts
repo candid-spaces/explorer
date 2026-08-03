@@ -219,7 +219,7 @@ function latestEntryBefore(
 function resolvePropertiesFor(
   object: SpatialObject,
   sourceObjects: SpatialObject[],
-  visitedRefs: string[] = [],
+  visitedRefTargets: SpatialObject[] = [],
 ): { properties: ResolvedProperties; diagnostics: ParseDiagnostic[] } {
   let properties = { ...DEFAULT_PROPERTIES };
   const diagnostics: ParseDiagnostic[] = [];
@@ -258,34 +258,37 @@ function resolvePropertiesFor(
   if (object.reference.targetPath) {
     const targetPath = object.reference.targetPath;
 
-    if (visitedRefs.includes(targetPath)) {
+    const target = latestEntryBefore(
+      sourceObjects,
+      targetPath,
+      object.lineNumber,
+    );
+
+    if (!target) {
       diagnostics.push({
         line: object.lineNumber,
         source: object.source,
-        message: `Cyclic ref detected: ${[...visitedRefs, targetPath].join(' -> ')}`,
+        message: `Reference target "${targetPath}" was not found.`,
+      });
+    } else if (visitedRefTargets.includes(target)) {
+      diagnostics.push({
+        line: object.lineNumber,
+        source: object.source,
+        message: `Cyclic ref detected: ${[
+          ...visitedRefTargets.map((entry) =>
+            canonicalNamespacePath(entry.namespace),
+          ),
+          targetPath,
+        ].join(' -> ')}`,
       });
     } else {
-      const target = latestEntryBefore(
+      const resolvedTarget = resolvePropertiesFor(
+        target,
         sourceObjects,
-        targetPath,
-        object.lineNumber,
+        [...visitedRefTargets, target],
       );
-
-      if (!target) {
-        diagnostics.push({
-          line: object.lineNumber,
-          source: object.source,
-          message: `Reference target "${targetPath}" was not found.`,
-        });
-      } else {
-        const resolvedTarget = resolvePropertiesFor(
-          target,
-          sourceObjects,
-          [...visitedRefs, targetPath],
-        );
-        diagnostics.push(...resolvedTarget.diagnostics);
-        properties = mergeProperties(properties, resolvedTarget.properties);
-      }
+      diagnostics.push(...resolvedTarget.diagnostics);
+      properties = mergeProperties(properties, resolvedTarget.properties);
     }
   }
 
