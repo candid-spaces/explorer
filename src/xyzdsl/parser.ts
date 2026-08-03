@@ -1,8 +1,13 @@
 import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
-import { parseXyzDslPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
+import { canonicalNamespacePath, parseXyzDslPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
 
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
+
+function namespaceReplacementKey(object: SpatialObject): string {
+  const declarationKind = object.declarationOnly ? 'declaration' : 'positioned';
+  return `${declarationKind}:${canonicalNamespacePath(object.namespace)}`;
+}
 
 export function parseCompactNumber(raw: string): number {
   return parsePathNumber(raw);
@@ -84,9 +89,25 @@ export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]
       }
     });
 
+  const newestObjectByNamespaceAndKind = new Map<string, SpatialObject>();
+
+  objects.forEach((object) => {
+    if (object.namespace.length > 0) {
+      newestObjectByNamespaceAndKind.set(namespaceReplacementKey(object), object);
+    }
+  });
+
+  const currentObjects = objects.filter((object) => {
+    if (object.namespace.length === 0) {
+      return true;
+    }
+
+    return newestObjectByNamespaceAndKind.get(namespaceReplacementKey(object)) === object;
+  });
+
   return {
     ok: diagnostics.length === 0,
-    value: objects,
+    value: currentObjects,
     diagnostics,
   };
 }

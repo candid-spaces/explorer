@@ -88,7 +88,7 @@ describe('parseXyzDslDocument', () => {
   it('parses namespaced world-space instances and namespace declarations', () => {
     const result = parseXyzDslDocument(`"Sofa/+7+4/+0+3/+0+2" : "color: brown"
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+1+2/+0+7/+0+1" : ""`);
+"Table/Leg/Front/+1+2/+0+7/+0+1" : ""`);
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].namespace).toEqual(['Sofa']);
@@ -97,8 +97,54 @@ describe('parseXyzDslDocument', () => {
     expect(result.value?.[1].namespace).toEqual(['Table', 'Leg']);
     expect(result.value?.[1].declarationOnly).toBe(true);
     expect(result.value?.[1].geometry.kind).toBe('cylinder');
-    expect(result.value?.[2].namespace).toEqual(['Table', 'Leg']);
+    expect(result.value?.[2].namespace).toEqual(['Table', 'Leg', 'Front']);
     expect(result.value?.[2].box?.height).toBe(7);
+  });
+
+  it('keeps only the newest declaration for each matching namespace', () => {
+    const result = parseXyzDslDocument(`"Chair/+0+1/+0+1/+0+1" : "color: red"
+"Lamp/+2+1/+0+1/+0+1" : "color: yellow"
+"Chair/+4+2/+0+2/+0+2" : "geometry: sphere; color: blue"`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toHaveLength(2);
+    expect(result.value?.map(({ namespace }) => namespace)).toEqual([['Lamp'], ['Chair']]);
+    expect(result.value?.[1].box?.x).toBe(4);
+    expect(result.value?.[1].geometry.kind).toBe('sphere');
+    expect(result.value?.[1].material.color).toBe('blue');
+  });
+
+  it('keeps namespace defaults alongside the newest positioned declaration', () => {
+    const result = parseXyzDslDocument(`"Table/Leg/" : "geometry: cylinder"
+"Table/Leg/+7+1/+0+5/+7+1" : "color: brown"`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toHaveLength(2);
+    expect(result.value?.[0].declarationOnly).toBe(true);
+    expect(result.value?.[0].geometry.kind).toBe('cylinder');
+    expect(result.value?.[1].box?.x).toBe(7);
+    expect(result.value?.[1].material.color).toBe('brown');
+  });
+
+  it('keeps only the newest namespace-only declaration at a path', () => {
+    const result = parseXyzDslDocument(`"Table/" : "color: red"
+"Table/" : "geometry: cylinder; color: blue"`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toHaveLength(1);
+    expect(result.value?.[0].lineNumber).toBe(2);
+    expect(result.value?.[0].geometry.kind).toBe('cylinder');
+    expect(result.value?.[0].material.color).toBe('blue');
+  });
+
+  it('keeps every anonymous declaration, including duplicate coordinates', () => {
+    const result = parseXyzDslDocument(`"+0+1/+0+1/+0+1" : "color: red"
+"+0+1/+0+1/+0+1" : "color: blue"`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toHaveLength(2);
+    expect(result.value?.map(({ id }) => id)).toEqual(['node-1', 'node-2']);
+    expect(result.value?.map(({ material }) => material.color)).toEqual(['red', 'blue']);
   });
 
   it('allows Base64 namespace segments before X/Y/Z coordinates except slash delimiters', () => {

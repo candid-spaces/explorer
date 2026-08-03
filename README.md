@@ -22,6 +22,10 @@ Each declaration lays out a primitive inside an edge-based X/Y/Z bounding box. T
 
 A spatial declaration is one quoted path/property line. Declaration keys can be anonymous world-space boxes, named spatial instances, namespace declarations, or child instances inside a named parent namespace. Namespaces use slash-separated identifiers before the final three coordinate segments. Namespace declarations end in `/` and do not render by themselves; they define inherited defaults for matching child instances. A prototype namespace is a reusable namespace intended for references. A reference instance uses the `ref` property to copy material, geometry, and transform defaults from a previously declared namespace and applies them to the referencing instance's own box.
 
+Named positioned declarations are unique by namespace, where the namespace is the complete path before the final X/Y/Z coordinate segments. When multiple positioned declarations have the same namespace, the parser keeps only the newest declaration and discards the older declaration in full; coordinate values and properties do not participate in matching or merge across those entries. Namespace-only declarations remain available as inherited defaults for a positioned declaration with the same namespace, while a newer namespace-only declaration replaces an older namespace-only declaration at that path.
+
+Anonymous declarations have no namespace because their paths consist only of the three X/Y/Z segments. They are exempt from replacement: every anonymous declaration remains in source order, even when another anonymous declaration uses identical coordinates.
+
 Path coordinates use compact project units rather than literal walking strides: `1` bare unit is `10 cm`, and `1c` is one centiunit, or `1 mm`. The optional `c` suffix applies per number, so mixed axis values are valid: `+1+3c` means offset `1` unit (`10 cm`) and size `0.03` units (`3 mm`). For real-world mental scale, an adult walking pace of about `0.75 m` is `7.5` units, written exactly as `750c`. Decimal path notation is intentionally avoided; write `10c` instead of `0.1`.
 
 Boolean composition operations (`operation: union`, `operation: subtraction`, and `operation: intersection`) follow declaration order and are implemented with CSG internally. A later overlapping operator first targets earlier solids in the same namespace/local scope; if no local scoped target overlaps, it falls back to the earlier overlapping world-space solid. This lets compound objects be authored as local groups, but the group must still have a concrete namespace anchor to materialize its children:
@@ -45,10 +49,10 @@ Spatial transaction validation may limit each memo/properties field to 100 bytes
 "Table/+18+8/+0+5/+4+8" : "color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/Leg/FrontLeft/+0+1/+0+5/+0+1" : ""
+"Table/Leg/FrontRight/+7+1/+0+5/+0+1" : ""
+"Table/Leg/BackLeft/+0+1/+0+5/+7+1" : ""
+"Table/Leg/BackRight/+7+1/+0+5/+7+1" : ""
 ```
 
 ## Spatial content cards
