@@ -68,14 +68,17 @@ Namespaced declarations extend the quoted coordinate expression with slash-separ
 "Seat/+3+5/+0+3/+0+15" : "ref: Sofa/"
 "Table/+18+8/+0+5/+4+8" : "color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
-"Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegC/+0+1/+0+5/+7+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 ```
 
 A spatial instance path ends with exactly three X/Y/Z axis segments. A namespace declaration ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. Nested coordinates are definitions in the local space of their parent namespace until that parent namespace is materialized. In other words, `Sofa/Base/+0+6/+0+40c/+0+3` defines `Base` inside `Sofa`; it does not render in world space unless `Sofa` has an explicit concrete instance such as `Sofa/+10+6/+0+2/+0+3` or another concrete instance references `Sofa/`.
+
+The canonical overwrite key is every namespace segment before the XYZ axes. Within each kind of named entry, a newer entry with the same key replaces the older entry: namespace declarations replace earlier namespace declarations, and concrete spatial instances replace earlier concrete instances even if their XYZ boxes differ. Declaration-only defaults and concrete instances at the same namespace coexist so inheritance continues to work. Authors who need several sibling primitives must give them distinct namespaces, such as `Table/LegA/...` and `Table/LegB/...`. Coordinate-only anonymous declarations have no namespace key, are exempt from replacement, and remain independent in source order.
+
+Reference lookup is historical rather than retroactive. A `ref` resolves to the newest target entry occurring before that line, including the then-current snapshot of compound descendants. For example, in `Sofa/` (brown), `SeatA/... : ref: Sofa/`, `Sofa/` (blue), then `SeatB/... : ref: Sofa/`, `SeatA/` keeps the brown target while `SeatB/` receives blue. Redeclaring `Sofa/` after `SeatA/` therefore neither invalidates nor rewrites the existing reference.
 
 References must point to a namespace that has already been declared or instantiated. A reference to a namespace with local descendants materializes those descendants below the referring instance. By default, the referring instance is an unscaled anchor transform, so referenced templates preserve their authored local dimensions and the referring box establishes only the world-space origin and rotation for the cloned local subtree. Authors can opt into fit-to-box scaling with `ref-scale: true`; in that mode, the referring box scales the referenced local subtree on X/Y/Z so the prototype root dimensions fit the referring box. References to namespaces without local descendants keep the previous primitive-copy behavior: the referring instance renders its own box with the target namespace properties. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults. Boolean composition declarations also use declaration order within the nearest concrete namespace scope before falling back to world-space overlap, so a later subtraction or union can refine an earlier local solid and the composed result can then participate with other world-space objects.
 

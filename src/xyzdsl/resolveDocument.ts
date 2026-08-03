@@ -174,27 +174,51 @@ function namespacePrefixes(namespace: string[]): string[] {
   );
 }
 
-function firstInstanceByNamespace(
-  objects: SpatialObject[],
-): Map<string, SpatialObject> {
-  const instances = new Map<string, SpatialObject>();
+function latestNamedEntries(objects: SpatialObject[]): SpatialObject[] {
+  const latestByNamespaceAndKind = new Map<string, SpatialObject>();
 
   objects.forEach((object) => {
-    if (!object.declarationOnly && object.namespace.length > 0) {
-      const key = canonicalNamespacePath(object.namespace);
-      if (!instances.has(key)) {
-        instances.set(key, object);
-      }
+    if (object.namespace.length > 0) {
+      latestByNamespaceAndKind.set(
+        `${object.declarationOnly ? 'declaration' : 'instance'}:${canonicalNamespacePath(object.namespace)}`,
+        object,
+      );
     }
   });
 
-  return instances;
+  return objects.filter(
+    (object) =>
+      object.namespace.length === 0 ||
+      latestByNamespaceAndKind.get(
+        `${object.declarationOnly ? 'declaration' : 'instance'}:${canonicalNamespacePath(object.namespace)}`,
+      ) === object,
+  );
+}
+
+function latestEntryBefore(
+  objects: SpatialObject[],
+  namespacePath: string,
+  lineNumber: number,
+  predicate: (candidate: SpatialObject) => boolean = () => true,
+): SpatialObject | undefined {
+  for (let index = objects.length - 1; index >= 0; index -= 1) {
+    const candidate = objects[index];
+    if (
+      candidate.lineNumber < lineNumber &&
+      candidate.namespace.length > 0 &&
+      canonicalNamespacePath(candidate.namespace) === namespacePath &&
+      predicate(candidate)
+    ) {
+      return candidate;
+    }
+  }
+
+  return undefined;
 }
 
 function resolvePropertiesFor(
   object: SpatialObject,
-  namespaceDeclarations: Map<string, SpatialObject>,
-  namespaceInstances: Map<string, SpatialObject>,
+  sourceObjects: SpatialObject[],
   visitedRefs: string[] = [],
 ): { properties: ResolvedProperties; diagnostics: ParseDiagnostic[] } {
   let properties = { ...DEFAULT_PROPERTIES };
@@ -203,16 +227,28 @@ function resolvePropertiesFor(
   const fullNamespacePath = canonicalNamespacePath(object.namespace);
 
   namespacePrefixes(object.namespace).forEach((prefix) => {
-    const declaration = namespaceDeclarations.get(prefix);
-    if (declaration && declaration !== object) {
+    const declaration = latestEntryBefore(
+      sourceObjects,
+      prefix,
+      object.lineNumber,
+      (candidate) => candidate.declarationOnly,
+    );
+    if (declaration) {
       properties = mergeProperties(properties, declaration);
     }
 
-    const instance = namespaceInstances.get(prefix);
-    if (prefix !== fullNamespacePath && instance && instance !== object) {
-      properties = mergeProperties(properties, instance, {
-        includeTransform: false,
-      });
+    if (prefix !== fullNamespacePath) {
+      const ancestor = latestEntryBefore(
+        sourceObjects,
+        prefix,
+        object.lineNumber + 1,
+        (candidate) => !candidate.declarationOnly,
+      );
+      if (ancestor && ancestor !== object) {
+        properties = mergeProperties(properties, ancestor, {
+          includeTransform: false,
+        });
+      }
     }
   });
 
@@ -226,9 +262,11 @@ function resolvePropertiesFor(
         message: `Cyclic ref detected: ${[...visitedRefs, targetPath].join(' -> ')}`,
       });
     } else {
-      const target =
-        namespaceDeclarations.get(targetPath) ??
-        namespaceInstances.get(targetPath);
+      const target = latestEntryBefore(
+        sourceObjects,
+        targetPath,
+        object.lineNumber,
+      );
 
       if (!target) {
         diagnostics.push({
@@ -236,17 +274,10 @@ function resolvePropertiesFor(
           source: object.source,
           message: `Reference target "${targetPath}" was not found.`,
         });
-      } else if (target.lineNumber >= object.lineNumber) {
-        diagnostics.push({
-          line: object.lineNumber,
-          source: object.source,
-          message: `Reference target "${targetPath}" must be declared before it is referenced.`,
-        });
       } else {
         const resolvedTarget = resolvePropertiesFor(
           target,
-          namespaceDeclarations,
-          namespaceInstances,
+          sourceObjects,
           [...visitedRefs, targetPath],
         );
         diagnostics.push(...resolvedTarget.diagnostics);
@@ -401,29 +432,11 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
   diagnostics: ParseDiagnostic[];
 } {
   const diagnostics: ParseDiagnostic[] = [];
-  const namespaceDeclarations = new Map<string, SpatialObject>();
-  const namespaceInstances = firstInstanceByNamespace(objects);
-  const instances = objects.filter(
+  const effectiveObjects = latestNamedEntries(objects);
+  const instances = effectiveObjects.filter(
     (object) => !object.declarationOnly && object.box,
   );
-  const concreteNamespaces = concreteNamespaceSet(objects);
-
-  objects.forEach((object) => {
-    if (!object.declarationOnly) {
-      return;
-    }
-
-    const key = canonicalNamespacePath(object.namespace);
-    if (namespaceDeclarations.has(key)) {
-      diagnostics.push({
-        line: object.lineNumber,
-        source: object.source,
-        message: `Namespace "${key}" was already declared; using the latest declaration.`,
-      });
-    }
-
-    namespaceDeclarations.set(key, object);
-  });
+  const concreteNamespaces = concreteNamespaceSet(effectiveObjects);
 
   const resolveObject = (
     object: SpatialObject,
@@ -435,7 +448,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
     } = {},
   ): ResolvedSpatialObject => {
     const { properties, diagnostics: propertyDiagnostics } =
-      resolvePropertiesFor(object, namespaceDeclarations, namespaceInstances);
+      resolvePropertiesFor(object, objects);
     diagnostics.push(...propertyDiagnostics);
 
     const namespace = options.namespace ?? object.namespace;
@@ -489,8 +502,13 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
     const targetNamespace = object.reference.targetPath
       .split('/')
       .filter(Boolean);
-    const descendants = instances.filter(
+    const historicalEntries = latestNamedEntries(
+      objects.filter((candidate) => candidate.lineNumber < object.lineNumber),
+    );
+    const descendants = historicalEntries.filter(
       (candidate) =>
+        !candidate.declarationOnly &&
+        candidate.box &&
         candidate !== object &&
         candidate.namespace.length > targetNamespace.length &&
         namespaceStartsWith(candidate.namespace, targetNamespace),
@@ -509,7 +527,11 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
       );
     }
 
-    const target = namespaceInstances.get(object.reference.targetPath);
+    const target = latestEntryBefore(
+      objects,
+      object.reference.targetPath,
+      object.lineNumber,
+    );
     const anchorScale = object.reference.scale
       ? scaleToFit(
           target?.box
@@ -573,7 +595,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
       hasConcreteAncestorInstance(object, materializedConcreteNamespaces),
   );
   const referencedTargetNamespaces = new Set(
-    objects
+    effectiveObjects
       .map((object) => object.reference.targetPath)
       .filter(Boolean) as string[],
   );
