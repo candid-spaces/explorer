@@ -24,8 +24,8 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
       createSpatialDocument(`"Table/+3+8/+0+5/+4+8" : "rotation: 0,90,0; color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""`);
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+7+1" : "geometry: cylinder"`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes).toHaveLength(3);
@@ -41,7 +41,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes[2].transform.position[2]).toBeCloseTo(-3.5);
   });
 
-  it('does not leak local overrides between sibling instances in the same namespace', () => {
+  it('uses only the newest concrete entry in a namespace', () => {
     const document =
       createSpatialDocument(`"Table/+0+4/+0+4/+0+4" : "color: grey"
 "Table/Leg/" : "geometry: cylinder"
@@ -49,8 +49,9 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
 "Table/Leg/+2+1/+0+1/+0+1" : ""`);
 
     expect(document.diagnostics).toEqual([]);
-    expect(document.renderNodes[0].material.color).toBe('red');
-    expect(document.renderNodes[1].material.color).toBe('grey');
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].material.color).toBe('grey');
+    expect(document.renderNodes[0].box.source).toBe('+2+1/+0+1/+0+1');
   });
 
   it('resolves refs against prior named objects and applies the local instance box', () => {
@@ -258,11 +259,10 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     const document =
       createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
-"Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegC/+0+1/+0+5/+7+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 "+19+4/+0+6/+7+3" : "ref: Table/"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -276,7 +276,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     );
     const firstLeg = document.renderNodes.find(
       (node) =>
-        node.namespacePath?.endsWith('/Leg/') &&
+        node.namespacePath?.endsWith('/LegA/') &&
         node.box.source === '+0+1/+0+5/+0+1',
     );
 
@@ -285,7 +285,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(container?.metadata?.anchorScale).toBeUndefined();
     expect(top?.namespacePath).toBe('Ref6/Top/');
     expect(top?.transform.position).toEqual([23, 4.5, 11]);
-    expect(firstLeg?.namespacePath).toBe('Ref6/Leg/');
+    expect(firstLeg?.namespacePath).toBe('Ref6/LegA/');
     expect(firstLeg?.geometry.kind).toBe('cylinder');
     expect(firstLeg?.transform.position).toEqual([19.5, 2.5, 7.5]);
     expect(document.renderNodes.some((node) => node.box.source === '+19+4/+0+6/+7+3')).toBe(false);
@@ -296,11 +296,10 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
       createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
 "Ref7/+0+1/+0+1/+0+1" : "color: red"
 "Table/Top/+0+8/+4+1/+0+8" : ""
-"Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegC/+0+1/+0+5/+7+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 "+19+4/+0+6/+7+3" : "ref: Table/"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -316,7 +315,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     );
     const firstLeg = document.renderNodes.find(
       (node) =>
-        node.namespacePath === 'Ref8/Leg/' &&
+        node.namespacePath === 'Ref8/LegA/' &&
         node.box.source === '+0+1/+0+5/+0+1',
     );
 
@@ -331,11 +330,10 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     const document =
       createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
-"Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegC/+0+1/+0+5/+7+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 "+19+4/+0+6/+7+3" : "ref: Table/; ref-scale: true"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -349,7 +347,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     );
     const firstLeg = document.renderNodes.find(
       (node) =>
-        node.namespacePath?.endsWith('/Leg/') &&
+        node.namespacePath?.endsWith('/LegA/') &&
         node.box.source === '+0+1/+0+5/+0+1',
     );
 
@@ -375,6 +373,91 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes[1].namespacePath).toBe('SeatB/Base/');
     expect(document.renderNodes[0].transform.position).toEqual([3, 0.2, 1.5]);
     expect(document.renderNodes[1].transform.position).toEqual([13, 0.2, 1.5]);
+  });
+
+  it('uses the newest declaration-only entry for inherited properties', () => {
+    const document = createSpatialDocument(`"Sofa/" : "color: brown"
+"Sofa/" : "color: blue"
+"Sofa/+0+4/+0+2/+0+3" : ""`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].material.color).toBe('blue');
+  });
+
+  it('does not merge omitted properties from a replaced declaration into refs', () => {
+    const document = createSpatialDocument(`"Sofa/" : "roughness: 0.2; geometry: sphere"
+"Sofa/" : "color: blue"
+"Seat/+0+4/+0+2/+0+3" : "ref: Sofa/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].material.color).toBe('blue');
+    expect(document.renderNodes[0].material.roughness).toBeUndefined();
+    expect(document.renderNodes[0].geometry.kind).toBe('box');
+  });
+
+  it('overwrites entries independently at nested namespace paths', () => {
+    const document = createSpatialDocument(`"Room/+0+1/+0+1/+0+1" : ""
+"Room/Chair/+0+2/+0+2/+0+2" : "color: red"
+"Room/Chair/+4+2/+0+2/+0+2" : "color: green"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].namespacePath).toBe('Room/Chair/');
+    expect(document.renderNodes[0].box.source).toBe('+4+2/+0+2/+0+2');
+    expect(document.renderNodes[0].material.color).toBe('green');
+  });
+
+  it('binds refs to the newest target available at the reference line', () => {
+    const document = createSpatialDocument(`"Sofa/" : "color: brown"
+"SeatA/+0+4/+0+2/+0+3" : "ref: Sofa/"
+"Sofa/" : "color: blue"
+"SeatB/+5+4/+0+2/+0+3" : "ref: Sofa/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes.find((node) => node.namespacePath === 'SeatA/')?.material.color).toBe('brown');
+    expect(document.renderNodes.find((node) => node.namespacePath === 'SeatB/')?.material.color).toBe('blue');
+  });
+
+  it('distinguishes historical namespace versions while resolving ref chains', () => {
+    const document = createSpatialDocument(`"A/+0+1/+0+1/+0+1" : "roughness: 0.25"
+"B/" : "ref: A/; color: green"
+"A/" : "ref: B/; metalness: 0.75"
+"X/+2+1/+0+1/+0+1" : "ref: A/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    const instance = document.renderNodes.find(
+      (node) => node.namespacePath === 'X/',
+    );
+    expect(instance?.material.color).toBe('green');
+    expect(instance?.material.roughness).toBe(0.25);
+    expect(instance?.material.metalness).toBe(0.75);
+  });
+
+  it('snapshots overwritten compound descendants for existing refs', () => {
+    const document = createSpatialDocument(`"Sofa/" : "color: brown"
+"Sofa/Cushion/+0+2/+0+1/+0+2" : "color: tan"
+"SeatA/+0+4/+0+2/+0+3" : "ref: Sofa/"
+"Sofa/Cushion/+3+2/+0+1/+0+2" : "color: blue"
+"SeatB/+6+4/+0+2/+0+3" : "ref: Sofa/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    const first = document.renderNodes.find((node) => node.namespacePath === 'SeatA/Cushion/');
+    const second = document.renderNodes.find((node) => node.namespacePath === 'SeatB/Cushion/');
+    expect(first?.box.source).toBe('+0+2/+0+1/+0+2');
+    expect(first?.material.color).toBe('tan');
+    expect(second?.box.source).toBe('+3+2/+0+1/+0+2');
+    expect(second?.material.color).toBe('blue');
+  });
+
+  it('keeps anonymous declarations independent', () => {
+    const document = createSpatialDocument(`"+0+1/+0+1/+0+1" : "color: red"
+"+0+1/+0+1/+0+1" : "color: blue"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(2);
+    expect(document.renderNodes.map((node) => node.material.color)).toEqual(['red', 'blue']);
   });
 
   it('allows puff-only child geometry declarations without dropping inherited box-radius', () => {
