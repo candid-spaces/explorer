@@ -209,10 +209,10 @@ export function transactionsToXyzDslSource(
 }
 
 /**
- * Maps the newest primary-key transaction observed on a secondary chain into
- * the declaration rendered as that chain's scene cursor.
+ * Maps the newest primary-key transaction observed on the shared secondary
+ * node into the declaration used as the canonical scene-editor input.
  */
-export function transactionToXyzDslCursorSource(transaction: XyzDslTransaction | undefined, publicKey: string): string {
+export function transactionToXyzDslSceneInputSource(transaction: XyzDslTransaction | undefined, publicKey: string): string {
   if (!transaction || !publicKey.trim()) {
     return '';
   }

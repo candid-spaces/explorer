@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { composeTransactionSources } from './composeTransactionSources';
+import { composeCanonicalAuthoringSource, composeTransactionSources } from './composeTransactionSources';
+
+describe('composeCanonicalAuthoringSource', () => {
+  it('places scene modifications after historical declarations', () => {
+    expect(composeCanonicalAuthoringSource(
+      '"Chair/" : "color: red"',
+      '"Chair/" : "color: blue"',
+    )).toBe('"Chair/" : "color: red"\n"Chair/" : "color: blue"');
+  });
+
+  it('accepts scene-input namespace declarations without a consumer filter', () => {
+    expect(composeCanonicalAuthoringSource('', '"Lamp/" : "color: yellow"'))
+      .toBe('"Lamp/" : "color: yellow"');
+  });
+});
 
 describe('composeTransactionSources', () => {
   const primary = '"Table/" : "color: white"\n"Table/+0+1/+0+1/+0+1" : ""';

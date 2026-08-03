@@ -18,14 +18,14 @@ function describeAuthoringState(
   }
 
   if (remoteBaselineChanged && hasAuthoringEdits) {
-    return 'Remote declarations changed after local edits. Keep editing, or reset to the latest remote state.';
+    return 'Remote declarations or primary scene input changed after local edits. Keep editing, or reset to the latest input state.';
   }
 
   if (hasAuthoringEdits) {
-    return 'Local draft differs from the loaded remote declarations. Edit, remove, or add declarations below.';
+    return 'Local draft differs from the loaded canonical scene input. Edit, remove, or add declarations below.';
   }
 
-  return 'Loaded from remote transactions. Edit, remove, or add declarations below.';
+  return 'Loaded from remote transactions and the primary scene input. Edit, remove, or add declarations below.';
 }
 
 function summarizeChanges({ added, removed }: { added: number; removed: number }): string {
@@ -206,7 +206,7 @@ export function XyzDslDrawer({
           <XyzDslEditor
             actions={
               <button type="button" disabled={!hasRemoteBaseline || !hasAuthoringEdits} onClick={onResetToRemote}>
-                Reset to remote
+                Reset to scene input
               </button>
             }
             description={describeAuthoringState(hasRemoteBaseline, hasAuthoringEdits, remoteBaselineChanged)}
@@ -223,10 +223,10 @@ export function XyzDslDrawer({
 
           {mappedTransactionSource.trim().length > 0 ? (
             <details className="remote-baseline-reference">
-              <summary>Original remote declarations</summary>
+              <summary>Canonical remote scene input</summary>
               <label className="xyzdsl-editor xyzdsl-editor-readonly">
                 <span>Mapped spatial declarations</span>
-                <small>Current remote baseline used for reset.</small>
+                <small>Primary history plus declarations observed on the shared secondary node; used for reset.</small>
                 <textarea spellCheck={false} value={mappedTransactionSource} wrap="off" readOnly />
               </label>
             </details>

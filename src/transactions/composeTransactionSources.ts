@@ -18,6 +18,19 @@ export interface ComposeTransactionSourcesOptions {
   namespacePolicy?: TransactionSourceNamespacePolicy;
 }
 
+/**
+ * Builds the editable remote baseline. Scene input is deliberately appended so
+ * normal XYZDSL declaration ordering gives it modification/overwrite semantics.
+ */
+export function composeCanonicalAuthoringSource(
+  primaryHistoricalSource: string,
+  primarySceneInputSource: string,
+): string {
+  return [primaryHistoricalSource, primarySceneInputSource]
+    .filter((source) => source.trim().length > 0)
+    .join('\n');
+}
+
 function declarationSources(declarations: readonly SecondaryTransactionSourceDeclaration[] | string): string[] {
   if (typeof declarations === 'string') {
     return declarations
