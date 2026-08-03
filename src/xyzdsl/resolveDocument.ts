@@ -227,12 +227,15 @@ function resolvePropertiesFor(
   const fullNamespacePath = canonicalNamespacePath(object.namespace);
 
   namespacePrefixes(object.namespace).forEach((prefix) => {
-    const declaration = latestEntryBefore(
-      sourceObjects,
-      prefix,
-      object.lineNumber,
-      (candidate) => candidate.declarationOnly,
-    );
+    const declaration =
+      prefix === fullNamespacePath && object.declarationOnly
+        ? undefined
+        : latestEntryBefore(
+            sourceObjects,
+            prefix,
+            object.lineNumber,
+            (candidate) => candidate.declarationOnly,
+          );
     if (declaration) {
       properties = mergeProperties(properties, declaration);
     }

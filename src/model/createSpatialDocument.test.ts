@@ -385,6 +385,18 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes[0].material.color).toBe('blue');
   });
 
+  it('does not merge omitted properties from a replaced declaration into refs', () => {
+    const document = createSpatialDocument(`"Sofa/" : "roughness: 0.2; geometry: sphere"
+"Sofa/" : "color: blue"
+"Seat/+0+4/+0+2/+0+3" : "ref: Sofa/"`);
+
+    expect(document.diagnostics).toEqual([]);
+    expect(document.renderNodes).toHaveLength(1);
+    expect(document.renderNodes[0].material.color).toBe('blue');
+    expect(document.renderNodes[0].material.roughness).toBeUndefined();
+    expect(document.renderNodes[0].geometry.kind).toBe('box');
+  });
+
   it('overwrites entries independently at nested namespace paths', () => {
     const document = createSpatialDocument(`"Room/+0+1/+0+1/+0+1" : ""
 "Room/Chair/+0+2/+0+2/+0+2" : "color: red"
