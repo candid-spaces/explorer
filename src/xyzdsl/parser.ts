@@ -4,11 +4,6 @@ import { canonicalNamespacePath, parseXyzDslPath, parsePathAxisSpec, parsePathBo
 
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
 
-function namespaceReplacementKey(object: SpatialObject): string {
-  const declarationKind = object.declarationOnly ? 'declaration' : 'positioned';
-  return `${declarationKind}:${canonicalNamespacePath(object.namespace)}`;
-}
-
 export function parseCompactNumber(raw: string): number {
   return parsePathNumber(raw);
 }
@@ -89,11 +84,11 @@ export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]
       }
     });
 
-  const newestObjectByNamespaceAndKind = new Map<string, SpatialObject>();
+  const newestObjectByNamespace = new Map<string, SpatialObject>();
 
   objects.forEach((object) => {
     if (object.namespace.length > 0) {
-      newestObjectByNamespaceAndKind.set(namespaceReplacementKey(object), object);
+      newestObjectByNamespace.set(canonicalNamespacePath(object.namespace), object);
     }
   });
 
@@ -102,7 +97,7 @@ export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]
       return true;
     }
 
-    return newestObjectByNamespaceAndKind.get(namespaceReplacementKey(object)) === object;
+    return newestObjectByNamespace.get(canonicalNamespacePath(object.namespace)) === object;
   });
 
   return {

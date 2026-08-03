@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { composeTransactionSources } from './composeTransactionSources';
 
 describe('composeTransactionSources', () => {
-  const primary = '"Table/" : "color: white"\n"Table/+0+1/+0+1/+0+1" : ""';
+  const primary = '"Table/" : "color: white"\n"Table/Root/+0+1/+0+1/+0+1" : ""';
 
   it('keeps primary XYZDSL first so secondary primitive instances can reference base objects', () => {
     const result = composeTransactionSources(primary, [

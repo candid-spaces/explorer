@@ -114,16 +114,16 @@ describe('parseXyzDslDocument', () => {
     expect(result.value?.[1].material.color).toBe('blue');
   });
 
-  it('keeps namespace defaults alongside the newest positioned declaration', () => {
+  it('lets a named declaration with coordinates replace a namespace declaration at the same path', () => {
     const result = parseXyzDslDocument(`"Table/Leg/" : "geometry: cylinder"
 "Table/Leg/+7+1/+0+5/+7+1" : "color: brown"`);
 
     expect(result.ok).toBe(true);
-    expect(result.value).toHaveLength(2);
-    expect(result.value?.[0].declarationOnly).toBe(true);
-    expect(result.value?.[0].geometry.kind).toBe('cylinder');
-    expect(result.value?.[1].box?.x).toBe(7);
-    expect(result.value?.[1].material.color).toBe('brown');
+    expect(result.value).toHaveLength(1);
+    expect(result.value?.[0].declarationOnly).toBe(false);
+    expect(result.value?.[0].box?.x).toBe(7);
+    expect(result.value?.[0].geometry.kind).toBe('box');
+    expect(result.value?.[0].material.color).toBe('brown');
   });
 
   it('keeps only the newest namespace-only declaration at a path', () => {

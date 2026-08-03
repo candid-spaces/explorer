@@ -7,7 +7,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
       createSpatialDocument(`"Table/+3+8/+0+5/+0+8" : "color: 0x333333; metalness: 0.8; roughness: 0.2"
 "Table/Top/+1+6/+0+5/+0+6" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+1+2/+0+7/+0+1" : ""`);
+"Table/Leg/Front/+1+2/+0+7/+0+1" : ""`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.nodes).toHaveLength(1);
@@ -65,10 +65,9 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes[1].transform.position).toEqual([5.5, 1.5, 7.5]);
   });
 
-  it('inherits content through namespace declarations and refs', () => {
+  it('inherits content through named parents and refs', () => {
     const document =
-      createSpatialDocument(`"Poster/" : "content-kind: text; content-text-uri: Sale"
-"Poster/+0+4/+0+2/+0+1" : ""
+      createSpatialDocument(`"Poster/+0+4/+0+2/+0+1" : "content-kind: text; content-text-uri: Sale"
 "Copy/+6+4/+0+2/+0+1" : "ref: Poster/"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -102,10 +101,9 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     ).toBe('Sold');
   });
 
-  it('inherits box-radius through namespaces and refs', () => {
+  it('inherits box-radius through named parents and refs', () => {
     const document =
-      createSpatialDocument(`"Cabinet/" : "box-radius: 0.2; color: orange"
-"Cabinet/+0+4/+0+2/+0+3" : ""
+      createSpatialDocument(`"Cabinet/+0+4/+0+2/+0+3" : "box-radius: 0.2; color: orange"
 "Copy/+6+4/+0+2/+0+3" : "ref: Cabinet/"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -128,11 +126,16 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
 
   it('keeps unanchored nested coordinates definition-only while refs inherit texture properties', () => {
     const document =
-      createSpatialDocument(`"Sofa/Cushion/" : "color: 0xf5f3ef; material-preset: upholstery.fabric; bump-texture-strength: 2; puff: 5"
-"Sofa/Cushion/+0+4/+0+1/+0+3" : "roughness: 0.92"
-"Copy/+6+4/+0+1/+0+3" : "ref: Sofa/Cushion/; bump-texture-strength: 1"`);
+      createSpatialDocument(`"Sofa/Cushion/+0+4/+0+1/+0+3" : "color: 0xf5f3ef; material-preset: upholstery.fabric; bump-texture-strength: 2; puff: 5"
+"Sofa/Cushion/Base/+0+4/+0+1/+0+3" : "roughness: 0.92"
+"Copy/+6+4/+0+1/+0+3" : "ref: Sofa/Cushion/Base/; bump-texture-strength: 1"`);
 
-    expect(document.diagnostics).toEqual([]);
+    expect(document.diagnostics).toEqual([
+      expect.objectContaining({
+        line: 1,
+        message: expect.stringContaining('has no concrete ancestor namespace anchor'),
+      }),
+    ]);
     expect(document.renderNodes).toHaveLength(1);
 
     const definition = document.nodes.find(
@@ -151,14 +154,14 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
   });
 
   it('inherits generic texture descriptors through namespaces and refs with local overrides', () => {
-    const document = createSpatialDocument(`"FabricThing/" : "material-preset: upholstery.fabric; texture: fabric.weave; texture-repeat: 4 5; bump-texture-strength: 4"
-"FabricThing/+0+4/+0+1/+0+3" : ""
-"Copy/+6+4/+0+1/+0+3" : "ref: FabricThing/; texture-src: /textures/custom.png; texture-repeat: 1 1"`);
+    const document = createSpatialDocument(`"FabricThing/+0+4/+0+1/+0+3" : "material-preset: upholstery.fabric; texture: fabric.weave; texture-repeat: 4 5; bump-texture-strength: 4"
+"FabricThing/Base/+0+4/+0+1/+0+3" : ""
+"Copy/+6+4/+0+1/+0+3" : "ref: FabricThing/Base/; texture-src: /textures/custom.png; texture-repeat: 1 1"`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes).toHaveLength(2);
 
-    const base = document.renderNodes.find((node) => node.namespacePath === 'FabricThing/');
+    const base = document.renderNodes.find((node) => node.namespacePath === 'FabricThing/Base/');
     const copy = document.renderNodes.find((node) => node.namespacePath === 'Copy/');
 
     expect(base?.material.materialPreset).toBe('upholstery.fabric');
@@ -379,8 +382,8 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
 
   it('allows puff-only child geometry declarations without dropping inherited box-radius', () => {
     const document =
-      createSpatialDocument(`"Cushion/" : "box-radius: 0.1; puff: 2"
-"Cushion/+0+4/+0+1/+0+3" : "puff: 5"`);
+      createSpatialDocument(`"Cushion/+0+4/+0+1/+0+3" : "box-radius: 0.1; puff: 2"
+"Cushion/Body/+0+4/+0+1/+0+3" : "puff: 5"`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes).toHaveLength(1);
