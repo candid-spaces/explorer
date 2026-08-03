@@ -10,7 +10,7 @@ import type { XyzDslTransaction, PrimaryHistoricalBaselineXyzDsl, RejectedTransa
 const TRAILING_FILLER_PATTERN = /\/[0=]+$/;
 const TERMINAL_AXIS_SIZE_FILLER_PATTERN = /(?<prefix>\+\d+\+)(?<size>[1-9]\d*?)0*=$/;
 const MAX_MEMO_PREVIEW_LENGTH = 120;
-export const DEFAULT_SECONDARY_TRANSACTION_ENDPOINT = 'wss://ungallant-unimpeding-kade.ngrok-free.dev/000006913ccf73b5990eb4833e4cdbd5ef58061384481ff1f6cee3cb7f18b2cd';
+export const DEFAULT_SIMULATION_TRANSACTION_ENDPOINT = 'wss://ungallant-unimpeding-kade.ngrok-free.dev/000006913ccf73b5990eb4833e4cdbd5ef58061384481ff1f6cee3cb7f18b2cd';
 
 function transactionFallbackId(transaction: XyzDslTransaction, index: number): string {
   return [transaction.time, trimTransactionPathFiller(transaction.to), transaction.series ?? 'none', index].join(':');
@@ -209,10 +209,10 @@ export function transactionsToXyzDslSource(
 }
 
 /**
- * Maps the newest primary-key transaction observed on a secondary chain into
- * the declaration rendered as that chain's scene cursor.
+ * Maps the newest primary-key transaction observed on the simulation node into
+ * the canonical remote spatial-document input modifier.
  */
-export function transactionToXyzDslCursorSource(transaction: XyzDslTransaction | undefined, publicKey: string): string {
+export function transactionToRemoteSpatialDocumentInput(transaction: XyzDslTransaction | undefined, publicKey: string): string {
   if (!transaction || !publicKey.trim()) {
     return '';
   }

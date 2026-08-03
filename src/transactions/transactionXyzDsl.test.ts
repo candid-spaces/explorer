@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizeXyzDslTransaction,
   normalizeXyzDslTransactions,
-  transactionToXyzDslCursorSource,
+  transactionToRemoteSpatialDocumentInput,
   transactionsToXyzDslSource,
   trimTransactionMemoFiller,
   trimTransactionPathFiller,
@@ -21,14 +21,14 @@ function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from
 }
 
 describe('transactionsToXyzDslSource', () => {
-  it('maps the current originating-key transaction into a secondary-chain cursor declaration', () => {
-    const cursor = transactionToXyzDslCursorSource(
+  it('maps the current primary-key transaction into a remote document input declaration', () => {
+    const remoteInput = transactionToRemoteSpatialDocumentInput(
       transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'originating-key'),
       'originating-key',
     );
 
-    expect(cursor).toBe('"+4+1/+2+1/+0+1" : "color: cyan"');
-    expect(transactionToXyzDslCursorSource(
+    expect(remoteInput).toBe('"+4+1/+2+1/+0+1" : "color: cyan"');
+    expect(transactionToRemoteSpatialDocumentInput(
       transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'another-key'),
       'originating-key',
     )).toBe('');

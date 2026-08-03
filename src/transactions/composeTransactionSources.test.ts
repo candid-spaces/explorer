@@ -37,6 +37,16 @@ describe('composeTransactionSources', () => {
     expect(result).toBe(`${primary}\n"Table/Leaf/+0+1/+0+1/+0+1" : "color: green"`);
   });
 
+  it('treats a remote document modifier as part of the canonical primary input', () => {
+    const remoteModifier = '"Table/" : "color: red"';
+    const canonicalInput = `${primary}\n${remoteModifier}`;
+    const result = composeTransactionSources(canonicalInput, [
+      { declarations: '"Table/Leaf/+0+1/+0+1/+0+1" : ""' },
+    ]);
+
+    expect(result).toBe(`${canonicalInput}\n"Table/Leaf/+0+1/+0+1/+0+1" : ""`);
+  });
+
   it('keeps unnamespaced secondary primitive instances', () => {
     const result = composeTransactionSources(primary, [
       { declarations: '"+2+1/+0+1/+0+1" : "color: purple"' },

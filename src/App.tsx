@@ -15,9 +15,9 @@ import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { composeTransactionSources } from './transactions/composeTransactionSources';
-import { DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, normalizeXyzDslTransaction, normalizeXyzDslTransactions, transactionToXyzDslCursorSource, transactionsToXyzDslSource } from './transactions/transactionXyzDsl';
+import { DEFAULT_SIMULATION_TRANSACTION_ENDPOINT, normalizeXyzDslTransaction, normalizeXyzDslTransactions, transactionToRemoteSpatialDocumentInput, transactionsToXyzDslSource } from './transactions/transactionXyzDsl';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
-import type { ActiveSecondaryTransactionStream, OriginatingPrimaryCursor, XyzDslTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
+import type { ActiveSecondaryTransactionStream, RemoteSpatialDocumentInput, XyzDslTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
 import { useRealtimePublicKeyTransactions } from './transactions/useRealtimePublicKeyTransactions';
 import { XyzDslDrawer } from './ui/XyzDslDrawer';
@@ -57,7 +57,6 @@ interface ActiveSecondaryTransactions {
   historyLoading?: boolean;
   playbackStartedAtMs?: number;
   playbackBaseTransactionTime?: number;
-  originatingCursor?: OriginatingPrimaryCursor;
 }
 
 interface LineChangeSummary {
@@ -109,7 +108,6 @@ function referencesBySecondaryProjection(references: readonly SecondaryKeyRefere
 function normalizeActiveSecondaryStream(
   stream: ActiveSecondaryTransactions | undefined,
   reference: SecondaryKeyReference,
-  originatingPublicKey = '',
 ): ActiveSecondaryTransactions {
   const transactions = outgoingTransactionsForPublicKey(
     normalizeXyzDslTransactions(stream?.transactions ?? []),
@@ -129,14 +127,6 @@ function normalizeActiveSecondaryStream(
     historyLoading: stream?.historyLoading,
     playbackStartedAtMs: stream?.playbackStartedAtMs,
     playbackBaseTransactionTime: stream?.playbackBaseTransactionTime,
-    originatingCursor: stream?.originatingCursor?.publicKey === originatingPublicKey
-      ? stream.originatingCursor
-      : {
-        publicKey: originatingPublicKey,
-        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
-        transactions: [],
-        realtimeStatus: 'connecting',
-      },
   };
 }
 
@@ -180,7 +170,7 @@ function SecondaryRealtimeSubscription({
   onStatusChange,
 }: SecondaryRealtimeSubscriptionProps) {
   useRealtimePublicKeyTransactions({
-    endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+    endpoint: DEFAULT_SIMULATION_TRANSACTION_ENDPOINT,
     publicKey: reference.publicKey,
     onTransaction: (transaction) => onTransaction(reference, transaction),
     onError: (error) => onError(reference, error),
@@ -190,22 +180,22 @@ function SecondaryRealtimeSubscription({
   return null;
 }
 
-interface OriginatingCursorRealtimeSubscriptionProps {
+interface RemoteDocumentInputRealtimeSubscriptionProps {
   publicKey: string;
   onTransaction: (transaction: XyzDslTransaction) => void;
   onError: (error: Error) => void;
   onStatusChange: (status: SecondaryRealtimeStatus) => void;
 }
 
-/** Subscribes once to the primary cursor on the shared secondary overlay node. */
-function OriginatingCursorRealtimeSubscription({
+/** Subscribes to the canonical remote document input on the simulation node. */
+function RemoteDocumentInputRealtimeSubscription({
   publicKey,
   onTransaction,
   onError,
   onStatusChange,
-}: OriginatingCursorRealtimeSubscriptionProps) {
+}: RemoteDocumentInputRealtimeSubscriptionProps) {
   useRealtimePublicKeyTransactions({
-    endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+    endpoint: DEFAULT_SIMULATION_TRANSACTION_ENDPOINT,
     publicKey,
     onTransaction,
     onError,
@@ -253,9 +243,24 @@ export default function App() {
   const [tipLoading, setTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | undefined>();
   const [activeSecondaryTransactions, setActiveSecondaryTransactions] = usePersistentState<Record<string, ActiveSecondaryTransactions>>('xyzdsl-active-secondary-transaction-streams', {});
+  const [remoteDocumentInput, setRemoteDocumentInput] = useState<RemoteSpatialDocumentInput>({
+    publicKey: transactionPublicKey.trim(),
+    endpoint: DEFAULT_SIMULATION_TRANSACTION_ENDPOINT,
+    transactions: [],
+    realtimeStatus: 'connecting',
+  });
   const [secondaryTransactionError, setSecondaryTransactionError] = useState<string | undefined>();
   const [primaryRealtimeError, setPrimaryRealtimeError] = useState<string | undefined>();
   const [primaryInventoryRefreshKey, setPrimaryInventoryRefreshKey] = useState(0);
+
+  useEffect(() => {
+    setRemoteDocumentInput({
+      publicKey: transactionPublicKey.trim(),
+      endpoint: DEFAULT_SIMULATION_TRANSACTION_ENDPOINT,
+      transactions: [],
+      realtimeStatus: 'connecting',
+    });
+  }, [transactionPublicKey]);
 
   useEffect(() => {
     setActiveSecondaryTransactions((streams) => {
@@ -367,7 +372,7 @@ export default function App() {
     const streamKey = streamKeyForSecondaryReference(reference);
 
     setActiveSecondaryTransactions((streams) => {
-      const current = normalizeActiveSecondaryStream(streams[streamKey], reference, transactionPublicKey.trim());
+      const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
       const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(current.transactions, [transaction]));
 
       return {
@@ -381,42 +386,32 @@ export default function App() {
         },
       };
     });
-  }, [setActiveSecondaryTransactions, transactionPublicKey]);
+  }, [setActiveSecondaryTransactions]);
 
-  const handleOriginatingCursorTransaction = useCallback((transaction: XyzDslTransaction) => {
+  const handleRemoteDocumentInputTransaction = useCallback((transaction: XyzDslTransaction) => {
     const publicKey = transactionPublicKey.trim();
 
     if (!publicKey || transaction.from !== publicKey) {
       return;
     }
 
-    setActiveSecondaryTransactions((streams) => {
-      return Object.fromEntries(Object.entries(streams).map(([streamKey, stream]) => {
-        const cursor = stream.originatingCursor;
+    setRemoteDocumentInput((input) => input.publicKey === publicKey ? {
+      ...input,
+      transactions: sortTransactionsByTimeStable(mergeStreamTransactions(input.transactions, [normalizeXyzDslTransaction(transaction)])),
+      streamError: undefined,
+    } : input);
+  }, [transactionPublicKey]);
 
-        if (!cursor || cursor.publicKey !== publicKey) {
-          return [streamKey, stream];
-        }
+  const handleRemoteDocumentInputStatusChange = useCallback((realtimeStatus: SecondaryRealtimeStatus) => {
+    setRemoteDocumentInput((input) => ({
+      ...input,
+      realtimeStatus,
+      streamError: realtimeStatus === 'connected' ? undefined : input.streamError,
+    }));
+  }, []);
 
-        const transactions = sortTransactionsByTimeStable(mergeStreamTransactions(cursor.transactions, [normalizeXyzDslTransaction(transaction)]));
-        return [streamKey, { ...stream, originatingCursor: { ...cursor, transactions, streamError: undefined } }];
-      }));
-    });
-  }, [setActiveSecondaryTransactions, transactionPublicKey]);
-
-  const handleOriginatingCursorStatusChange = useCallback((realtimeStatus: SecondaryRealtimeStatus) => {
-    setActiveSecondaryTransactions((streams) => Object.fromEntries(Object.entries(streams).map(([streamKey, stream]) => [streamKey, {
-      ...stream,
-      originatingCursor: stream.originatingCursor && {
-        ...stream.originatingCursor,
-        realtimeStatus,
-        streamError: realtimeStatus === 'connected' ? undefined : stream.originatingCursor.streamError,
-      },
-    }])));
-  }, [setActiveSecondaryTransactions]);
-
-  const handleOriginatingCursorError = useCallback((error: Error) => {
-    setSecondaryTransactionError(error.message);
+  const handleRemoteDocumentInputError = useCallback((error: Error) => {
+    setRemoteDocumentInput((input) => ({ ...input, realtimeStatus: 'error', streamError: error.message }));
   }, []);
 
   const handleSecondaryRealtimeStatusChange = useCallback((
@@ -426,7 +421,7 @@ export default function App() {
     const streamKey = streamKeyForSecondaryReference(reference);
 
     setActiveSecondaryTransactions((streams) => {
-      const current = normalizeActiveSecondaryStream(streams[streamKey], reference, transactionPublicKey.trim());
+      const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
 
       return {
         ...streams,
@@ -434,21 +429,16 @@ export default function App() {
           ...current,
           realtimeStatus,
           streamError: realtimeStatus === 'connected' ? undefined : current.streamError,
-          originatingCursor: current.originatingCursor && {
-            ...current.originatingCursor,
-            realtimeStatus,
-            streamError: realtimeStatus === 'connected' ? undefined : current.originatingCursor.streamError,
-          },
         },
       };
     });
-  }, [setActiveSecondaryTransactions, transactionPublicKey]);
+  }, [setActiveSecondaryTransactions]);
 
   const handleSecondaryRealtimeError = useCallback((reference: SecondaryKeyReference, error: Error) => {
     const streamKey = streamKeyForSecondaryReference(reference);
     setSecondaryTransactionError(error.message);
     setActiveSecondaryTransactions((streams) => {
-      const current = normalizeActiveSecondaryStream(streams[streamKey], reference, transactionPublicKey.trim());
+      const current = normalizeActiveSecondaryStream(streams[streamKey], reference);
 
       return {
         ...streams,
@@ -456,20 +446,15 @@ export default function App() {
           ...current,
           realtimeStatus: 'error',
           streamError: error.message,
-          originatingCursor: current.originatingCursor && {
-            ...current.originatingCursor,
-            realtimeStatus: 'error',
-            streamError: error.message,
-          },
         },
       };
     });
-  }, [setActiveSecondaryTransactions, transactionPublicKey]);
+  }, [setActiveSecondaryTransactions]);
 
   useEffect(() => {
-    const endpointError = endpointValidationError(DEFAULT_SECONDARY_TRANSACTION_ENDPOINT);
+    const endpointError = endpointValidationError(DEFAULT_SIMULATION_TRANSACTION_ENDPOINT);
     setSecondaryTransactionError(endpointError
-      ? `Invalid shared secondary endpoint: ${endpointError}`
+      ? `Invalid simulation node endpoint: ${endpointError}`
       : undefined);
 
     if (secondaryKeyReferences.length === 0) {
@@ -484,7 +469,7 @@ export default function App() {
       secondaryKeyReferences.forEach((reference) => {
         const streamKey = streamKeyForSecondaryReference(reference);
         const validationError = endpointError;
-        const current = normalizeActiveSecondaryStream(nextStreams[streamKey], reference, transactionPublicKey.trim());
+        const current = normalizeActiveSecondaryStream(nextStreams[streamKey], reference);
 
         nextStreams[streamKey] = validationError
           ? { ...current, realtimeStatus: 'error', streamError: validationError }
@@ -493,9 +478,10 @@ export default function App() {
 
       return nextStreams;
     });
-  }, [secondaryKeyReferences, setActiveSecondaryTransactions, transactionPublicKey]);
+  }, [secondaryKeyReferences, setActiveSecondaryTransactions]);
 
-  const validSecondaryKeyReferences = endpointValidationError(DEFAULT_SECONDARY_TRANSACTION_ENDPOINT) === undefined
+  const simulationEndpointIsValid = endpointValidationError(DEFAULT_SIMULATION_TRANSACTION_ENDPOINT) === undefined;
+  const validSecondaryKeyReferences = simulationEndpointIsValid
     ? secondaryKeyReferences
     : [];
 
@@ -548,9 +534,9 @@ export default function App() {
   }, [activeSecondaryTransactions, setActiveSecondaryTransactions]);
 
   const secondaryTransactionStreams = useMemo<ActiveSecondaryTransactionStream[]>(() => Object.values(activeSecondaryTransactions)
-    .map(({ reference, transactions: secondaryTransactions, playbackIndex, playbackSpeed, replaying, realtimeStatus, streamError, historyLoading, originatingCursor }) => ({
+    .map(({ reference, transactions: secondaryTransactions, playbackIndex, playbackSpeed, replaying, realtimeStatus, streamError, historyLoading }) => ({
       publicKey: reference.publicKey,
-      endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
+      endpoint: DEFAULT_SIMULATION_TRANSACTION_ENDPOINT,
       transactions: secondaryTransactions,
       playbackIndex,
       playbackSpeed: normalizePlaybackSpeed(playbackSpeed),
@@ -559,13 +545,7 @@ export default function App() {
       streamError,
       historyLoading,
       currentTransactionRejectedDiagnostics: [],
-      originatingCursor: originatingCursor ?? {
-        publicKey: transactionPublicKey.trim(),
-        endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT,
-        transactions: [],
-        realtimeStatus: 'connecting',
-      },
-    })), [activeSecondaryTransactions, transactionPublicKey]);
+    })), [activeSecondaryTransactions]);
 
   const secondaryTransactionOverlayStreams = useMemo(() => secondaryTransactionStreams
     .map(({ publicKey, endpoint, transactions: secondaryTransactions, playbackIndex }) => {
@@ -590,17 +570,10 @@ export default function App() {
       currentTransactionRejectedDiagnostics: diagnosticsByStreamId.get(`${stream.publicKey}@@${stream.endpoint}`) ?? [],
     }));
   }, [secondaryTransactionOverlayStreams, secondaryTransactionStreams]);
-  const originatingCursorSources = useMemo(() => [...new Set(secondaryTransactionStreams
-    .flatMap((stream) => {
-      const transaction = stream.originatingCursor.transactions.at(-1);
-
-      if (!transaction || !stream.originatingCursor.publicKey) {
-        return [];
-      }
-
-      return [transactionToXyzDslCursorSource(transaction, stream.originatingCursor.publicKey)];
-    })
-    .filter(Boolean))], [secondaryTransactionStreams]);
+  const remoteDocumentInputSource = useMemo(() => transactionToRemoteSpatialDocumentInput(
+    remoteDocumentInput.transactions.at(-1),
+    remoteDocumentInput.publicKey,
+  ), [remoteDocumentInput]);
   const secondaryProjections = useMemo<SecondaryProjection[]>(() => {
     const referencesByProjection = referencesBySecondaryProjection(transactionXyzDsl.secondaryKeys);
 
@@ -646,9 +619,13 @@ export default function App() {
     () => summarizeLineChanges(remoteBaselineAppliedToEditor, authoringSource),
     [authoringSource, remoteBaselineAppliedToEditor],
   );
-  const renderedSource = useMemo(() => [composeTransactionSources(authoringSource, secondaryTransactionOverlayStreams, {
+  const documentInputSource = useMemo(
+    () => [authoringSource, remoteDocumentInputSource].filter(Boolean).join('\n'),
+    [authoringSource, remoteDocumentInputSource],
+  );
+  const renderedSource = useMemo(() => composeTransactionSources(documentInputSource, secondaryTransactionOverlayStreams, {
     namespacePolicy: 'consume-primary-namespaces',
-  }), ...originatingCursorSources].filter(Boolean).join('\n'), [authoringSource, originatingCursorSources, secondaryTransactionOverlayStreams]);
+  }), [documentInputSource, secondaryTransactionOverlayStreams]);
   const document = useMemo(() => createSpatialDocument(renderedSource), [renderedSource]);
   const selectedNode = useMemo(
     () => findNodeById(document.nodes, selectedNodeId) ?? findNodeByLineNumber(document.nodes, selectedLineNumber),
@@ -793,21 +770,12 @@ export default function App() {
         [streamKey]: {
           ...stream,
           historyLoading: true,
-          originatingCursor: stream.originatingCursor && { ...stream.originatingCursor, historyLoading: true },
         },
       } : streams;
     });
 
-    const originatingPublicKey = transactionPublicKey.trim();
-    const originatingHistory = originatingPublicKey
-      ? fetchPublicKeyTransactions({ endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, publicKey: originatingPublicKey, range: transactionRange, signal: controller.signal })
-      : Promise.resolve([]);
-
-    Promise.all([
-      fetchPublicKeyTransactions({ endpoint: DEFAULT_SECONDARY_TRANSACTION_ENDPOINT, publicKey, range: transactionRange, signal: controller.signal }),
-      originatingHistory,
-    ])
-      .then(([historicalTransactions, originatingTransactions]) => {
+    fetchPublicKeyTransactions({ endpoint: DEFAULT_SIMULATION_TRANSACTION_ENDPOINT, publicKey, range: transactionRange, signal: controller.signal })
+      .then((historicalTransactions) => {
         setActiveSecondaryTransactions((streams) => {
           const stream = streams[streamKey];
 
@@ -820,13 +788,6 @@ export default function App() {
             publicKey,
           );
           const transactions = sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(stream.transactions, outgoingHistoricalTransactions));
-          const cursor = stream.originatingCursor;
-          const cursorTransactions = cursor && cursor.publicKey === originatingPublicKey
-            ? sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(
-              cursor.transactions,
-              outgoingTransactionsForPublicKey(normalizeXyzDslTransactions(originatingTransactions), originatingPublicKey),
-            ))
-            : cursor?.transactions ?? [];
 
           return {
             ...streams,
@@ -835,11 +796,6 @@ export default function App() {
               transactions,
               playbackIndex: stream.replaying ? stream.playbackIndex : Math.max(0, transactions.length - 1),
               historyLoading: false,
-              originatingCursor: cursor && {
-                ...cursor,
-                transactions: cursorTransactions,
-                historyLoading: false,
-              },
             },
           };
         });
@@ -858,14 +814,13 @@ export default function App() {
             [streamKey]: {
               ...stream,
               historyLoading: false,
-              originatingCursor: stream.originatingCursor && { ...stream.originatingCursor, historyLoading: false },
             },
           } : streams;
         });
       });
 
     return () => controller.abort();
-  }, [setActiveSecondaryTransactions, transactionPublicKey, transactionRange]);
+  }, [setActiveSecondaryTransactions, transactionRange]);
 
   const handleAuthoringSourceChange = useCallback((nextSource: string) => {
     setAuthoringSource(nextSource);
@@ -962,13 +917,13 @@ export default function App() {
           onError={handlePrimaryRealtimeError}
         />
       ) : null}
-      {transactionPublicKey.trim() && validSecondaryKeyReferences.length > 0 ? (
-        <OriginatingCursorRealtimeSubscription
+      {transactionPublicKey.trim() && simulationEndpointIsValid ? (
+        <RemoteDocumentInputRealtimeSubscription
           key={transactionPublicKey.trim()}
           publicKey={transactionPublicKey.trim()}
-          onTransaction={handleOriginatingCursorTransaction}
-          onError={handleOriginatingCursorError}
-          onStatusChange={handleOriginatingCursorStatusChange}
+          onTransaction={handleRemoteDocumentInputTransaction}
+          onError={handleRemoteDocumentInputError}
+          onStatusChange={handleRemoteDocumentInputStatusChange}
         />
       ) : null}
       {validSecondaryKeyReferences.map((reference) => (
@@ -1009,7 +964,7 @@ export default function App() {
         transactionPublicKeyShareUrl={transactionPublicKeyShareUrl}
         transactionRange={transactionRange}
         transactionsLoading={transactionsLoading}
-        transactionError={transactionError ?? primaryRealtimeError ?? secondaryTransactionError}
+        transactionError={transactionError ?? primaryRealtimeError ?? remoteDocumentInput.streamError ?? secondaryTransactionError}
         tipHeight={tipHeight}
         tipLoading={tipLoading}
         tipError={tipError}
