@@ -174,7 +174,7 @@ function namespacePrefixes(namespace: string[]): string[] {
   );
 }
 
-function firstInstanceByNamespace(
+function instanceByNamespace(
   objects: SpatialObject[],
 ): Map<string, SpatialObject> {
   const instances = new Map<string, SpatialObject>();
@@ -182,9 +182,7 @@ function firstInstanceByNamespace(
   objects.forEach((object) => {
     if (!object.declarationOnly && object.namespace.length > 0) {
       const key = canonicalNamespacePath(object.namespace);
-      if (!instances.has(key)) {
-        instances.set(key, object);
-      }
+      instances.set(key, object);
     }
   });
 
@@ -402,7 +400,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
 } {
   const diagnostics: ParseDiagnostic[] = [];
   const namespaceDeclarations = new Map<string, SpatialObject>();
-  const namespaceInstances = firstInstanceByNamespace(objects);
+  const namespaceInstances = instanceByNamespace(objects);
   const instances = objects.filter(
     (object) => !object.declarationOnly && object.box,
   );
@@ -414,14 +412,6 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
     }
 
     const key = canonicalNamespacePath(object.namespace);
-    if (namespaceDeclarations.has(key)) {
-      diagnostics.push({
-        line: object.lineNumber,
-        source: object.source,
-        message: `Namespace "${key}" was already declared; using the latest declaration.`,
-      });
-    }
-
     namespaceDeclarations.set(key, object);
   });
 

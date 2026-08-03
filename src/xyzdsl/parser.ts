@@ -1,6 +1,12 @@
 import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
-import { parseXyzDslPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
+import {
+  canonicalNamespacePath,
+  parseXyzDslPath,
+  parsePathAxisSpec,
+  parsePathBoxSpec,
+  parsePathNumber,
+} from './pathParser';
 
 const DECLARATION_PATTERN = /^\s*"(?<box>[^"]+)"\s*:\s*"(?<properties>[^"]*)"\s*$/;
 
@@ -68,6 +74,7 @@ export function parseXyzDslDeclaration(line: string, lineNumber = 1): ParseResul
 
 export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]> {
   const objects: SpatialObject[] = [];
+  const latestNamedObjectIndex = new Map<string, number>();
   const diagnostics: ParseDiagnostic[] = [];
 
   source
@@ -80,13 +87,32 @@ export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]
       diagnostics.push(...result.diagnostics);
 
       if (result.ok && result.value) {
-        objects.push({ ...result.value, id: result.value.namespace.length > 0 ? result.value.id : `node-${objects.length + 1}` });
+        const object = {
+          ...result.value,
+          id: result.value.namespace.length > 0
+            ? result.value.id
+            : `node-${objects.length + 1}`,
+        };
+
+        objects.push(object);
+
+        if (object.namespace.length > 0) {
+          latestNamedObjectIndex.set(
+            `${object.declarationOnly ? 'declaration' : 'concrete'}:${canonicalNamespacePath(object.namespace)}`,
+            objects.length - 1,
+          );
+        }
       }
     });
 
   return {
     ok: diagnostics.length === 0,
-    value: objects,
+    value: objects.filter((object, index) =>
+      object.namespace.length === 0 ||
+      latestNamedObjectIndex.get(
+        `${object.declarationOnly ? 'declaration' : 'concrete'}:${canonicalNamespacePath(object.namespace)}`,
+      ) === index
+    ),
     diagnostics,
   };
 }

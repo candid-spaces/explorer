@@ -12,6 +12,7 @@ The long-term model is intentionally DOM-like: spatial declarations compile into
 - **Spatial Declaration Language**: the compact text authoring syntax for spatial paths and object properties. Internal parser modules still use `xyzdsl` names for historical continuity.
 - **Spatial declaration**: one quoted path/property line in the authoring source.
 - **Spatial path**: a slash-delimited namespace plus an optional final X/Y/Z bounding box.
+- **Declaration namespace**: every slash-delimited segment before the final X/Y/Z segments; coordinate-only declarations have an empty namespace.
 - **Namespace declaration**: a spatial path ending in `/`; it does not render by itself and exists to provide inherited defaults.
 - **Spatial instance**: a spatial path with a concrete box; it can produce a node in the spatial document.
 - **Prototype namespace**: a reusable namespace intended to be materialized through `ref`.
@@ -69,13 +70,27 @@ Namespaced declarations extend the quoted coordinate expression with slash-separ
 "Table/+18+8/+0+5/+4+8" : "color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : ""
+"Table/LegB/+7+1/+0+5/+0+1" : ""
+"Table/LegC/+0+1/+0+5/+7+1" : ""
+"Table/LegD/+7+1/+0+5/+7+1" : ""
 ```
 
 A spatial instance path ends with exactly three X/Y/Z axis segments. A namespace declaration ends in `/`, does not render, and supplies inherited defaults to matching child namespaces. Nested coordinates are definitions in the local space of their parent namespace until that parent namespace is materialized. In other words, `Sofa/Base/+0+6/+0+40c/+0+3` defines `Base` inside `Sofa`; it does not render in world space unless `Sofa` has an explicit concrete instance such as `Sofa/+10+6/+0+2/+0+3` or another concrete instance references `Sofa/`.
+
+The declaration namespace is the entire canonical path before those final X/Y/Z segments. Successfully parsed named declarations use that namespace as their identity and are last-write-wins within their declaration kind: a newer concrete declaration replaces an older concrete declaration with the same namespace, while a newer namespace-only declaration replaces an older namespace-only declaration there. A namespace-only default and concrete instance at the same namespace may coexist. The winners remain ordered by their own source positions. For example, only the blue concrete `Chair` survives below:
+
+```txt
+"Chair/+0+2/+0+2/+0+2" : "color: red"
+"Chair/+4+2/+0+2/+0+2" : "color: blue"
+```
+
+Coordinate-only declarations have an empty namespace and never overwrite one another. They remain additive, ordered, anonymous `node-*` entries:
+
+```txt
+"+0+1/+0+1/+0+1" : "color: red"
+"+2+1/+0+1/+0+1" : "color: blue"
+```
 
 References must point to a namespace that has already been declared or instantiated. A reference to a namespace with local descendants materializes those descendants below the referring instance. By default, the referring instance is an unscaled anchor transform, so referenced templates preserve their authored local dimensions and the referring box establishes only the world-space origin and rotation for the cloned local subtree. Authors can opt into fit-to-box scaling with `ref-scale: true`; in that mode, the referring box scales the referenced local subtree on X/Y/Z so the prototype root dimensions fit the referring box. References to namespaces without local descendants keep the previous primitive-copy behavior: the referring instance renders its own box with the target namespace properties. Child coordinates are local to the nearest concrete ancestor namespace, while anonymous and top-level named instances remain in world space. Concrete ancestor transforms compose onto descendants as group transforms; they are not inherited into each child primitive as local rotation defaults. Boolean composition declarations also use declaration order within the nearest concrete namespace scope before falling back to world-space overlap, so a later subtraction or union can refine an earlier local solid and the composed result can then participate with other world-space objects.
 

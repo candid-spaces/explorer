@@ -24,8 +24,8 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
       createSpatialDocument(`"Table/+3+8/+0+5/+4+8" : "rotation: 0,90,0; color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""`);
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes).toHaveLength(3);
@@ -45,8 +45,8 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     const document =
       createSpatialDocument(`"Table/+0+4/+0+4/+0+4" : "color: grey"
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+1/+0+1" : "color: red"
-"Table/Leg/+2+1/+0+1/+0+1" : ""`);
+"Table/LegA/+0+1/+0+1/+0+1" : "color: red"
+"Table/LegB/+2+1/+0+1/+0+1" : ""`);
 
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes[0].material.color).toBe('red');
@@ -259,10 +259,10 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
       createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegC/+0+1/+0+5/+7+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 "+19+4/+0+6/+7+3" : "ref: Table/"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -276,7 +276,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     );
     const firstLeg = document.renderNodes.find(
       (node) =>
-        node.namespacePath?.endsWith('/Leg/') &&
+        node.namespacePath?.endsWith('/LegA/') &&
         node.box.source === '+0+1/+0+5/+0+1',
     );
 
@@ -285,7 +285,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(container?.metadata?.anchorScale).toBeUndefined();
     expect(top?.namespacePath).toBe('Ref6/Top/');
     expect(top?.transform.position).toEqual([23, 4.5, 11]);
-    expect(firstLeg?.namespacePath).toBe('Ref6/Leg/');
+    expect(firstLeg?.namespacePath).toBe('Ref6/LegA/');
     expect(firstLeg?.geometry.kind).toBe('cylinder');
     expect(firstLeg?.transform.position).toEqual([19.5, 2.5, 7.5]);
     expect(document.renderNodes.some((node) => node.box.source === '+19+4/+0+6/+7+3')).toBe(false);
@@ -297,10 +297,10 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
 "Ref7/+0+1/+0+1/+0+1" : "color: red"
 "Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegC/+0+1/+0+5/+7+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 "+19+4/+0+6/+7+3" : "ref: Table/"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -316,7 +316,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     );
     const firstLeg = document.renderNodes.find(
       (node) =>
-        node.namespacePath === 'Ref8/Leg/' &&
+        node.namespacePath === 'Ref8/LegA/' &&
         node.box.source === '+0+1/+0+5/+0+1',
     );
 
@@ -332,10 +332,10 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
       createSpatialDocument(`"Table/" : "color: white; metalness: 0.8; roughness: 0.2"
 "Table/Top/+0+8/+4+1/+0+8" : ""
 "Table/Leg/" : "geometry: cylinder"
-"Table/Leg/+0+1/+0+5/+0+1" : ""
-"Table/Leg/+7+1/+0+5/+0+1" : ""
-"Table/Leg/+0+1/+0+5/+7+1" : ""
-"Table/Leg/+7+1/+0+5/+7+1" : ""
+"Table/LegA/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegB/+7+1/+0+5/+0+1" : "geometry: cylinder"
+"Table/LegC/+0+1/+0+5/+7+1" : "geometry: cylinder"
+"Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 "+19+4/+0+6/+7+3" : "ref: Table/; ref-scale: true"`);
 
     expect(document.diagnostics).toEqual([]);
@@ -349,7 +349,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     );
     const firstLeg = document.renderNodes.find(
       (node) =>
-        node.namespacePath?.endsWith('/Leg/') &&
+        node.namespacePath?.endsWith('/LegA/') &&
         node.box.source === '+0+1/+0+5/+0+1',
     );
 

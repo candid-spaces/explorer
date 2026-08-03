@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseBoxSpec, parseCompactNumber, parseXyzDslDocument } from './parser';
+import { createSpatialDocument } from '../model/createSpatialDocument';
 
 const EXAMPLE = `"+2+4/+0+6/+1+3" : "geometry: cylinder; color: 0x333333; metalness: 0.8; roughness: 0.2"
 "+2+4/+7+6/+0+10c" : "geometry: cone; color: yellow; metalness: 0.2; roughness: 0.5"
@@ -71,6 +72,83 @@ describe('parseBoxSpec', () => {
 });
 
 describe('parseXyzDslDocument', () => {
+  it('keeps only the latest concrete declaration for a named namespace', () => {
+    const result = parseXyzDslDocument(`"Chair/+0+1/+0+2/+0+3" : "color: red"
+"Chair/+4+5/+6+7/+8+9" : "color: blue"`);
+
+    expect(result.value).toHaveLength(1);
+    expect(result.value?.[0].lineNumber).toBe(2);
+    expect(result.value?.[0].box).toMatchObject({ x: 4, width: 5, y: 6, height: 7, z: 8, depth: 9 });
+  });
+
+  it('uses the complete nested namespace as the overwrite identity', () => {
+    const result = parseXyzDslDocument(`"Room/Chair/+0+1/+0+1/+0+1" : "color: red"
+"Room/Table/+1+1/+0+1/+0+1" : "color: green"
+"Room/Chair/+2+1/+0+1/+0+1" : "color: blue"`);
+
+    expect(result.value?.map((object) => [object.namespace.join('/'), object.lineNumber])).toEqual([
+      ['Room/Table', 2],
+      ['Room/Chair', 3],
+    ]);
+  });
+
+  it('keeps distinct named namespaces independent', () => {
+    const result = parseXyzDslDocument(`"Chair/+0+1/+0+1/+0+1" : ""
+"Table/+1+1/+0+1/+0+1" : ""`);
+
+    expect(result.value?.map((object) => object.namespace)).toEqual([['Chair'], ['Table']]);
+  });
+
+  it('keeps anonymous declarations additive, ordered, and sequentially identified', () => {
+    const result = parseXyzDslDocument(`"+0+1/+0+1/+0+1" : "color: red"
+"+1+1/+0+1/+0+1" : "color: green"
+"+2+1/+0+1/+0+1" : "color: blue"`);
+
+    expect(result.value?.map((object) => [object.id, object.lineNumber, object.box?.x])).toEqual([
+      ['node-1', 1, 0],
+      ['node-2', 2, 1],
+      ['node-3', 3, 2],
+    ]);
+  });
+
+  it('keeps the latest repeated namespace-only declaration', () => {
+    const result = parseXyzDslDocument(`"Sofa/" : "color: red"
+"Sofa/" : "color: blue"`);
+
+    expect(result.value).toHaveLength(1);
+    expect(result.value?.[0]).toMatchObject({ lineNumber: 2, declarationOnly: true });
+    expect(result.value?.[0].material.color).toBe('blue');
+  });
+
+  it('keeps namespace-only defaults and concrete instances when they share a namespace', () => {
+    const concreteWins = parseXyzDslDocument(`"Lamp/" : "color: red"
+"Lamp/+0+1/+0+2/+0+1" : "color: blue"`);
+    const declarationWins = parseXyzDslDocument(`"Lamp/+0+1/+0+2/+0+1" : "color: blue"
+"Lamp/" : "color: red"`);
+
+    expect(concreteWins.value?.map((object) => object.declarationOnly)).toEqual([true, false]);
+    expect(declarationWins.value?.map((object) => object.declarationOnly)).toEqual([false, true]);
+  });
+
+  it('excludes overwritten declarations from resolution, references, collisions, CSG, and descendant materialization', () => {
+    const oldTarget = '"Target/+0+4/+0+4/+0+4" : "ref: Proto/; geometry: cylinder; operation: subtraction; color: red"';
+    const document = createSpatialDocument(`"Proto/" : "color: yellow"
+"Proto/Child/+0+1/+0+1/+0+1" : ""
+"+0+4/+0+4/+0+4" : "geometry: sphere"
+${oldTarget}
+"Target/+10+1/+0+1/+0+1" : "color: blue"
+"Copy/+20+1/+0+1/+0+1" : "ref: Target/"`);
+
+    const allNodes = document.nodes.flatMap((node) => [node, ...(node.children ?? [])]);
+    expect(allNodes.some((node) => node.source === oldTarget)).toBe(false);
+    expect(allNodes.some((node) => node.metadata?.materializedFrom === 'Proto/')).toBe(false);
+    expect(allNodes.some((node) => node.namespacePath === 'Target/Child/')).toBe(false);
+    expect(document.csgExpressions).toEqual([]);
+    expect(document.renderNodes).toHaveLength(3);
+    expect(document.renderNodes.every((node) => node.unionGroupId === undefined)).toBe(true);
+    expect(document.renderNodes.find((node) => node.namespacePath === 'Copy/')?.material.color).toBe('blue');
+  });
+
   it('parses composed object declarations with geometry and material properties', () => {
     const result = parseXyzDslDocument(EXAMPLE);
 
@@ -87,14 +165,14 @@ describe('parseXyzDslDocument', () => {
 
   it('parses namespaced world-space instances and namespace declarations', () => {
     const result = parseXyzDslDocument(`"Sofa/+7+4/+0+3/+0+2" : "color: brown"
-"Table/Leg/" : "geometry: cylinder"
+"Table/" : "geometry: cylinder"
 "Table/Leg/+1+2/+0+7/+0+1" : ""`);
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].namespace).toEqual(['Sofa']);
     expect(result.value?.[0].declarationOnly).toBe(false);
     expect(result.value?.[0].box?.width).toBe(4);
-    expect(result.value?.[1].namespace).toEqual(['Table', 'Leg']);
+    expect(result.value?.[1].namespace).toEqual(['Table']);
     expect(result.value?.[1].declarationOnly).toBe(true);
     expect(result.value?.[1].geometry.kind).toBe('cylinder');
     expect(result.value?.[2].namespace).toEqual(['Table', 'Leg']);

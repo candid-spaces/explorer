@@ -20,7 +20,17 @@ In the repository settings, set **Pages** → **Build and deployment** → **Sou
 
 Each declaration lays out a primitive inside an edge-based X/Y/Z bounding box. The optional `geometry` property defaults to `box` and currently supports `box`, `cylinder`, `cone`, and `sphere`. Boxes can also set `box-radius` in the same project units as path coordinates to render rounded edges and `puff: 0..5` to make cushion-like boxes use a softer rounded silhouette while keeping the same layout, transform, collision, and union contract.
 
-A spatial declaration is one quoted path/property line. Declaration keys can be anonymous world-space boxes, named spatial instances, namespace declarations, or child instances inside a named parent namespace. Namespaces use slash-separated identifiers before the final three coordinate segments. Namespace declarations end in `/` and do not render by themselves; they define inherited defaults for matching child instances. A prototype namespace is a reusable namespace intended for references. A reference instance uses the `ref` property to copy material, geometry, and transform defaults from a previously declared namespace and applies them to the referencing instance's own box.
+A spatial declaration is one quoted path/property line. Declaration keys can be anonymous world-space boxes, named spatial instances, namespace declarations, or child instances inside a named parent namespace. A declaration's namespace is the complete slash-separated path before its final three X/Y/Z coordinate segments. Namespace declarations end in `/` and do not render by themselves; they define inherited defaults for matching child instances. A prototype namespace is a reusable namespace intended for references. A reference instance uses the `ref` property to copy material, geometry, and transform defaults from a previously declared namespace and applies them to the referencing instance's own box.
+
+Named declarations use last-write-wins semantics within their declaration kind: a newer concrete declaration replaces an older concrete declaration with the same canonical namespace, and a newer namespace-only declaration replaces an older namespace-only declaration there. A namespace-only default and a concrete instance may coexist at the same namespace. Surviving declarations retain the source order of their winning occurrences. Thus the second `Chair` below is the only concrete `Chair` declaration. Anonymous coordinate-only declarations have an empty namespace, are exempt from overwriting, and remain additive in source order.
+
+```txt
+"Chair/+0+2/+0+2/+0+2" : "color: red"
+"Chair/+4+2/+0+2/+0+2" : "color: blue"
+
+"+0+1/+0+1/+0+1" : "color: red"
+"+2+1/+0+1/+0+1" : "color: blue"
+```
 
 Path coordinates use compact project units rather than literal walking strides: `1` bare unit is `10 cm`, and `1c` is one centiunit, or `1 mm`. The optional `c` suffix applies per number, so mixed axis values are valid: `+1+3c` means offset `1` unit (`10 cm`) and size `0.03` units (`3 mm`). For real-world mental scale, an adult walking pace of about `0.75 m` is `7.5` units, written exactly as `750c`. Decimal path notation is intentionally avoided; write `10c` instead of `0.1`.
 
