@@ -12,7 +12,6 @@ interface UseRealtimePublicKeyTransactionsOptions {
   endpoint: string;
   publicKey: string;
   onTransaction?: (transaction: XyzDslTransaction) => void;
-  onInventory?: () => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: SecondaryRealtimeStatus) => void;
 }
@@ -40,7 +39,6 @@ export function useRealtimePublicKeyTransactions({
   endpoint,
   publicKey,
   onTransaction,
-  onInventory,
   onError,
   onStatusChange,
 }: UseRealtimePublicKeyTransactionsOptions) {
@@ -48,8 +46,8 @@ export function useRealtimePublicKeyTransactions({
   const normalizedEndpoint = useMemo(() => normalizeEndpoint(endpoint), [endpoint]);
   const [shouldConnect, setShouldConnect] = useState(false);
   const [inventorySequence, setInventorySequence] = useState(0);
-  const callbacksRef = useRef({ onTransaction, onInventory, onError, onStatusChange });
-  callbacksRef.current = { onTransaction, onInventory, onError, onStatusChange };
+  const callbacksRef = useRef({ onTransaction, onError, onStatusChange });
+  callbacksRef.current = { onTransaction, onError, onStatusChange };
 
   // Defer the initial connection until after the component has committed. This
   // avoids opening then immediately closing a socket during React StrictMode's
@@ -73,7 +71,6 @@ export function useRealtimePublicKeyTransactions({
       // matching filter_block without maintaining separate socket machinery.
       if (isInvBlockMessage(event)) {
         setInventorySequence((sequence) => sequence + 1);
-        callbacksRef.current.onInventory?.();
         return;
       }
 

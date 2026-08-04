@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SpatialDocument } from '../model/SpatialDocument';
 import { UNIT_SCALE_DESCRIPTION } from '../model/units';
-import type { RejectedTransaction, SecondaryProjection, TransactionRange } from '../transactions/types';
+import type { RejectedTransaction, RemoteSpatialEditor, SecondaryProjection, TransactionRange } from '../transactions/types';
 import { normalizeXyzDslTransaction } from '../transactions/transactionXyzDsl';
 import { XyzDslEditor } from './XyzDslEditor';
 import { XyzDslTransactionControls } from './XyzDslTransactionControls';
@@ -100,6 +100,7 @@ interface XyzDslDrawerProps {
   mappedTransactionSource: string;
   rejectedTransactions: RejectedTransaction[];
   secondaryProjections: SecondaryProjection[];
+  remoteEditor: RemoteSpatialEditor;
   hasRemoteBaseline: boolean;
   hasAuthoringEdits: boolean;
   remoteBaselineChanged: boolean;
@@ -139,6 +140,7 @@ export function XyzDslDrawer({
   mappedTransactionSource,
   rejectedTransactions,
   secondaryProjections,
+  remoteEditor,
   hasRemoteBaseline,
   hasAuthoringEdits,
   remoteBaselineChanged,
@@ -220,6 +222,24 @@ export function XyzDslDrawer({
             value={source}
             onChange={onChange}
           />
+
+          {transactionPublicKey.trim() ? (
+            <section className="secondary-projections" aria-label="Remote spatial editor">
+              <div className="section-heading-row">
+                <h2>Remote editor</h2>
+                <span>{remoteEditor.historyLoading ? 'Loading history' : remoteEditor.realtimeStatus === 'connected' ? 'Listening live' : remoteEditor.realtimeStatus}</span>
+              </div>
+              <p className="secondary-projection-intro">
+                The overlay node applies the latest primary-key transaction after the local draft.
+              </p>
+              <dl className="secondary-projection-facts">
+                <div><dt>Overlay node</dt><dd>{remoteEditor.endpoint}</dd></div>
+                <div><dt>Public key</dt><dd>{remoteEditor.publicKey}</dd></div>
+                <div><dt>Transactions received</dt><dd>{remoteEditor.transactions.length}</dd></div>
+              </dl>
+              {remoteEditor.streamError ? <p className="transaction-error">{remoteEditor.streamError}</p> : null}
+            </section>
+          ) : null}
 
           {mappedTransactionSource.trim().length > 0 ? (
             <details className="remote-baseline-reference">

@@ -52,12 +52,10 @@ export interface ActiveSecondaryTransactionStream extends TransactionPublicKeyEn
   historyLoading?: boolean;
   /** Diagnostics for the transaction selected by this stream's playback cursor. */
   currentTransactionRejectedDiagnostics: RejectedTransaction[];
-  /** Activity for the primary key, read from this secondary node as a scene cursor. */
-  originatingCursor: OriginatingPrimaryCursor;
 }
 
-/** The originating primary key as observed by a particular secondary node. */
-export interface OriginatingPrimaryCursor extends TransactionPublicKeyEndpoint {
+/** The canonical live editor for the document, read from the overlay node. */
+export interface RemoteSpatialEditor extends TransactionPublicKeyEndpoint {
   transactions: XyzDslTransaction[];
   realtimeStatus: SecondaryRealtimeStatus;
   streamError?: string;
