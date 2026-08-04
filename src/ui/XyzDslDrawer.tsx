@@ -227,7 +227,7 @@ export function XyzDslDrawer({
             <section className="secondary-projections" aria-label="Remote spatial editor">
               <div className="section-heading-row">
                 <h2>Remote editor</h2>
-                <span>{remoteEditor.realtimeStatus === 'connected' ? 'Listening live' : remoteEditor.realtimeStatus}</span>
+                <span>{remoteEditor.historyLoading ? 'Loading history' : remoteEditor.realtimeStatus === 'connected' ? 'Listening live' : remoteEditor.realtimeStatus}</span>
               </div>
               <p className="secondary-projection-intro">
                 The overlay node applies the latest primary-key transaction after the local draft.
