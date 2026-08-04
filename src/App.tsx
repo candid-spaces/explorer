@@ -15,7 +15,7 @@ import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
 import { composeSpatialEditorSources } from './transactions/composeTransactionSources';
-import { DEFAULT_OVERLAY_TRANSACTION_ENDPOINT, normalizeXyzDslTransaction, normalizeXyzDslTransactions, transactionToRemoteEditorSource, transactionsToXyzDslSource } from './transactions/transactionXyzDsl';
+import { DEFAULT_OVERLAY_TRANSACTION_ENDPOINT, normalizeXyzDslTransaction, normalizeXyzDslTransactions, transactionsToRemoteEditorSource, transactionsToXyzDslSource } from './transactions/transactionXyzDsl';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, RemoteSpatialEditor, XyzDslTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
 import { usePublicKeyTransactions } from './transactions/usePublicKeyTransactions';
@@ -531,8 +531,8 @@ export default function App() {
       currentTransactionRejectedDiagnostics: diagnosticsByStreamId.get(`${stream.publicKey}@@${stream.endpoint}`) ?? [],
     }));
   }, [secondaryTransactionOverlayStreams, secondaryTransactionStreams]);
-  const remoteEditorSource = useMemo(() => transactionToRemoteEditorSource(
-    remoteEditor.transactions.at(-1),
+  const remoteEditorSource = useMemo(() => transactionsToRemoteEditorSource(
+    remoteEditor.transactions,
     remoteEditor.publicKey,
   ), [remoteEditor.publicKey, remoteEditor.transactions]);
   const secondaryProjections = useMemo<SecondaryProjection[]>(() => {

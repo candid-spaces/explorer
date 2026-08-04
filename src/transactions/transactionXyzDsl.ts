@@ -209,13 +209,17 @@ export function transactionsToXyzDslSource(
 }
 
 /**
- * Maps the newest primary-key transaction observed on the overlay node into
- * the declaration applied by the remote spatial editor.
+ * Maps primary-key transactions observed on the overlay node into declarations
+ * applied in order by the remote spatial editor.
  */
-export function transactionToRemoteEditorSource(transaction: XyzDslTransaction | undefined, publicKey: string): string {
-  if (!transaction || !publicKey.trim()) {
+export function transactionsToRemoteEditorSource(transactions: readonly XyzDslTransaction[], publicKey: string): string {
+  if (!publicKey.trim()) {
     return '';
   }
 
-  return transactionsToXyzDslSource([transaction], { publicKey }).source;
+  return transactionsToXyzDslSource(transactions, { publicKey }).source;
+}
+
+export function transactionToRemoteEditorSource(transaction: XyzDslTransaction | undefined, publicKey: string): string {
+  return transactionsToRemoteEditorSource(transaction ? [transaction] : [], publicKey);
 }
