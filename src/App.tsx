@@ -579,55 +579,14 @@ export default function App() {
 
   useEffect(() => {
     const publicKey = transactionPublicKey.trim();
-    const controller = new AbortController();
 
     setRemoteEditor({
       publicKey,
       endpoint: DEFAULT_OVERLAY_TRANSACTION_ENDPOINT,
       transactions: [],
       realtimeStatus: 'connecting',
-      historyLoading: Boolean(publicKey),
     });
-
-    if (!publicKey) {
-      return () => controller.abort();
-    }
-
-    fetchPublicKeyTransactions({
-      endpoint: DEFAULT_OVERLAY_TRANSACTION_ENDPOINT,
-      publicKey,
-      range: transactionRange,
-      signal: controller.signal,
-    })
-      .then((historicalTransactions) => {
-        const outgoingHistory = outgoingTransactionsForPublicKey(
-          normalizeXyzDslTransactions(historicalTransactions),
-          publicKey,
-        );
-
-        setRemoteEditor((editor) => editor.publicKey === publicKey ? {
-          ...editor,
-          transactions: sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(
-            editor.transactions,
-            outgoingHistory,
-          )),
-          historyLoading: false,
-        } : editor);
-      })
-      .catch((caught: unknown) => {
-        if (caught instanceof DOMException && caught.name === 'AbortError') {
-          return;
-        }
-
-        setRemoteEditor((editor) => editor.publicKey === publicKey ? {
-          ...editor,
-          historyLoading: false,
-          streamError: caught instanceof Error ? caught.message : 'Unable to load remote editor history.',
-        } : editor);
-      });
-
-    return () => controller.abort();
-  }, [remoteBaselineSource, transactionPublicKey, transactionRange]);
+  }, [transactionPublicKey]);
 
   const authoringChangeSummary = useMemo(
     () => summarizeLineChanges(remoteBaselineAppliedToEditor, authoringSource),
@@ -921,7 +880,7 @@ export default function App() {
     <main className={`app-shell app-shell--${appMode}`}>
       {transactionPublicKey.trim() && endpointValidationError(DEFAULT_OVERLAY_TRANSACTION_ENDPOINT) === undefined ? (
         <RemoteEditorRealtimeSubscription
-          key={`${transactionPublicKey.trim()}@@${transactionRange.startHeight}:${transactionRange.endHeight}:${transactionRange.limit}@@${remoteBaselineSource}`}
+          key={transactionPublicKey.trim()}
           publicKey={transactionPublicKey.trim()}
           onTransaction={handleRemoteEditorTransaction}
           onError={handleRemoteEditorError}

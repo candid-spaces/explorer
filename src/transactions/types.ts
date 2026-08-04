@@ -59,7 +59,6 @@ export interface RemoteSpatialEditor extends TransactionPublicKeyEndpoint {
   transactions: XyzDslTransaction[];
   realtimeStatus: SecondaryRealtimeStatus;
   streamError?: string;
-  historyLoading?: boolean;
 }
 
 export type SecondaryKeyReference = DiscoveredSecondaryPublicKeyReference;
