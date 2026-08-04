@@ -3,6 +3,7 @@ import {
   normalizeXyzDslTransaction,
   normalizeXyzDslTransactions,
   transactionToRemoteEditorSource,
+  transactionsToRemoteEditorSource,
   transactionsToXyzDslSource,
   trimTransactionMemoFiller,
   trimTransactionPathFiller,
@@ -32,6 +33,22 @@ describe('transactionsToXyzDslSource', () => {
       transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'another-key'),
       'originating-key',
     )).toBe('');
+  });
+
+  it('maps multiple outgoing remote editor transactions and filters other senders', () => {
+    const editorSource = transactionsToRemoteEditorSource([
+      transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'originating-key'),
+      transaction('color: magenta', 1, '+5+1/+2+1/+0+1', 'other-key'),
+      transaction('color: yellow', 2, '+6+1/+2+1/+0+1', 'originating-key'),
+    ], 'originating-key');
+
+    expect(editorSource).toBe('"+4+1/+2+1/+0+1" : "color: cyan"\n"+6+1/+2+1/+0+1" : "color: yellow"');
+  });
+
+  it('returns an empty remote editor source when the public key is blank', () => {
+    expect(transactionsToRemoteEditorSource([
+      transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'originating-key'),
+    ], '   ')).toBe('');
   });
 
   it('builds valid XYZDSL coordinate declarations from transaction path and memo properties', () => {

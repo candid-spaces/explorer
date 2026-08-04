@@ -230,7 +230,7 @@ export function XyzDslDrawer({
                 <span>{remoteEditor.realtimeStatus === 'connected' ? 'Listening live' : remoteEditor.realtimeStatus}</span>
               </div>
               <p className="secondary-projection-intro">
-                The overlay node applies the latest primary-key transaction after the local draft.
+                The overlay node applies remote editor declarations in transaction order after the local draft.
               </p>
               <dl className="secondary-projection-facts">
                 <div><dt>Overlay node</dt><dd>{remoteEditor.endpoint}</dd></div>
