@@ -232,6 +232,7 @@ export default function App() {
     transactions: [],
     realtimeStatus: 'connecting',
   });
+  const remoteEditorPublicKey = transactionPublicKey.trim();
 
   useEffect(() => {
     setActiveSecondaryTransactions((streams) => {
@@ -348,22 +349,20 @@ export default function App() {
   }, [setActiveSecondaryTransactions, transactionPublicKey]);
 
   const handleRemoteEditorTransaction = useCallback((transaction: XyzDslTransaction) => {
-    const publicKey = transactionPublicKey.trim();
-
-    if (!publicKey || transaction.from !== publicKey) {
+    if (!remoteEditorPublicKey || transaction.from !== remoteEditorPublicKey) {
       return;
     }
 
     setRemoteEditor((editor) => {
-      const existing = editor.publicKey === publicKey ? editor.transactions : [];
+      const existing = editor.publicKey === remoteEditorPublicKey ? editor.transactions : [];
       return {
-        publicKey,
+        publicKey: remoteEditorPublicKey,
         endpoint: DEFAULT_OVERLAY_TRANSACTION_ENDPOINT,
         transactions: sortTransactionsByTimeStable(mergeStreamTransactions(existing, [normalizeXyzDslTransaction(transaction)])),
         realtimeStatus: editor.realtimeStatus,
       };
     });
-  }, [transactionPublicKey]);
+  }, [remoteEditorPublicKey]);
 
   const handleRemoteEditorStatusChange = useCallback((realtimeStatus: SecondaryRealtimeStatus) => {
     setRemoteEditor((editor) => ({
@@ -578,56 +577,13 @@ export default function App() {
   }, [authoringSource, hasRemoteBaseline, remoteBaselineAppliedToEditor, remoteBaselineSource]);
 
   useEffect(() => {
-    const publicKey = transactionPublicKey.trim();
-    const controller = new AbortController();
-
     setRemoteEditor({
-      publicKey,
+      publicKey: remoteEditorPublicKey,
       endpoint: DEFAULT_OVERLAY_TRANSACTION_ENDPOINT,
       transactions: [],
       realtimeStatus: 'connecting',
-      historyLoading: Boolean(publicKey),
     });
-
-    if (!publicKey) {
-      return () => controller.abort();
-    }
-
-    fetchPublicKeyTransactions({
-      endpoint: DEFAULT_OVERLAY_TRANSACTION_ENDPOINT,
-      publicKey,
-      range: transactionRange,
-      signal: controller.signal,
-    })
-      .then((historicalTransactions) => {
-        const outgoingHistory = outgoingTransactionsForPublicKey(
-          normalizeXyzDslTransactions(historicalTransactions),
-          publicKey,
-        );
-
-        setRemoteEditor((editor) => editor.publicKey === publicKey ? {
-          ...editor,
-          transactions: sortTransactionsByTimeStable(mergeHistoricalStreamTransactions(
-            editor.transactions,
-            outgoingHistory,
-          )),
-          historyLoading: false,
-        } : editor);
-      })
-      .catch((caught: unknown) => {
-        if (caught instanceof DOMException && caught.name === 'AbortError') {
-          return;
-        }
-
-        setRemoteEditor((editor) => editor.publicKey === publicKey ? {
-          ...editor,
-          historyLoading: false,
-          streamError: caught instanceof Error ? caught.message : 'Unable to load remote editor history.',
-        } : editor);
-      });
-
-    return () => controller.abort();
-  }, [remoteBaselineSource, transactionPublicKey, transactionRange]);
+  }, [remoteEditorPublicKey]);
 
   const authoringChangeSummary = useMemo(
     () => summarizeLineChanges(remoteBaselineAppliedToEditor, authoringSource),
@@ -919,10 +875,10 @@ export default function App() {
 
   return (
     <main className={`app-shell app-shell--${appMode}`}>
-      {transactionPublicKey.trim() && endpointValidationError(DEFAULT_OVERLAY_TRANSACTION_ENDPOINT) === undefined ? (
+      {remoteEditorPublicKey && endpointValidationError(DEFAULT_OVERLAY_TRANSACTION_ENDPOINT) === undefined ? (
         <RemoteEditorRealtimeSubscription
-          key={`${transactionPublicKey.trim()}@@${transactionRange.startHeight}:${transactionRange.endHeight}:${transactionRange.limit}@@${remoteBaselineSource}`}
-          publicKey={transactionPublicKey.trim()}
+          key={remoteEditorPublicKey}
+          publicKey={remoteEditorPublicKey}
           onTransaction={handleRemoteEditorTransaction}
           onError={handleRemoteEditorError}
           onStatusChange={handleRemoteEditorStatusChange}
