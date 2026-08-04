@@ -92,3 +92,16 @@ export function composeTransactionSources(
     .filter((source) => source.trim().length > 0)
     .join('\n');
 }
+
+/** Composes the static/local document, referenced-key projections, then the canonical remote editor. */
+export function composeSpatialEditorSources(
+  documentSource: string,
+  secondaryStreams: readonly ComposeTransactionSecondaryStream[],
+  remoteEditorSource: string,
+): string {
+  return [composeTransactionSources(documentSource, secondaryStreams, {
+    namespacePolicy: 'consume-primary-namespaces',
+  }), remoteEditorSource]
+    .filter((source) => source.trim().length > 0)
+    .join('\n');
+}

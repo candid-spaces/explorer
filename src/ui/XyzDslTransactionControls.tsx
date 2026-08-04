@@ -278,7 +278,7 @@ export function XyzDslTransactionControls({
       </details>
 
       <p className="transaction-status">
-        {transactionCount} fetched · {acceptedCount} mapped · {secondaryProjectionCount} projected source{secondaryProjectionCount === 1 ? '' : 's'} · {rejectedCount} rejected
+        {transactionCount} fetched · {acceptedCount} mapped · {secondaryProjectionCount} secondary key projection{secondaryProjectionCount === 1 ? '' : 's'} · {rejectedCount} rejected
       </p>
       {error ? <p className="transaction-error">{error}</p> : null}
       {tipError ? <p className="transaction-error">{tipError}</p> : null}
