@@ -63,7 +63,23 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes).toHaveLength(2);
     expect(document.renderNodes[1].material.color).toBe('brown');
     expect(document.renderNodes[1].material.metalness).toBe(0.2);
-    expect(document.renderNodes[1].transform.position).toEqual([5.5, 1.5, 7.5]);
+    expect(document.renderNodes[1].transform.position).toEqual([4.5, 1.5, 7.5]);
+  });
+
+  it('packs materialized descendants using the reference declaration order', () => {
+    const document = createSpatialDocument(`"Template/" : "color: red"
+"Template/Part/+0+4/+0+2/+0+2" : ""
+"+10+4/+0+2/+0+2" : "color: blue"
+"Copy/+10+4/+0+2/+0+2" : "ref: Template/"`);
+
+    const prior = document.renderNodes.find((node) => node.material.color === 'blue');
+    const materialized = document.renderNodes.find(
+      (node) => node.namespacePath === 'Copy/Part/',
+    );
+
+    expect(prior?.transform.position).toEqual([12, 1, 1]);
+    expect(materialized?.transform.position).toEqual([12, 3, 1]);
+    expect(materialized?.metadata?.lineNumber).toBe(4);
   });
 
   it('inherits content through namespace declarations and refs', () => {
@@ -460,6 +476,21 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes.map((node) => node.material.color)).toEqual(['red', 'blue']);
   });
 
+  it('unions overlapping parts within a component but packs a global collision', () => {
+    const document = createSpatialDocument(`"Lamp/+0+1/+0+1/+0+1" : ""
+"Lamp/Shade/+0+4/+0+2/+0+4" : ""
+"Lamp/Bulb/+1+2/+0+2/+1+2" : "geometry: sphere"
+"+0+4/+0+2/+0+4" : "color: blue"`);
+
+    const shade = document.renderNodes.find((node) => node.namespacePath === 'Lamp/Shade/');
+    const bulb = document.renderNodes.find((node) => node.namespacePath === 'Lamp/Bulb/');
+    const global = document.renderNodes.find((node) => node.material.color === 'blue');
+    expect(shade?.unionGroupId).toBe('union-1');
+    expect(bulb?.unionGroupId).toBe('union-1');
+    expect(global?.unionGroupId).toBeUndefined();
+    expect(global?.bounds.minY).toBe(2);
+  });
+
   it('allows puff-only child geometry declarations without dropping inherited box-radius', () => {
     const document =
       createSpatialDocument(`"Cushion/" : "box-radius: 0.1; puff: 2"
@@ -500,6 +531,8 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.csgExpressions).toHaveLength(1);
     expect(document.csgExpressions[0].base.geometry.kind).toBe('sphere');
     expect(document.renderNodes.map((node) => node.geometry.kind)).toEqual(['box']);
+    expect(document.renderNodes[0].bounds.maxX).toBe(document.csgExpressions[0].base.bounds.minX);
+    expect(document.csgExpressions[0].operations[0].tool.transform.position[0]).toBe(5.5);
   });
 
   it('chains declaration-order boolean operations inside a concrete namespace scope', () => {
