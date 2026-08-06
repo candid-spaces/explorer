@@ -531,6 +531,8 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.csgExpressions).toHaveLength(1);
     expect(document.csgExpressions[0].base.geometry.kind).toBe('sphere');
     expect(document.renderNodes.map((node) => node.geometry.kind)).toEqual(['box']);
+    expect(document.renderNodes[0].bounds.maxX).toBe(document.csgExpressions[0].base.bounds.minX);
+    expect(document.csgExpressions[0].operations[0].tool.transform.position[0]).toBe(5.5);
   });
 
   it('chains declaration-order boolean operations inside a concrete namespace scope', () => {

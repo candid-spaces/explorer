@@ -141,30 +141,55 @@ function packNode(node: SpatialNode, obstacles: SpatialNode[]): SpatialNode {
   return node;
 }
 
+function csgBaseByTool(nodes: SpatialNode[]): Map<string, string> {
+  const ordered = nodes
+    .map((node, index) => ({ node, index }))
+    .sort((a, b) => sourceOrder(a.node, a.index) - sourceOrder(b.node, b.index));
+  const baseByTool = new Map<string, string>();
+
+  ordered.forEach(({ node: tool }, toolIndex) => {
+    if (!tool.geometry.operation) {
+      return;
+    }
+
+    const earlierOverlapping = ordered
+      .slice(0, toolIndex)
+      .map(({ node }) => node)
+      .filter((candidate) => boundsOverlap(candidate.bounds, tool.bounds));
+    const scopedCandidate = earlierOverlapping
+      .filter((candidate) => (candidate.parentNamespacePath ?? '') === (tool.parentNamespacePath ?? ''))
+      .at(-1);
+    const candidate = scopedCandidate ?? earlierOverlapping.at(-1);
+    const baseId = candidate
+      ? (baseByTool.get(candidate.id) ?? (candidate.geometry.operation ? undefined : candidate.id))
+      : undefined;
+
+    if (baseId) {
+      baseByTool.set(tool.id, baseId);
+    }
+  });
+
+  return baseByTool;
+}
+
 /**
  * Keeps collisions inside a named component as default unions, while moving
  * later global-space objects to the nearest free face-aligned coordinate.
- * Explicit CSG tools are deliberately left in place for buildCsgExpressions.
+ * Explicit CSG tools follow the selected base's packing translation.
  */
 export function resolveCollisions(nodes: SpatialNode[]): SpatialNode[] {
   const ordered = nodes
     .map((node, index) => ({ node, index }))
     .sort((a, b) => sourceOrder(a.node, a.index) - sourceOrder(b.node, b.index));
   const placed: SpatialNode[] = [];
+  const baseByTool = csgBaseByTool(nodes);
+  const translationByBase = new Map<string, [number, number, number]>();
 
   ordered.forEach(({ node }) => {
     if (node.geometry.operation) {
-      placed.push(node);
-      return;
-    }
-
-    const protectedByLaterCsg = nodes.some((candidate) =>
-      candidate.geometry.operation !== undefined &&
-      sourceOrder(candidate, Number.MAX_SAFE_INTEGER) > sourceOrder(node, 0) &&
-      boundsOverlap(candidate.bounds, node.bounds),
-    );
-    if (protectedByLaterCsg) {
-      placed.push(node);
+      const baseId = baseByTool.get(node.id);
+      const translation = baseId ? translationByBase.get(baseId) : undefined;
+      placed.push(translation ? translateNode(node, translation) : node);
       return;
     }
 
@@ -175,6 +200,11 @@ export function resolveCollisions(nodes: SpatialNode[]): SpatialNode[] {
     const resolved = globalObstacles.some((candidate) => boundsOverlap(node.bounds, candidate.bounds))
       ? packNode(node, globalObstacles)
       : node;
+    translationByBase.set(node.id, [
+      resolved.transform.position[0] - node.transform.position[0],
+      resolved.transform.position[1] - node.transform.position[1],
+      resolved.transform.position[2] - node.transform.position[2],
+    ]);
     placed.push(resolved);
   });
 
