@@ -21,6 +21,7 @@ export interface ResolvedSpatialObject extends SpatialObject {
   parentNamespacePath: string;
   renderable: boolean;
   materializedFrom?: string;
+  collisionOrder?: number;
   anchorScale?: [number, number, number];
 }
 
@@ -584,6 +585,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
         content: properties.content,
         reference: { diagnostics: [] },
         materializedFrom: object.reference.targetPath,
+        collisionOrder: object.lineNumber,
         renderable: false,
       });
     });

@@ -66,6 +66,22 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes[1].transform.position).toEqual([4.5, 1.5, 7.5]);
   });
 
+  it('packs materialized descendants using the reference declaration order', () => {
+    const document = createSpatialDocument(`"Template/" : "color: red"
+"Template/Part/+0+4/+0+2/+0+2" : ""
+"+10+4/+0+2/+0+2" : "color: blue"
+"Copy/+10+4/+0+2/+0+2" : "ref: Template/"`);
+
+    const prior = document.renderNodes.find((node) => node.material.color === 'blue');
+    const materialized = document.renderNodes.find(
+      (node) => node.namespacePath === 'Copy/Part/',
+    );
+
+    expect(prior?.transform.position).toEqual([12, 1, 1]);
+    expect(materialized?.transform.position).toEqual([12, 3, 1]);
+    expect(materialized?.metadata?.lineNumber).toBe(4);
+  });
+
   it('inherits content through namespace declarations and refs', () => {
     const document =
       createSpatialDocument(`"Poster/" : "content-kind: text; content-text-uri: Sale"

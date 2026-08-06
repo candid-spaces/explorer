@@ -111,7 +111,7 @@ export function createSpatialDocument(source: string): SpatialDocument {
         renderable: object.renderable,
         children: [],
         metadata: {
-          lineNumber: object.lineNumber,
+          lineNumber: object.collisionOrder ?? object.lineNumber,
           declarationOnly: object.declarationOnly,
           container: hasChildren,
           reference: object.reference.targetPath,
