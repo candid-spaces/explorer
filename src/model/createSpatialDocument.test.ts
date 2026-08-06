@@ -63,7 +63,7 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.renderNodes).toHaveLength(2);
     expect(document.renderNodes[1].material.color).toBe('brown');
     expect(document.renderNodes[1].material.metalness).toBe(0.2);
-    expect(document.renderNodes[1].transform.position).toEqual([5.5, 1.5, 7.5]);
+    expect(document.renderNodes[1].transform.position).toEqual([4.5, 1.5, 7.5]);
   });
 
   it('inherits content through namespace declarations and refs', () => {
@@ -458,6 +458,21 @@ describe('createSpatialDocument namespaced spatial declarations', () => {
     expect(document.diagnostics).toEqual([]);
     expect(document.renderNodes).toHaveLength(2);
     expect(document.renderNodes.map((node) => node.material.color)).toEqual(['red', 'blue']);
+  });
+
+  it('unions overlapping parts within a component but packs a global collision', () => {
+    const document = createSpatialDocument(`"Lamp/+0+1/+0+1/+0+1" : ""
+"Lamp/Shade/+0+4/+0+2/+0+4" : ""
+"Lamp/Bulb/+1+2/+0+2/+1+2" : "geometry: sphere"
+"+0+4/+0+2/+0+4" : "color: blue"`);
+
+    const shade = document.renderNodes.find((node) => node.namespacePath === 'Lamp/Shade/');
+    const bulb = document.renderNodes.find((node) => node.namespacePath === 'Lamp/Bulb/');
+    const global = document.renderNodes.find((node) => node.material.color === 'blue');
+    expect(shade?.unionGroupId).toBe('union-1');
+    expect(bulb?.unionGroupId).toBe('union-1');
+    expect(global?.unionGroupId).toBeUndefined();
+    expect(global?.bounds.minY).toBe(2);
   });
 
   it('allows puff-only child geometry declarations without dropping inherited box-radius', () => {

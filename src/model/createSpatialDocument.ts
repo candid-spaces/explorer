@@ -3,7 +3,7 @@ import { resolveXyzDslDocument } from '../xyzdsl/resolveDocument';
 import { canonicalNamespacePath } from '../xyzdsl/pathParser';
 import type { SpatialDocument } from './SpatialDocument';
 import type { SpatialNode } from './SpatialNode';
-import { assignUnionGroups, boundsFromTransformedBox } from './collision';
+import { boundsFromTransformedBox, resolveCollisions } from './collision';
 import { buildCsgExpressions } from './csg';
 import { geometryFromBox } from './geometry';
 import {
@@ -49,6 +49,10 @@ function applyRenderableStateToTree(
 
     return {
       ...node,
+      bounds: state?.bounds ?? node.bounds,
+      transform: state?.transform ?? node.transform,
+      localTransform: state?.localTransform ?? node.localTransform,
+      worldTransform: state?.worldTransform ?? node.worldTransform,
       unionGroupId: state?.unionGroupId ?? node.unionGroupId,
       csgExpressionId: state?.csgExpressionId ?? node.csgExpressionId,
       csgConsumed: state?.csgConsumed ?? node.csgConsumed,
@@ -127,7 +131,7 @@ export function createSpatialDocument(source: string): SpatialDocument {
       }
     });
 
-  const groupedNodes = assignUnionGroups(flattenRenderable(topLevelNodes));
+  const groupedNodes = resolveCollisions(flattenRenderable(topLevelNodes));
   const csg = buildCsgExpressions(groupedNodes);
   const renderNodes = csg.nodes.filter((node) => !node.csgConsumed && !node.csgExpressionId);
   const nodes = applyRenderableStateToTree(topLevelNodes, csg.nodes);

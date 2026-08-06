@@ -85,6 +85,104 @@ export function boundsOverlap(a: SpatialBounds, b: SpatialBounds): boolean {
   );
 }
 
+function sourceOrder(node: SpatialNode, fallback: number): number {
+  return (node.metadata?.lineNumber as number | undefined) ?? fallback;
+}
+
+function componentScope(node: SpatialNode): string | undefined {
+  return node.namespacePath?.split('/').filter(Boolean)[0];
+}
+
+function translateNode(node: SpatialNode, [x, y, z]: [number, number, number]): SpatialNode {
+  const translateTransform = (transform: SpatialTransform | undefined) => transform
+    ? { ...transform, position: [transform.position[0] + x, transform.position[1] + y, transform.position[2] + z] as [number, number, number] }
+    : undefined;
+
+  return {
+    ...node,
+    transform: translateTransform(node.transform)!,
+    worldTransform: translateTransform(node.worldTransform),
+    localTransform: node.parentNamespacePath ? node.localTransform : translateTransform(node.localTransform),
+    bounds: {
+      minX: node.bounds.minX + x,
+      maxX: node.bounds.maxX + x,
+      minY: node.bounds.minY + y,
+      maxY: node.bounds.maxY + y,
+      minZ: node.bounds.minZ + z,
+      maxZ: node.bounds.maxZ + z,
+    },
+  };
+}
+
+function packingCandidates(node: SpatialNode, obstacles: SpatialNode[]): [number, number, number][] {
+  const candidates: [number, number, number][] = [];
+  obstacles.forEach((obstacle) => {
+    candidates.push(
+      [obstacle.bounds.maxX - node.bounds.minX, 0, 0],
+      [obstacle.bounds.minX - node.bounds.maxX, 0, 0],
+      [0, obstacle.bounds.maxY - node.bounds.minY, 0],
+      [0, obstacle.bounds.minY - node.bounds.maxY, 0],
+      [0, 0, obstacle.bounds.maxZ - node.bounds.minZ],
+      [0, 0, obstacle.bounds.minZ - node.bounds.maxZ],
+    );
+  });
+
+  // Stable sorting preserves the +X, -X, +Y, -Y, +Z, -Z tie-break above.
+  return candidates.sort((a, b) => Math.hypot(...a) - Math.hypot(...b));
+}
+
+function packNode(node: SpatialNode, obstacles: SpatialNode[]): SpatialNode {
+  for (const translation of packingCandidates(node, obstacles)) {
+    const candidate = translateNode(node, translation);
+    if (!obstacles.some((obstacle) => boundsOverlap(candidate.bounds, obstacle.bounds))) {
+      return candidate;
+    }
+  }
+  return node;
+}
+
+/**
+ * Keeps collisions inside a named component as default unions, while moving
+ * later global-space objects to the nearest free face-aligned coordinate.
+ * Explicit CSG tools are deliberately left in place for buildCsgExpressions.
+ */
+export function resolveCollisions(nodes: SpatialNode[]): SpatialNode[] {
+  const ordered = nodes
+    .map((node, index) => ({ node, index }))
+    .sort((a, b) => sourceOrder(a.node, a.index) - sourceOrder(b.node, b.index));
+  const placed: SpatialNode[] = [];
+
+  ordered.forEach(({ node }) => {
+    if (node.geometry.operation) {
+      placed.push(node);
+      return;
+    }
+
+    const protectedByLaterCsg = nodes.some((candidate) =>
+      candidate.geometry.operation !== undefined &&
+      sourceOrder(candidate, Number.MAX_SAFE_INTEGER) > sourceOrder(node, 0) &&
+      boundsOverlap(candidate.bounds, node.bounds),
+    );
+    if (protectedByLaterCsg) {
+      placed.push(node);
+      return;
+    }
+
+    const scope = componentScope(node);
+    const globalObstacles = placed.filter((candidate) =>
+      !candidate.geometry.operation && (scope === undefined || componentScope(candidate) !== scope),
+    );
+    const resolved = globalObstacles.some((candidate) => boundsOverlap(node.bounds, candidate.bounds))
+      ? packNode(node, globalObstacles)
+      : node;
+    placed.push(resolved);
+  });
+
+  return assignUnionGroups(placed).sort(
+    (a, b) => nodes.findIndex((node) => node.id === a.id) - nodes.findIndex((node) => node.id === b.id),
+  );
+}
+
 export function assignUnionGroups(nodes: SpatialNode[]): SpatialNode[] {
   const adjacency = new Map<string, Set<string>>();
 
@@ -92,7 +190,14 @@ export function assignUnionGroups(nodes: SpatialNode[]): SpatialNode[] {
 
   for (let i = 0; i < nodes.length; i += 1) {
     for (let j = i + 1; j < nodes.length; j += 1) {
-      if (boundsOverlap(nodes[i].bounds, nodes[j].bounds)) {
+      const scope = componentScope(nodes[i]);
+      if (
+        scope !== undefined &&
+        scope === componentScope(nodes[j]) &&
+        !nodes[i].geometry.operation &&
+        !nodes[j].geometry.operation &&
+        boundsOverlap(nodes[i].bounds, nodes[j].bounds)
+      ) {
         adjacency.get(nodes[i].id)?.add(nodes[j].id);
         adjacency.get(nodes[j].id)?.add(nodes[i].id);
       }
