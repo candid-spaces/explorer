@@ -130,4 +130,17 @@ describe('resolveCollisions', () => {
     ]);
     expect(resolved[1].bounds.minX).toBe(4);
   });
+
+  it('packs all parts of a component with one shared translation', () => {
+    const largeBox = box({ width: 4, height: 10, depth: 10 });
+    const resolved = resolveCollisions([
+      node('obstacle', largeBox, [0, 0, 0], undefined, 1),
+      node('left', box({ x: -1, width: 2, height: 10, depth: 10 }), [0, 0, 0], 'Fixture/Left/', 2),
+      node('right', box({ x: 3, width: 2, height: 10, depth: 10 }), [0, 0, 0], 'Fixture/Right/', 3),
+    ]);
+
+    expect(resolved[1].transform.position[0] - 0).toBe(5);
+    expect(resolved[2].transform.position[0] - 4).toBe(5);
+    expect(resolved[2].transform.position[0] - resolved[1].transform.position[0]).toBe(4);
+  });
 });

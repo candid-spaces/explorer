@@ -181,34 +181,52 @@ export function resolveCollisions(nodes: SpatialNode[]): SpatialNode[] {
   const ordered = nodes
     .map((node, index) => ({ node, index }))
     .sort((a, b) => sourceOrder(a.node, a.index) - sourceOrder(b.node, b.index));
-  const placed: SpatialNode[] = [];
   const baseByTool = csgBaseByTool(nodes);
-  const translationByBase = new Map<string, [number, number, number]>();
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const entityKey = (node: SpatialNode): string => {
+    const base = node.geometry.operation ? nodeById.get(baseByTool.get(node.id) ?? '') : node;
+    const scope = base ? componentScope(base) : undefined;
+    return scope ? `component:${scope}` : `node:${base?.id ?? node.id}`;
+  };
+  const entities = new Map<string, SpatialNode[]>();
 
   ordered.forEach(({ node }) => {
-    if (node.geometry.operation) {
-      const baseId = baseByTool.get(node.id);
-      const translation = baseId ? translationByBase.get(baseId) : undefined;
-      placed.push(translation ? translateNode(node, translation) : node);
+    const key = entityKey(node);
+    entities.set(key, [...(entities.get(key) ?? []), node]);
+  });
+
+  const placedObstacles: SpatialNode[] = [];
+  const resolvedNodes: SpatialNode[] = [];
+  entities.forEach((members) => {
+    const collisionMembers = members.filter((member) => !member.geometry.operation);
+    if (collisionMembers.length === 0) {
+      resolvedNodes.push(...members);
       return;
     }
 
-    const scope = componentScope(node);
-    const globalObstacles = placed.filter((candidate) =>
-      !candidate.geometry.operation && (scope === undefined || componentScope(candidate) !== scope),
-    );
-    const resolved = globalObstacles.some((candidate) => boundsOverlap(node.bounds, candidate.bounds))
-      ? packNode(node, globalObstacles)
-      : node;
-    translationByBase.set(node.id, [
-      resolved.transform.position[0] - node.transform.position[0],
-      resolved.transform.position[1] - node.transform.position[1],
-      resolved.transform.position[2] - node.transform.position[2],
-    ]);
-    placed.push(resolved);
+    const bounds = collisionMembers.reduce<SpatialBounds>((combined, member) => ({
+      minX: Math.min(combined.minX, member.bounds.minX),
+      maxX: Math.max(combined.maxX, member.bounds.maxX),
+      minY: Math.min(combined.minY, member.bounds.minY),
+      maxY: Math.max(combined.maxY, member.bounds.maxY),
+      minZ: Math.min(combined.minZ, member.bounds.minZ),
+      maxZ: Math.max(combined.maxZ, member.bounds.maxZ),
+    }), collisionMembers[0].bounds);
+    const representative = { ...collisionMembers[0], bounds };
+    const packed = placedObstacles.some((obstacle) => boundsOverlap(bounds, obstacle.bounds))
+      ? packNode(representative, placedObstacles)
+      : representative;
+    const translation: [number, number, number] = [
+      packed.transform.position[0] - representative.transform.position[0],
+      packed.transform.position[1] - representative.transform.position[1],
+      packed.transform.position[2] - representative.transform.position[2],
+    ];
+    const resolvedMembers = members.map((member) => translateNode(member, translation));
+    resolvedNodes.push(...resolvedMembers);
+    placedObstacles.push(...resolvedMembers.filter((member) => !member.geometry.operation));
   });
 
-  return assignUnionGroups(placed).sort(
+  return assignUnionGroups(resolvedNodes).sort(
     (a, b) => nodes.findIndex((node) => node.id === a.id) - nodes.findIndex((node) => node.id === b.id),
   );
 }
