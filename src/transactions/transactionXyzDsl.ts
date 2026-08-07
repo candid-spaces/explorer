@@ -132,7 +132,7 @@ function quoteXyzDslDeclaration(path: string, properties: string): string {
 function parseValidXyzDsl(source: string) {
   const parsed = parseXyzDslDocument(source);
   const objects = parsed.value ?? [];
-  const hasInvalidObject = objects.some((object) => !object.declarationOnly && !object.box);
+  const hasInvalidObject = objects.some((object) => !object.declarationOnly && !object.box && !object.conditional);
 
   return {
     parsed,

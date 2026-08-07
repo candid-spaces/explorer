@@ -1,6 +1,8 @@
 import type { XyzDslBoxSpec, XyzDslContentSpec, XyzDslMaterialSpec } from '../xyzdsl/types';
 import type { SpatialGeometry } from './geometry';
 import type { SpatialTransform } from './transform';
+import type { InteractionFact } from './interactions';
+import type { XyzDslDeclarationOrigin } from '../xyzdsl/types';
 
 export interface SpatialBounds {
   minX: number;
@@ -30,4 +32,7 @@ export interface SpatialNode {
   csgConsumed?: boolean;
   children?: SpatialNode[];
   metadata?: Record<string, unknown>;
+  origin?: XyzDslDeclarationOrigin;
+  baseBox?: XyzDslBoxSpec;
+  activeInteractions?: InteractionFact[];
 }

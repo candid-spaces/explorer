@@ -25,6 +25,12 @@ export interface ResolvedSpatialObject extends SpatialObject {
   anchorScale?: [number, number, number];
 }
 
+export interface ResolvedConditionalVariant extends Omit<SpatialObject, 'box'> {
+  conditional: NonNullable<SpatialObject['conditional']>;
+  properties: ResolvedProperties;
+  targetNamespacePath: string;
+}
+
 interface ResolvedProperties {
   material: XyzDslMaterialSpec;
   geometry: XyzDslGeometrySpec;
@@ -177,11 +183,14 @@ function namespacePrefixes(namespace: string[]): string[] {
 
 function latestNamedEntries(objects: SpatialObject[]): SpatialObject[] {
   const latestByNamespaceAndKind = new Map<string, SpatialObject>();
+  const identityKey = (object: SpatialObject) => object.origin?.sourceKind === 'secondary'
+    ? `secondary:${object.origin.streamId ?? object.origin.publicKey ?? 'unknown'}:`
+    : '';
 
   objects.forEach((object) => {
     if (object.namespace.length > 0) {
       latestByNamespaceAndKind.set(
-        `${object.declarationOnly ? 'declaration' : 'instance'}:${canonicalNamespacePath(object.namespace)}`,
+        `${identityKey(object)}${object.declarationOnly ? 'declaration' : 'instance'}:${canonicalNamespacePath(object.namespace)}`,
         object,
       );
     }
@@ -191,7 +200,7 @@ function latestNamedEntries(objects: SpatialObject[]): SpatialObject[] {
     (object) =>
       object.namespace.length === 0 ||
       latestByNamespaceAndKind.get(
-        `${object.declarationOnly ? 'declaration' : 'instance'}:${canonicalNamespacePath(object.namespace)}`,
+        `${identityKey(object)}${object.declarationOnly ? 'declaration' : 'instance'}:${canonicalNamespacePath(object.namespace)}`,
       ) === object,
   );
 }
@@ -436,10 +445,13 @@ function scaleToFit(
 
 export function resolveXyzDslDocument(objects: SpatialObject[]): {
   objects: ResolvedSpatialObject[];
+  variants: ResolvedConditionalVariant[];
   diagnostics: ParseDiagnostic[];
 } {
   const diagnostics: ParseDiagnostic[] = [];
-  const effectiveObjects = latestNamedEntries(objects);
+  const ordinaryObjects = objects.filter((object) => !object.conditional);
+  const conditionalObjects = objects.filter((object) => object.conditional);
+  const effectiveObjects = latestNamedEntries(ordinaryObjects);
   const instances = effectiveObjects.filter(
     (object) => !object.declarationOnly && object.box,
   );
@@ -455,7 +467,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
     } = {},
   ): ResolvedSpatialObject => {
     const { properties, diagnostics: propertyDiagnostics } =
-      resolvePropertiesFor(object, objects);
+      resolvePropertiesFor(object, ordinaryObjects);
     diagnostics.push(...propertyDiagnostics);
 
     const namespace = options.namespace ?? object.namespace;
@@ -466,11 +478,14 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
       namespace.length > 0
         ? `${namespacePath}${object.box!.source}${duplicateSuffix}`
         : object.id;
+    const originIdPrefix = object.origin?.sourceKind === 'secondary'
+      ? `${object.origin.streamId ?? object.origin.publicKey ?? 'secondary'}::`
+      : '';
 
     return {
       ...object,
       namespace,
-      id: options.idPrefix ? `${options.idPrefix}${idPath}` : idPath,
+      id: `${originIdPrefix}${options.idPrefix ? `${options.idPrefix}${idPath}` : idPath}`,
       box: object.box!,
       namespacePath,
       parentNamespacePath,
@@ -493,7 +508,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
   const materializedObjects: ResolvedSpatialObject[] = [];
   const anchorScaleById = new Map<string, [number, number, number]>();
   const occupiedNamespaces = new Set(
-    objects
+    ordinaryObjects
       .map((object) => canonicalNamespacePath(object.namespace))
       .filter(Boolean),
   );
@@ -510,7 +525,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
       .split('/')
       .filter(Boolean);
     const historicalEntries = latestNamedEntries(
-      objects.filter((candidate) => candidate.lineNumber < object.lineNumber),
+      ordinaryObjects.filter((candidate) => candidate.lineNumber < object.lineNumber),
     );
     const descendants = historicalEntries.filter(
       (candidate) =>
@@ -535,7 +550,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
     }
 
     const target = latestEntryBefore(
-      objects,
+      ordinaryObjects,
       object.reference.targetPath,
       object.lineNumber,
     );
@@ -627,6 +642,31 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
     }
   });
 
+  const concreteTargetNamespaces = new Set(allObjects.map((object) => object.namespacePath));
+  const variants: ResolvedConditionalVariant[] = conditionalObjects.flatMap((object) => {
+    const conditional = object.conditional!;
+    const targetNamespacePath = canonicalNamespacePath(conditional.targetNamespace);
+    if (!concreteTargetNamespaces.has(targetNamespacePath)) {
+      diagnostics.push({
+        line: object.lineNumber,
+        source: object.source,
+        message: `Conditional declaration target "${targetNamespacePath}" was not found.`,
+      });
+      return [];
+    }
+    return [{
+      ...object,
+      conditional,
+      targetNamespacePath,
+      properties: {
+        material: object.material,
+        geometry: object.geometry,
+        transform: object.transform,
+        content: object.content,
+      },
+    }];
+  });
+
   return {
     objects: allObjects.map((object) => ({
       ...object,
@@ -635,6 +675,7 @@ export function resolveXyzDslDocument(objects: SpatialObject[]): {
         renderEligibleObjects.includes(object) &&
         !hasMaterializedChildInstance(object, renderEligibleObjects),
     })),
+    variants,
     diagnostics,
   };
 }

@@ -16,12 +16,42 @@ export interface XyzDslBoxSpec {
   depth: number;
 }
 
+export type XyzDslInteractionState = 'probe' | 'breach';
+
+export interface XyzDslDirectiveSpec {
+  name: XyzDslInteractionState;
+  segmentIndex: number;
+  scopeNamespace: string[];
+}
+
+export type XyzDslConditionalSpatialOverride =
+  | { mode: 'inherit' }
+  | { mode: 'translation'; magnitude: [number, number, number] }
+  | { mode: 'absolute-box'; box: XyzDslBoxSpec };
+
+export interface XyzDslConditionalSpec {
+  directives: XyzDslDirectiveSpec[];
+  spatialOverride: XyzDslConditionalSpatialOverride;
+  targetNamespace: string[];
+}
+
+export interface XyzDslDeclarationOrigin {
+  sourceKind: 'baseline' | 'secondary' | 'remote-editor';
+  streamId?: string;
+  publicKey?: string;
+  endpoint?: string;
+  transactionId?: string;
+  transactionTime?: number;
+  sourceOrder?: number;
+}
+
 export interface XyzDslPathSpec {
   source: string;
   namespace: string[];
   box?: XyzDslBoxSpec;
   canonicalPath: string;
   isDeclarationOnly: boolean;
+  conditional?: XyzDslConditionalSpec;
 }
 
 export type XyzDslGeometryKind = 'box' | 'cylinder' | 'cone' | 'sphere';
@@ -97,6 +127,8 @@ export interface SpatialObject {
   content: XyzDslContentSpec;
   declarationOnly: boolean;
   lineNumber: number;
+  origin?: XyzDslDeclarationOrigin;
+  conditional?: XyzDslConditionalSpec;
   unionGroupId?: string;
 }
 

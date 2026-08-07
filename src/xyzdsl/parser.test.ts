@@ -71,6 +71,32 @@ describe('parseBoxSpec', () => {
 });
 
 describe('parseXyzDslDocument', () => {
+  it('parses scoped interaction directives and all conditional coordinate modes', () => {
+    const result = parseXyzDslDocument(`"Rod/+probe" : "rotation: 90,90,0"
+"Machine/+probe/Lever/+4/+5/+9" : ""
+"Rod/+breach/+9+1/+0+5/+0+1" : "color: red"`);
+
+    expect(result.ok).toBe(true);
+    expect(result.value?.[0].conditional).toMatchObject({
+      targetNamespace: ['Rod'],
+      directives: [{ name: 'probe', scopeNamespace: ['Rod'] }],
+      spatialOverride: { mode: 'inherit' },
+    });
+    expect(result.value?.[1].conditional).toMatchObject({
+      targetNamespace: ['Machine', 'Lever'],
+      directives: [{ name: 'probe', scopeNamespace: ['Machine'] }],
+      spatialOverride: { mode: 'translation', magnitude: [4, 5, 9] },
+    });
+    expect(result.value?.[2].conditional?.spatialOverride).toMatchObject({
+      mode: 'absolute-box',
+      box: { x: 9, width: 1, y: 0, height: 5, z: 0, depth: 1 },
+    });
+  });
+
+  it('rejects unknown and unscoped interaction directives', () => {
+    expect(parseXyzDslDocument('"Rod/+hover" : ""').diagnostics[0].message).toContain('Unknown interaction directive');
+    expect(parseXyzDslDocument('"+probe/+1/+2/+3" : ""').diagnostics[0].message).toContain('require a target namespace');
+  });
   it('parses composed object declarations with geometry and material properties', () => {
     const result = parseXyzDslDocument(EXAMPLE);
 
@@ -127,7 +153,7 @@ describe('parseXyzDslDocument', () => {
     );
     expect(leadingPlusResult.ok).toBe(false);
     expect(leadingPlusResult.diagnostics[0].message).toBe(
-      'Namespace segment "+Room" must start with a letter or number and contain only Base64 characters except the / delimiter.',
+      'Unknown interaction directive "+Room". Expected +probe or +breach.',
     );
   });
 

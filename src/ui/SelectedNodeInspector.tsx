@@ -168,6 +168,18 @@ export function SelectedNodeInspector({
             {node.box.width} × {node.box.height} × {node.box.depth} at ({node.box.x}, {node.box.y}, {node.box.z})
           </dd>
         </div>
+        {node.origin ? <div>
+          <dt>Source</dt>
+          <dd>{node.origin.sourceKind}{node.origin.streamId ? ` · ${node.origin.streamId}` : ''}</dd>
+        </div> : null}
+        {(node.activeInteractions?.length ?? 0) > 0 ? <div>
+          <dt>Interactions</dt>
+          <dd>{node.activeInteractions!.map((fact) => `${fact.state} by ${fact.cursorNamespace} (${fact.streamId})`).join(', ')}</dd>
+        </div> : null}
+        {node.baseBox && (node.baseBox.x !== node.box.x || node.baseBox.y !== node.box.y || node.baseBox.z !== node.box.z) ? <div>
+          <dt>Base position</dt>
+          <dd>({node.baseBox.x}, {node.baseBox.y}, {node.baseBox.z})</dd>
+        </div> : null}
       </dl>
 
       {selectionPath.length > 1 ? (

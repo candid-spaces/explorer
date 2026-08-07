@@ -1,4 +1,4 @@
-import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject } from './types';
+import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, ParseDiagnostic, ParseResult, SpatialObject, XyzDslDeclarationOrigin } from './types';
 import { parseObjectProperties } from './objectDeclarationParser';
 import { parseXyzDslPath, parsePathAxisSpec, parsePathBoxSpec, parsePathNumber } from './pathParser';
 
@@ -16,7 +16,7 @@ export function parseBoxSpec(source: string): XyzDslBoxSpec {
   return parsePathBoxSpec(source);
 }
 
-export function parseXyzDslDeclaration(line: string, lineNumber = 1): ParseResult<SpatialObject> {
+export function parseXyzDslDeclaration(line: string, lineNumber = 1, origin?: XyzDslDeclarationOrigin): ParseResult<SpatialObject> {
   const match = line.match(DECLARATION_PATTERN);
   const diagnostics: ParseDiagnostic[] = [];
 
@@ -52,6 +52,8 @@ export function parseXyzDslDeclaration(line: string, lineNumber = 1): ParseResul
         content: properties.content,
         declarationOnly: path.isDeclarationOnly,
         lineNumber,
+        conditional: path.conditional,
+        origin,
       },
       diagnostics: properties.diagnostics.map((message) => ({ line: lineNumber, source: line, message })),
     };
@@ -66,7 +68,7 @@ export function parseXyzDslDeclaration(line: string, lineNumber = 1): ParseResul
   }
 }
 
-export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]> {
+export function parseXyzDslDocument(source: string, originsByLine: ReadonlyMap<number, XyzDslDeclarationOrigin> = new Map()): ParseResult<SpatialObject[]> {
   const objects: SpatialObject[] = [];
   const diagnostics: ParseDiagnostic[] = [];
 
@@ -75,7 +77,7 @@ export function parseXyzDslDocument(source: string): ParseResult<SpatialObject[]
     .map((line, index) => ({ line, lineNumber: index + 1 }))
     .filter(({ line }) => line.trim().length > 0)
     .forEach(({ line, lineNumber }) => {
-      const result = parseXyzDslDeclaration(line, lineNumber);
+      const result = parseXyzDslDeclaration(line, lineNumber, originsByLine.get(lineNumber));
 
       diagnostics.push(...result.diagnostics);
 
