@@ -76,6 +76,30 @@ function mergeTextures(
   return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
+/** Merges a conditional/inherited material without discarding undeclared texture channels or attributes. */
+export function mergeXyzDslMaterialSpecs(
+  base: XyzDslMaterialSpec,
+  override: XyzDslMaterialSpec,
+): XyzDslMaterialSpec {
+  return {
+    diagnostics: [],
+    materialPreset: override.materialPreset ?? base.materialPreset,
+    semanticMaterial: override.semanticMaterial ?? base.semanticMaterial,
+    materialVariant: override.materialVariant ?? base.materialVariant,
+    materialPattern: override.materialPattern ?? base.materialPattern,
+    materialFinish: override.materialFinish ?? base.materialFinish,
+    textures: mergeTextures(base.textures, override.textures),
+    color: override.color ?? base.color,
+    metalness: override.metalness ?? base.metalness,
+    roughness: override.roughness ?? base.roughness,
+    reflectivity: override.reflectivity ?? base.reflectivity,
+    clearcoat: override.clearcoat ?? base.clearcoat,
+    opacity: override.opacity ?? base.opacity,
+    transmission: override.transmission ?? base.transmission,
+    ior: override.ior ?? base.ior,
+  };
+}
+
 const DEFAULT_PROPERTIES: ResolvedProperties = {
   material: { diagnostics: [] },
   geometry: { kind: 'box', diagnostics: [] },
@@ -149,23 +173,7 @@ function mergeProperties(
   const includeTransform = options.includeTransform ?? true;
 
   return {
-    material: {
-      diagnostics: [],
-      materialPreset: overrideMaterial.materialPreset ?? base.material.materialPreset,
-      semanticMaterial: overrideMaterial.semanticMaterial ?? base.material.semanticMaterial,
-      materialVariant: overrideMaterial.materialVariant ?? base.material.materialVariant,
-      materialPattern: overrideMaterial.materialPattern ?? base.material.materialPattern,
-      materialFinish: overrideMaterial.materialFinish ?? base.material.materialFinish,
-      textures: mergeTextures(base.material.textures, overrideMaterial.textures),
-      color: overrideMaterial.color ?? base.material.color,
-      metalness: overrideMaterial.metalness ?? base.material.metalness,
-      roughness: overrideMaterial.roughness ?? base.material.roughness,
-      reflectivity: overrideMaterial.reflectivity ?? base.material.reflectivity,
-      clearcoat: overrideMaterial.clearcoat ?? base.material.clearcoat,
-      opacity: overrideMaterial.opacity ?? base.material.opacity,
-      transmission: overrideMaterial.transmission ?? base.material.transmission,
-      ior: overrideMaterial.ior ?? base.material.ior,
-    },
+    material: mergeXyzDslMaterialSpecs(base.material, overrideMaterial),
     geometry: mergeGeometry(base.geometry, overrideGeometry),
     content: mergeContent(base.content, override.content),
     transform:

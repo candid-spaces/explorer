@@ -36,6 +36,26 @@ describe('secondary projection interactions', () => {
     expect(rod?.material.color).toBe('red');
   });
 
+  it('merges conditional texture attributes without dropping base channels or presets', () => {
+    const document = createSpatialDocument(`"Rod/+0+1/+0+1/+0+1" : "texture: wood.oak; normal-texture: bump.noise"
+"Rod/+probe" : "texture-repeat: 3 4"
+"Cursor/+1+1/+0+1/+0+1" : ""`, { originsByLine: origins(3) });
+    const material = document.renderNodes.find((node) => node.namespacePath === 'Rod/')?.material;
+
+    expect(material?.textures?.map).toMatchObject({ preset: 'wood.oak', repeat: [3, 4] });
+    expect(material?.textures?.normalMap).toMatchObject({ preset: 'bump.noise' });
+  });
+
+  it('merges a conditional channel attribute into its inherited texture specification', () => {
+    const document = createSpatialDocument(`"Rod/+0+1/+0+1/+0+1" : "texture: wood.oak; normal-texture: bump.noise"
+"Rod/+probe" : "normal-texture-repeat: 5 6"
+"Cursor/+1+1/+0+1/+0+1" : ""`, { originsByLine: origins(3) });
+    const material = document.renderNodes.find((node) => node.namespacePath === 'Rod/')?.material;
+
+    expect(material?.textures?.map).toEqual({ preset: 'wood.oak' });
+    expect(material?.textures?.normalMap).toEqual({ preset: 'bump.noise', repeat: [5, 6] });
+  });
+
   it('attributes identical cursor namespaces to independent streams without replacement', () => {
     const source = `"Rod/+0+1/+0+1/+0+1" : ""
 "Cursor/+1+1/+0+1/+0+1" : ""
