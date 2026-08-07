@@ -14,7 +14,7 @@ import {
 import { SceneRoot } from './scene/SceneRoot';
 import { fetchPublicKeyTransactions, fetchTipHeight, normalizeEndpoint } from './transactions/publicKeyTransactions';
 import { createPublicKeyShareUrl, readPublicKeyFromUrl } from './transactions/publicKeyShareUrl';
-import { composeSpatialEditorSources } from './transactions/composeTransactionSources';
+import { composeSpatialEditorSourceBundle } from './transactions/composeTransactionSources';
 import { DEFAULT_OVERLAY_TRANSACTION_ENDPOINT, normalizeXyzDslTransaction, normalizeXyzDslTransactions, transactionsToRemoteEditorSource, transactionsToXyzDslSource } from './transactions/transactionXyzDsl';
 import { clampPlaybackIndex, currentPlaybackTransaction, hasPlaybackReachedEnd, mergeHistoricalStreamTransactions, mergeStreamTransactions, normalizePlaybackSpeed, outgoingTransactionsForPublicKey, playbackIndexForElapsedTime, playbackTickIntervalMilliseconds, playbackTimeForElapsedTime, scaledPlaybackElapsedSeconds, sortTransactionsByTimeStable } from './transactions/streamTransactions';
 import type { ActiveSecondaryTransactionStream, RemoteSpatialEditor, XyzDslTransaction, SecondaryKeyReference, SecondaryProjection, SecondaryRealtimeStatus, TransactionRange } from './transactions/types';
@@ -517,6 +517,10 @@ export default function App() {
 
       return {
         id: `${publicKey}@@${endpoint}`,
+        publicKey,
+        endpoint,
+        transactionId: currentTransaction?.signature,
+        transactionTime: currentTransaction?.time,
         declarations: xyzdslResult.source,
         xyzdslResult,
       };
@@ -589,11 +593,14 @@ export default function App() {
     () => summarizeLineChanges(remoteBaselineAppliedToEditor, authoringSource),
     [authoringSource, remoteBaselineAppliedToEditor],
   );
-  const renderedSource = useMemo(
-    () => composeSpatialEditorSources(authoringSource, secondaryTransactionOverlayStreams, remoteEditorSource),
+  const renderedBundle = useMemo(
+    () => composeSpatialEditorSourceBundle(authoringSource, secondaryTransactionOverlayStreams, remoteEditorSource),
     [authoringSource, remoteEditorSource, secondaryTransactionOverlayStreams],
   );
-  const document = useMemo(() => createSpatialDocument(renderedSource), [renderedSource]);
+  const renderedSource = renderedBundle.source;
+  const document = useMemo(() => createSpatialDocument(renderedBundle.source, {
+    originsByLine: renderedBundle.originsByLine,
+  }), [renderedBundle]);
   const selectedNode = useMemo(
     () => findNodeById(document.nodes, selectedNodeId) ?? findNodeByLineNumber(document.nodes, selectedLineNumber),
     [document.nodes, selectedLineNumber, selectedNodeId],

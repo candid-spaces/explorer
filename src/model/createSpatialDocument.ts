@@ -1,5 +1,7 @@
 import { parseXyzDslDocument } from '../xyzdsl/parser';
-import { resolveXyzDslDocument } from '../xyzdsl/resolveDocument';
+import { mergeXyzDslContentSpecs, mergeXyzDslGeometrySpecs, mergeXyzDslMaterialSpecs, resolveXyzDslDocument } from '../xyzdsl/resolveDocument';
+import type { ResolvedConditionalVariant } from '../xyzdsl/resolveDocument';
+import type { XyzDslBoxSpec, XyzDslDeclarationOrigin } from '../xyzdsl/types';
 import { canonicalNamespacePath } from '../xyzdsl/pathParser';
 import type { SpatialDocument } from './SpatialDocument';
 import type { SpatialNode } from './SpatialNode';
@@ -11,6 +13,14 @@ import {
   composeTransforms,
   transformFromBox,
 } from './transform';
+import type { SpatialTransform } from './transform';
+import { evaluateInteractions } from './interactions';
+import type { InteractionFact } from './interactions';
+
+export interface CreateSpatialDocumentOptions {
+  originsByLine?: ReadonlyMap<number, XyzDslDeclarationOrigin>;
+  probeTolerance?: number;
+}
 
 function nearestConcreteAncestor(
   namespace: string[],
@@ -61,8 +71,101 @@ function applyRenderableStateToTree(
   });
 }
 
-export function createSpatialDocument(source: string): SpatialDocument {
-  const parsed = parseXyzDslDocument(source);
+function translateBox(box: XyzDslBoxSpec, magnitude: [number, number, number], fact: InteractionFact): XyzDslBoxSpec {
+  const signs = magnitude.map((_, axis) => fact.normal[axis] || fact.inferredDirection[axis] || 1) as [number, number, number];
+  return {
+    ...box,
+    source: `${box.source} (conditional translation)`,
+    x: box.x + magnitude[0] * signs[0],
+    y: box.y + magnitude[1] * signs[1],
+    z: box.z + magnitude[2] * signs[2],
+  };
+}
+
+function variantsForNode(node: SpatialNode, variants: readonly ResolvedConditionalVariant[], facts: readonly InteractionFact[]) {
+  return variants.flatMap((variant) => {
+    if (variant.targetNamespacePath !== node.namespacePath) return [];
+    const matchingFacts = facts.filter((fact) => variant.conditional.directives.every((directive) =>
+      fact.state === directive.name && fact.targetNamespace.startsWith(canonicalNamespacePath(directive.scopeNamespace)),
+    ));
+    const fact = matchingFacts.sort((a, b) =>
+      (b.penetration ?? 0) - (a.penetration ?? 0) ||
+      (a.separation ?? 0) - (b.separation ?? 0) ||
+      a.streamId.localeCompare(b.streamId) || a.cursorId.localeCompare(b.cursorId),
+    )[0];
+    return fact ? [{ variant, fact }] : [];
+  }).sort((a, b) =>
+    a.variant.conditional.directives[0].scopeNamespace.length - b.variant.conditional.directives[0].scopeNamespace.length ||
+    a.variant.lineNumber - b.variant.lineNumber,
+  );
+}
+
+function applyConditionalVariants(
+  nodes: SpatialNode[],
+  variants: readonly ResolvedConditionalVariant[],
+  facts: readonly InteractionFact[],
+  parentTransform?: SpatialTransform,
+  parentChanged = false,
+): SpatialNode[] {
+  return nodes.map((node) => {
+    let box = { ...node.box };
+    let material = node.material;
+    let geometry = node.geometry;
+    let content = node.content ?? { diagnostics: [] };
+    let rotation = node.localTransform?.rotation ?? node.transform.rotation;
+    const matches = variantsForNode(node, variants, facts);
+    if (matches.length === 0 && !parentChanged) {
+      return {
+        ...node,
+        children: applyConditionalVariants(node.children ?? [], variants, facts, node.worldTransform, false),
+      };
+    }
+    matches.forEach(({ variant, fact }) => {
+      const spatial = variant.conditional.spatialOverride;
+      if (spatial.mode === 'absolute-box') box = { ...spatial.box };
+      if (spatial.mode === 'translation') box = translateBox(box, spatial.magnitude, fact);
+      material = mergeXyzDslMaterialSpecs(material, variant.properties.material);
+      content = mergeXyzDslContentSpecs(content, variant.properties.content);
+      if (variant.properties.geometry.declared) {
+        geometry = geometryFromBox(box, mergeXyzDslGeometrySpecs({
+          kind: geometry.kind,
+          diagnostics: [],
+          declared: true,
+          kindDeclared: true,
+          'box-radius': geometry['box-radius'],
+          puff: geometry.puff,
+          operation: geometry.operation,
+        }, variant.properties.geometry));
+      }
+      if (variant.properties.transform.declared) rotation = variant.properties.transform.rotation;
+    });
+    geometry = { ...geometry, dimensions: [box.width, box.height, box.depth] };
+    const localTransform = matches.length > 0
+      ? (node.renderable
+          ? transformFromBox(box, { rotation, diagnostics: [] })
+          : { ...anchorTransformFromBox(box, { rotation, diagnostics: [] }), scale: node.localTransform?.scale ?? [1, 1, 1] })
+      : node.localTransform!;
+    const worldTransform = parentTransform ? composeTransforms(parentTransform, localTransform) : localTransform;
+    const updated: SpatialNode = {
+      ...node,
+      baseBox: node.baseBox ?? node.box,
+      box,
+      material,
+      content,
+      geometry,
+      localTransform,
+      worldTransform,
+      transform: worldTransform,
+      bounds: boundsFromTransformedBox(box, worldTransform),
+      activeInteractions: matches.map(({ fact }) => fact),
+    };
+    updated.children = applyConditionalVariants(node.children ?? [], variants, facts, worldTransform, matches.length > 0 || parentChanged);
+    return updated;
+  });
+}
+
+export function createSpatialDocument(source: string, options: CreateSpatialDocumentOptions = {}): SpatialDocument {
+  const parsed = parseXyzDslDocument(source, options.originsByLine);
   const resolved = resolveXyzDslDocument(parsed.value ?? []);
   const diagnostics = [...parsed.diagnostics, ...resolved.diagnostics];
   const nodesByNamespace = new Map<string, SpatialNode>();
@@ -118,6 +221,8 @@ export function createSpatialDocument(source: string): SpatialDocument {
           materializedFrom: object.materializedFrom,
           anchorScale: object.anchorScale,
         },
+        origin: object.origin,
+        baseBox: object.box,
       };
 
       if (object.namespacePath && !nodesByNamespace.has(object.namespacePath)) {
@@ -131,10 +236,16 @@ export function createSpatialDocument(source: string): SpatialDocument {
       }
     });
 
-  const groupedNodes = resolveCollisions(flattenRenderable(topLevelNodes));
+  const authoredRenderable = flattenRenderable(topLevelNodes);
+  const interactions = evaluateInteractions(authoredRenderable, options.probeTolerance);
+  const effectiveTree = applyConditionalVariants(topLevelNodes, resolved.variants, interactions);
+  const effectiveRenderable = flattenRenderable(effectiveTree);
+  const physicalNodes = effectiveRenderable.filter((node) => node.origin?.sourceKind !== 'secondary');
+  const sensorNodes = effectiveRenderable.filter((node) => node.origin?.sourceKind === 'secondary');
+  const groupedNodes = [...resolveCollisions(physicalNodes), ...sensorNodes];
   const csg = buildCsgExpressions(groupedNodes);
   const renderNodes = csg.nodes.filter((node) => !node.csgConsumed && !node.csgExpressionId);
-  const nodes = applyRenderableStateToTree(topLevelNodes, csg.nodes);
+  const nodes = applyRenderableStateToTree(effectiveTree, csg.nodes);
 
   return {
     id: 'spatial-document',
@@ -142,5 +253,6 @@ export function createSpatialDocument(source: string): SpatialDocument {
     renderNodes,
     csgExpressions: csg.expressions,
     diagnostics,
+    interactions,
   };
 }

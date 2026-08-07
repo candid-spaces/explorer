@@ -1,5 +1,5 @@
 import { CENTIUNITS_PER_UNIT } from '../model/units';
-import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, XyzDslPathSpec } from './types';
+import type { AxisName, XyzDslAxisSpec, XyzDslBoxSpec, XyzDslConditionalSpec, XyzDslPathSpec } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
 const PATH_NUMBER_PATTERN = /^(?:0|[1-9]\d*)(?:c)?$/;
@@ -8,6 +8,9 @@ const LEGACY_P_DECIMAL_PATTERN = /^(?<whole>\d+)p(?<fraction>\d+)$/;
 const AXIS_PATTERN = /^\+(?<offset>[^+]+)\+(?<size>[^+]+)$/;
 const AXIS_NUMBER_CANDIDATE_PATTERN = /^(?:\d+(?:c)?|\d+p\d+)$/;
 const NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9+]*$/;
+const DIRECTIVE_PATTERN = /^\+(?<name>[A-Za-z][A-Za-z0-9]*)$/;
+const DELTA_PATTERN = /^\+(?<magnitude>(?:0|[1-9]\d*)(?:c)?)$/;
+const SUPPORTED_INTERACTION_DIRECTIVES = new Set(['probe', 'breach']);
 
 function isAxisSegment(segment: string): boolean {
   const match = segment.match(AXIS_PATTERN);
@@ -136,6 +139,68 @@ export function parseXyzDslPath(source: string): XyzDslPathSpec {
 
   if (segments.some((segment) => segment.trim() !== segment || segment.length === 0)) {
     throw new Error('Path segments cannot be empty or contain leading/trailing whitespace.');
+  }
+
+  const directiveEntries = segments.flatMap((segment, segmentIndex) => {
+    const match = segment.match(DIRECTIVE_PATTERN);
+    return match?.groups ? [{ name: match.groups.name, segmentIndex }] : [];
+  });
+
+  if (directiveEntries.length > 0) {
+    directiveEntries.forEach(({ name }) => {
+      if (!SUPPORTED_INTERACTION_DIRECTIVES.has(name)) {
+        throw new Error(`Unknown interaction directive "+${name}". Expected +probe or +breach.`);
+      }
+    });
+
+    let suffixStart = segments.length;
+    let spatialOverride: XyzDslConditionalSpec['spatialOverride'] = { mode: 'inherit' };
+    const suffix = segments.slice(-3);
+
+    if (suffix.length === 3 && suffix.every(isAxisSegment)) {
+      suffixStart = segments.length - 3;
+      const boxSource = suffix.join('/');
+      spatialOverride = { mode: 'absolute-box', box: parsePathBoxSpec(boxSource) };
+    } else if (suffix.length === 3 && suffix.every((segment) => DELTA_PATTERN.test(segment))) {
+      suffixStart = segments.length - 3;
+      spatialOverride = {
+        mode: 'translation',
+        magnitude: suffix.map((segment) => parsePathNumber(segment.slice(1))) as [number, number, number],
+      };
+    }
+
+    const pathSegments = segments.slice(0, suffixStart);
+    const namespace: string[] = [];
+    const directives = pathSegments.flatMap((segment, segmentIndex) => {
+      const match = segment.match(DIRECTIVE_PATTERN);
+      if (!match?.groups) {
+        namespace.push(segment);
+        return [];
+      }
+      return [{
+        name: match.groups.name as 'probe' | 'breach',
+        segmentIndex,
+        scopeNamespace: [...namespace],
+      }];
+    });
+
+    validateNamespaceSegments(namespace);
+    if (namespace.length === 0 || directives.some((directive) => directive.scopeNamespace.length === 0)) {
+      throw new Error('Interaction directives require a target namespace and a namespace scope before the directive.');
+    }
+    if (pathSegments.some((segment) => isAxisSegment(segment) || DELTA_PATTERN.test(segment))) {
+      throw new Error('Conditional paths must end with either three XYZ axes or three translation magnitudes.');
+    }
+
+    const conditional = { directives, spatialOverride, targetNamespace: namespace };
+    return {
+      source,
+      namespace,
+      ...(spatialOverride.mode === 'absolute-box' ? { box: spatialOverride.box } : {}),
+      canonicalPath: `${canonicalNamespacePath(namespace)}${directives.map((directive) => `+${directive.name}`).join('/')}`,
+      isDeclarationOnly: false,
+      conditional,
+    };
   }
 
   if (declarationOnly) {

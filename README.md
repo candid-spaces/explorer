@@ -65,6 +65,28 @@ Spatial transaction validation may limit each memo/properties field to 100 bytes
 "Table/LegD/+7+1/+0+5/+7+1" : "geometry: cylinder"
 ```
 
+## Interaction directives
+
+Secondary projections can act as remote cursors. A baseline object can declare conditional variants with the Base64-compatible `+probe` and `+breach` directives. `probe` means face contact (within a small tolerance); `breach` means positive-volume intersection. Directive segments are removed from object identity, and their position selects the namespace scope that must be interacting.
+
+```txt
+"Rod/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Rod/+probe" : "rotation: 90,90,0"
+"Rod/+breach/+9+1/+0+5/+0+1" : "color: red"
+```
+
+Conditional paths have three spatial forms:
+
+| Form | Effect while active |
+| --- | --- |
+| `Rod/+probe` | Inherit the baseline box and override only declared properties. |
+| `Rod/+probe/+4/+5/+9` | Translate by unsigned X/Y/Z magnitudes, away from the interacting cursor; an indeterminate direction defaults positive. |
+| `Rod/+probe/+9+1/+0+5/+0+1` | Replace the complete absolute X/Y/Z box, including sizes. |
+
+Relative translation is recalculated from the resolved baseline on each frame and therefore does not accumulate. In `Machine/+probe/Lever`, the target remains `Machine/Lever/`, while placement of the directive after `Machine` makes `Machine/` the interaction scope. Secondary cursor identity includes its projection stream, so independent controllers can reuse the same cursor namespace.
+
+See the [Secondary projection interaction specification](docs/secondary-interaction-spec.md) for the normative syntax and evaluation rules. The current release evaluates persistent `probe` and `breach` facts for the selected frame. Temporal transition playback and a persistent incremental spatial index are only partially implemented; see [Secondary interaction implementation status](docs/secondary-interaction-roadmap.md) for the exact supported behavior and remaining acceptance criteria.
+
 ## Spatial content cards
 
 Spatial transaction memos can still contain ordinary declaration properties such as `geometry: sphere; color: blue`. If a memo is not valid property text, the transaction importer treats it as a placed spatial content card instead:

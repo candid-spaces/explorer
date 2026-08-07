@@ -22,6 +22,13 @@ function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from
 }
 
 describe('transactionsToXyzDslSource', () => {
+  it('accepts coordinate-less conditional directives as spatial declarations', () => {
+    const result = transactionsToXyzDslSource([
+      transaction('rotation: 90,90,0', 1, 'Rod/+probe'),
+    ]);
+    expect(result.rejected).toEqual([]);
+    expect(result.source).toContain('"Rod/+probe"');
+  });
   it('maps the current primary-key transaction into a remote editor declaration', () => {
     const editorSource = transactionToRemoteEditorSource(
       transaction('color: cyan', 0, '+4+1/+2+1/+0+1', 'originating-key'),
