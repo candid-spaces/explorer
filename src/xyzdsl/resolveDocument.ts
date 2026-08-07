@@ -134,7 +134,7 @@ export function mergeXyzDslGeometrySpecs(
   };
 }
 
-function mergeContent(base: XyzDslContentSpec, override: XyzDslContentSpec): XyzDslContentSpec {
+export function mergeXyzDslContentSpecs(base: XyzDslContentSpec, override: XyzDslContentSpec): XyzDslContentSpec {
   if (!override.kind) {
     return { ...base, diagnostics: [] };
   }
@@ -175,7 +175,7 @@ function mergeProperties(
   return {
     material: mergeXyzDslMaterialSpecs(base.material, overrideMaterial),
     geometry: mergeXyzDslGeometrySpecs(base.geometry, overrideGeometry),
-    content: mergeContent(base.content, override.content),
+    content: mergeXyzDslContentSpecs(base.content, override.content),
     transform:
       includeTransform && overrideTransform.declared
         ? { ...overrideTransform, diagnostics: [] }

@@ -1,5 +1,5 @@
 import { parseXyzDslDocument } from '../xyzdsl/parser';
-import { mergeXyzDslGeometrySpecs, mergeXyzDslMaterialSpecs, resolveXyzDslDocument } from '../xyzdsl/resolveDocument';
+import { mergeXyzDslContentSpecs, mergeXyzDslGeometrySpecs, mergeXyzDslMaterialSpecs, resolveXyzDslDocument } from '../xyzdsl/resolveDocument';
 import type { ResolvedConditionalVariant } from '../xyzdsl/resolveDocument';
 import type { XyzDslBoxSpec, XyzDslDeclarationOrigin } from '../xyzdsl/types';
 import { canonicalNamespacePath } from '../xyzdsl/pathParser';
@@ -111,6 +111,7 @@ function applyConditionalVariants(
     let box = { ...node.box };
     let material = node.material;
     let geometry = node.geometry;
+    let content = node.content ?? { diagnostics: [] };
     let rotation = node.localTransform?.rotation ?? node.transform.rotation;
     const matches = variantsForNode(node, variants, facts);
     if (matches.length === 0 && !parentChanged) {
@@ -124,6 +125,7 @@ function applyConditionalVariants(
       if (spatial.mode === 'absolute-box') box = { ...spatial.box };
       if (spatial.mode === 'translation') box = translateBox(box, spatial.magnitude, fact);
       material = mergeXyzDslMaterialSpecs(material, variant.properties.material);
+      content = mergeXyzDslContentSpecs(content, variant.properties.content);
       if (variant.properties.geometry.declared) {
         geometry = geometryFromBox(box, mergeXyzDslGeometrySpecs({
           kind: geometry.kind,
@@ -149,6 +151,7 @@ function applyConditionalVariants(
       baseBox: node.baseBox ?? node.box,
       box,
       material,
+      content,
       geometry,
       localTransform,
       worldTransform,

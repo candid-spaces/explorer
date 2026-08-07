@@ -66,6 +66,15 @@ describe('secondary projection interactions', () => {
     expect(rod?.geometry.operation).toBe('subtraction');
   });
 
+  it('applies conditional content overrides to the effective node', () => {
+    const document = createSpatialDocument(`"Card/+0+1/+0+1/+0+1" : "content-kind: text; content-text: Waiting"
+"Card/+probe" : "content-kind: text; content-text: Active"
+"Cursor/+1+1/+0+1/+0+1" : ""`, { originsByLine: origins(3) });
+    const card = document.renderNodes.find((node) => node.namespacePath === 'Card/');
+
+    expect(card?.content).toMatchObject({ kind: 'text', text: 'Active' });
+  });
+
   it('attributes identical cursor namespaces to independent streams without replacement', () => {
     const source = `"Rod/+0+1/+0+1/+0+1" : ""
 "Cursor/+1+1/+0+1/+0+1" : ""
