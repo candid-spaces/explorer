@@ -107,7 +107,7 @@ const DEFAULT_PROPERTIES: ResolvedProperties = {
   content: { diagnostics: [] },
 };
 
-function mergeGeometry(
+export function mergeXyzDslGeometrySpecs(
   base: XyzDslGeometrySpec,
   override: XyzDslGeometrySpec,
 ): XyzDslGeometrySpec {
@@ -174,7 +174,7 @@ function mergeProperties(
 
   return {
     material: mergeXyzDslMaterialSpecs(base.material, overrideMaterial),
-    geometry: mergeGeometry(base.geometry, overrideGeometry),
+    geometry: mergeXyzDslGeometrySpecs(base.geometry, overrideGeometry),
     content: mergeContent(base.content, override.content),
     transform:
       includeTransform && overrideTransform.declared

@@ -1,5 +1,5 @@
 import { parseXyzDslDocument } from '../xyzdsl/parser';
-import { mergeXyzDslMaterialSpecs, resolveXyzDslDocument } from '../xyzdsl/resolveDocument';
+import { mergeXyzDslGeometrySpecs, mergeXyzDslMaterialSpecs, resolveXyzDslDocument } from '../xyzdsl/resolveDocument';
 import type { ResolvedConditionalVariant } from '../xyzdsl/resolveDocument';
 import type { XyzDslBoxSpec, XyzDslDeclarationOrigin } from '../xyzdsl/types';
 import { canonicalNamespacePath } from '../xyzdsl/pathParser';
@@ -125,7 +125,15 @@ function applyConditionalVariants(
       if (spatial.mode === 'translation') box = translateBox(box, spatial.magnitude, fact);
       material = mergeXyzDslMaterialSpecs(material, variant.properties.material);
       if (variant.properties.geometry.declared) {
-        geometry = geometryFromBox(box, { ...variant.properties.geometry, diagnostics: [] });
+        geometry = geometryFromBox(box, mergeXyzDslGeometrySpecs({
+          kind: geometry.kind,
+          diagnostics: [],
+          declared: true,
+          kindDeclared: true,
+          'box-radius': geometry['box-radius'],
+          puff: geometry.puff,
+          operation: geometry.operation,
+        }, variant.properties.geometry));
       }
       if (variant.properties.transform.declared) rotation = variant.properties.transform.rotation;
     });

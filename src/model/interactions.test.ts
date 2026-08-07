@@ -56,6 +56,16 @@ describe('secondary projection interactions', () => {
     expect(material?.textures?.normalMap).toEqual({ preset: 'bump.noise', repeat: [5, 6] });
   });
 
+  it('retains the base geometry kind for a partial conditional geometry override', () => {
+    const document = createSpatialDocument(`"Rod/+0+1/+0+5/+0+1" : "geometry: cylinder"
+"Rod/+probe" : "operation: subtraction"
+"Cursor/+1+1/+0+1/+0+1" : ""`, { originsByLine: origins(3) });
+    const rod = document.nodes.find((node) => node.namespacePath === 'Rod/');
+
+    expect(rod?.geometry.kind).toBe('cylinder');
+    expect(rod?.geometry.operation).toBe('subtraction');
+  });
+
   it('attributes identical cursor namespaces to independent streams without replacement', () => {
     const source = `"Rod/+0+1/+0+1/+0+1" : ""
 "Cursor/+1+1/+0+1/+0+1" : ""
