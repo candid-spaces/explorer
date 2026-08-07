@@ -85,6 +85,8 @@ Conditional paths have three spatial forms:
 
 Relative translation is recalculated from the resolved baseline on each frame and therefore does not accumulate. In `Machine/+probe/Lever`, the target remains `Machine/Lever/`, while placement of the directive after `Machine` makes `Machine/` the interaction scope. Secondary cursor identity includes its projection stream, so independent controllers can reuse the same cursor namespace.
 
+The current release evaluates persistent `probe` and `breach` facts for the selected frame. Temporal transition playback and a persistent incremental spatial index are only partially implemented; see [Secondary interaction implementation status](docs/secondary-interaction-roadmap.md) for the exact supported behavior and remaining acceptance criteria.
+
 ## Spatial content cards
 
 Spatial transaction memos can still contain ordinary declaration properties such as `geometry: sphere; color: blue`. If a memo is not valid property text, the transaction importer treats it as a placed spatial content card instead:
