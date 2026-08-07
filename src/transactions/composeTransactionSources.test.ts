@@ -65,6 +65,31 @@ describe('composeTransactionSources', () => {
 });
 
 describe('composeSpatialEditorSources', () => {
+  it('preserves baseline blank lines and their original editor line numbers', () => {
+    const document = '"First/+0+1/+0+1/+0+1" : ""\n\n"Third/+2+1/+0+1/+0+1" : ""';
+    const bundle = composeSpatialEditorSourceBundle(document, [{
+      id: 'stream-a', declarations: '"+4+1/+0+1/+0+1" : ""',
+    }], '"+6+1/+0+1/+0+1" : ""');
+
+    expect(bundle.source).toBe(`${document}\n"+4+1/+0+1/+0+1" : ""\n"+6+1/+0+1/+0+1" : ""`);
+    expect(bundle.originsByLine.get(1)?.sourceKind).toBe('baseline');
+    expect(bundle.originsByLine.has(2)).toBe(false);
+    expect(bundle.originsByLine.get(3)?.sourceKind).toBe('baseline');
+    expect(bundle.originsByLine.get(4)).toMatchObject({ sourceKind: 'secondary', streamId: 'stream-a' });
+    expect(bundle.originsByLine.get(5)?.sourceKind).toBe('remote-editor');
+  });
+
+  it('preserves leading and trailing baseline blanks before appended projections', () => {
+    const document = '\n"Second/+0+1/+0+1/+0+1" : ""\n';
+    const bundle = composeSpatialEditorSourceBundle(document, [{
+      declarations: '"+2+1/+0+1/+0+1" : ""',
+    }], '');
+
+    expect(bundle.source).toBe(`${document}\n"+2+1/+0+1/+0+1" : ""`);
+    expect(bundle.originsByLine.get(2)?.sourceKind).toBe('baseline');
+    expect(bundle.originsByLine.get(4)?.sourceKind).toBe('secondary');
+  });
+
   it('preserves source provenance for baseline, secondary, and editor declarations', () => {
     const bundle = composeSpatialEditorSourceBundle('"Cursor/" : ""', [{
       id: 'stream-a', publicKey: 'key-a', declarations: '"Cursor/+0+1/+0+1/+0+1" : ""', transactionTime: 42,

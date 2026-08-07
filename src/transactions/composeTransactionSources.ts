@@ -103,8 +103,8 @@ export function composeTransactionSources(
     .join('\n');
 }
 
-function nonEmptyLines(source: string): string[] {
-  return source.split('\n').filter((line) => line.trim().length > 0);
+function sourceLines(source: string): string[] {
+  return source.length > 0 ? source.split('\n') : [];
 }
 
 export function composeTransactionSourceBundle(
@@ -114,14 +114,20 @@ export function composeTransactionSourceBundle(
 ): ComposedXyzDslSource {
   const primaryNamespaces = primaryDeclarationNamespaces(primaryXyzDslSource);
   const policy = options.namespacePolicy ?? 'consume-primary-namespaces';
-  const lines: string[] = [];
+  // Baseline line numbers are also editor line numbers. Preserve blank lines
+  // verbatim so node metadata continues to address the original authoring text.
+  const lines = sourceLines(primaryXyzDslSource);
   const originsByLine = new Map<number, XyzDslDeclarationOrigin>();
   const append = (line: string, origin: XyzDslDeclarationOrigin) => {
     lines.push(line);
     originsByLine.set(lines.length, { ...origin, sourceOrder: lines.length - 1 });
   };
 
-  nonEmptyLines(primaryXyzDslSource).forEach((line) => append(line, { sourceKind: 'baseline' }));
+  lines.forEach((line, index) => {
+    if (line.trim().length > 0) {
+      originsByLine.set(index + 1, { sourceKind: 'baseline', sourceOrder: index });
+    }
+  });
   secondaryStreams.forEach((stream) => {
     const declarationLines = declarationSources(stream.declarations);
     const cursor = clampCursor(stream.playbackCursor ?? options.playbackCursor, declarationLines.length);
@@ -163,11 +169,13 @@ export function composeSpatialEditorSourceBundle(
   const bundle = composeTransactionSourceBundle(documentSource, secondaryStreams, {
     namespacePolicy: 'consume-primary-namespaces',
   });
-  const lines = nonEmptyLines(bundle.source);
+  const lines = sourceLines(bundle.source);
   const originsByLine = new Map(bundle.originsByLine);
-  nonEmptyLines(remoteEditorSource).forEach((line) => {
+  sourceLines(remoteEditorSource).forEach((line) => {
     lines.push(line);
-    originsByLine.set(lines.length, { sourceKind: 'remote-editor', sourceOrder: lines.length - 1 });
+    if (line.trim().length > 0) {
+      originsByLine.set(lines.length, { sourceKind: 'remote-editor', sourceOrder: lines.length - 1 });
+    }
   });
   return { source: lines.join('\n'), originsByLine };
 }
