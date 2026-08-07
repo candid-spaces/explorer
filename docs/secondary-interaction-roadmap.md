@@ -2,6 +2,8 @@
 
 This document records the implementation boundary for secondary/projection interactions. It distinguishes the functionality used by the application today from scaffolding that exists for later work.
 
+Normative syntax and evaluation semantics live in the [Secondary projection interaction specification](secondary-interaction-spec.md). This roadmap describes implementation status rather than redefining that contract.
+
 ## Current interaction pipeline
 
 For each compiled document, the application currently:

@@ -6,7 +6,7 @@ The project renders realistic interior spatial compositions from a declarative S
 
 The long-term model is intentionally DOM-like: spatial declarations compile into a neutral spatial document model, and the ThreeJS renderer consumes that document. This keeps parsing, layout, collision handling, and rendering independently extensible.
 
-Secondary interaction directives are available, but temporal playback transitions and cross-frame incremental spatial indexing remain partial. The implemented boundary and completion criteria are tracked in [Secondary interaction implementation status](secondary-interaction-roadmap.md).
+Secondary interaction directives are defined by the [Secondary projection interaction specification](secondary-interaction-spec.md). Temporal playback transitions and cross-frame incremental spatial indexing remain partial; the implemented boundary and completion criteria are tracked in [Secondary interaction implementation status](secondary-interaction-roadmap.md).
 
 
 ## Terminology
