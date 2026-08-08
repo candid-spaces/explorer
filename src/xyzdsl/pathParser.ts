@@ -10,6 +10,7 @@ const AXIS_NUMBER_CANDIDATE_PATTERN = /^(?:\d+(?:c)?|\d+p\d+)$/;
 const NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9+]*$/;
 const DIRECTIVE_PATTERN = /^\+(?<name>[A-Za-z][A-Za-z0-9]*)$/;
 const DELTA_PATTERN = /^\+(?<magnitude>(?:0|[1-9]\d*)(?:c)?)$/;
+const WEIGHTED_TRANSLATION_SEGMENT = '+++';
 const SUPPORTED_INTERACTION_DIRECTIVES = new Set(['probe', 'breach']);
 
 function isAxisSegment(segment: string): boolean {
@@ -157,7 +158,10 @@ export function parseXyzDslPath(source: string): XyzDslPathSpec {
     let spatialOverride: XyzDslConditionalSpec['spatialOverride'] = { mode: 'inherit' };
     const suffix = segments.slice(-3);
 
-    if (suffix.length === 3 && suffix.every(isAxisSegment)) {
+    if (segments.at(-1) === WEIGHTED_TRANSLATION_SEGMENT) {
+      suffixStart = segments.length - 1;
+      spatialOverride = { mode: 'weighted-translation' };
+    } else if (suffix.length === 3 && suffix.every(isAxisSegment)) {
       suffixStart = segments.length - 3;
       const boxSource = suffix.join('/');
       spatialOverride = { mode: 'absolute-box', box: parsePathBoxSpec(boxSource) };

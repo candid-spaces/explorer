@@ -1,5 +1,5 @@
 import { parseXyzDslDocument } from '../xyzdsl/parser';
-import type { ParseDiagnostic } from '../xyzdsl/types';
+import type { ParseDiagnostic, XyzDslDeclarationOrigin } from '../xyzdsl/types';
 import type { XyzDslTransaction, PrimaryHistoricalBaselineXyzDsl, RejectedTransaction, SecondaryKeyReference } from './types';
 
 // Remote transaction transport/validation can append either slash-prefixed
@@ -147,8 +147,12 @@ interface TransactionsToXyzDslSourceOptions {
 export function transactionsToXyzDslSource(
   transactions: readonly XyzDslTransaction[],
   options: TransactionsToXyzDslSourceOptions = {},
-): PrimaryHistoricalBaselineXyzDsl & { secondaryKeys: SecondaryKeyReference[] } {
+): PrimaryHistoricalBaselineXyzDsl & {
+  secondaryKeys: SecondaryKeyReference[];
+  originsByLine: Map<number, XyzDslDeclarationOrigin>;
+} {
   const accepted: string[] = [];
+  const originsByLine = new Map<number, XyzDslDeclarationOrigin>();
   const rejected: RejectedTransaction[] = [];
   const secondaryKeys: SecondaryKeyReference[] = [];
   const publicKey = options.publicKey?.trim();
@@ -178,6 +182,14 @@ export function transactionsToXyzDslSource(
 
     if (valid) {
       accepted.push(source);
+      originsByLine.set(accepted.length, {
+        sourceKind: 'baseline',
+        publicKey,
+        transactionId: transaction.signature,
+        transactionTime: transaction.time,
+        transactionAmount: transaction.amount,
+        sourceOrder: accepted.length - 1,
+      });
       return;
     }
 
@@ -205,6 +217,7 @@ export function transactionsToXyzDslSource(
     source: accepted.join('\n'),
     rejected,
     secondaryKeys,
+    originsByLine,
   };
 }
 

@@ -115,6 +115,14 @@ The final three single-number segments are unsigned X/Y/Z translation magnitudes
 
 Translation MUST be recalculated from the resolved base state for the evaluated frame. It MUST NOT accumulate from the previously rendered effective position, because accumulation would make results depend on render frequency.
 
+The terminal marker `+++` selects weighted unsigned inferred-direction translation:
+
+```text
+"Ball/+probe/+++": ""
+```
+
+The scalar distance is `cursor transaction amount / target baseline transaction amount` in project units, capped at 100. Missing, zero, negative, and non-finite amounts use a deterministic weight of `1`. Implementations MUST use the target-oriented contact normal when nonzero; otherwise they MUST normalize the inferred target-away-from-cursor direction. An entirely indeterminate vector defaults to positive X. Like explicit relative translation, weighted translation is recomputed from the resolved base state and never accumulates.
+
 For each axis, direction is selected in this order:
 
 1. Use a nonzero target-oriented interaction/contact normal.

@@ -521,6 +521,7 @@ export default function App() {
         endpoint,
         transactionId: currentTransaction?.signature,
         transactionTime: currentTransaction?.time,
+        transactionAmount: currentTransaction?.amount,
         declarations: xyzdslResult.source,
         xyzdslResult,
       };
@@ -594,8 +595,9 @@ export default function App() {
     [authoringSource, remoteBaselineAppliedToEditor],
   );
   const renderedBundle = useMemo(
-    () => composeSpatialEditorSourceBundle(authoringSource, secondaryTransactionOverlayStreams, remoteEditorSource),
-    [authoringSource, remoteEditorSource, secondaryTransactionOverlayStreams],
+    () => composeSpatialEditorSourceBundle(authoringSource, secondaryTransactionOverlayStreams, remoteEditorSource,
+      authoringSource === primaryRemoteBaselineSource ? transactionXyzDsl.originsByLine : undefined),
+    [authoringSource, primaryRemoteBaselineSource, remoteEditorSource, secondaryTransactionOverlayStreams, transactionXyzDsl.originsByLine],
   );
   const renderedSource = renderedBundle.source;
   const document = useMemo(() => createSpatialDocument(renderedBundle.source, {

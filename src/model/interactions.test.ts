@@ -12,6 +12,20 @@ function origins(secondaryLine: number): Map<number, XyzDslDeclarationOrigin> {
 }
 
 describe('secondary projection interactions', () => {
+  it('translates along the polar opposite contact direction using cursor and object transaction weights', () => {
+    const document = createSpatialDocument(`"Ball/+2+3/+0+3/+4+3" : "geometry: sphere;"
+"Ball/+probe/+++" : ""
+"Cursor/+5+1/+0+1/+4+1" : ""`, { originsByLine: new Map([
+      [1, { sourceKind: 'baseline', transactionAmount: 2 }],
+      [2, { sourceKind: 'baseline' }],
+      [3, { sourceKind: 'secondary', streamId: 'cursor', transactionAmount: 6 }],
+    ]) });
+    const ball = document.renderNodes.find((node) => node.namespacePath === 'Ball/');
+
+    expect(document.interactions?.[0]).toMatchObject({ normal: [-1, 0, 0], cursorWeight: 6, targetWeight: 2 });
+    expect(ball?.box).toMatchObject({ x: -1, y: 0, z: 4, width: 3, height: 3, depth: 3 });
+  });
+
   it('detects probe before packing and applies inferred-direction translation without resizing', () => {
     const document = createSpatialDocument(`"Rod/+0+1/+0+5/+0+1" : "geometry: cylinder"
 "Rod/+probe/+4/+0/+0" : "rotation: 90,90,0"

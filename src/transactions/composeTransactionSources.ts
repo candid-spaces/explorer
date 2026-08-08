@@ -16,6 +16,7 @@ export interface ComposeTransactionSecondaryStream {
   endpoint?: string;
   transactionId?: string;
   transactionTime?: number;
+  transactionAmount?: number;
 }
 
 export interface ComposedXyzDslSource {
@@ -111,6 +112,7 @@ export function composeTransactionSourceBundle(
   primaryXyzDslSource: string,
   secondaryStreams: readonly ComposeTransactionSecondaryStream[],
   options: ComposeTransactionSourcesOptions = {},
+  primaryOriginsByLine?: ReadonlyMap<number, XyzDslDeclarationOrigin>,
 ): ComposedXyzDslSource {
   const primaryNamespaces = primaryDeclarationNamespaces(primaryXyzDslSource);
   const policy = options.namespacePolicy ?? 'consume-primary-namespaces';
@@ -125,7 +127,7 @@ export function composeTransactionSourceBundle(
 
   lines.forEach((line, index) => {
     if (line.trim().length > 0) {
-      originsByLine.set(index + 1, { sourceKind: 'baseline', sourceOrder: index });
+      originsByLine.set(index + 1, primaryOriginsByLine?.get(index + 1) ?? { sourceKind: 'baseline', sourceOrder: index });
     }
   });
   secondaryStreams.forEach((stream) => {
@@ -141,6 +143,7 @@ export function composeTransactionSourceBundle(
           endpoint: stream.endpoint,
           transactionId: stream.transactionId,
           transactionTime: stream.transactionTime,
+          transactionAmount: stream.transactionAmount,
         });
       }
     });
@@ -165,10 +168,11 @@ export function composeSpatialEditorSourceBundle(
   documentSource: string,
   secondaryStreams: readonly ComposeTransactionSecondaryStream[],
   remoteEditorSource: string,
+  primaryOriginsByLine?: ReadonlyMap<number, XyzDslDeclarationOrigin>,
 ): ComposedXyzDslSource {
   const bundle = composeTransactionSourceBundle(documentSource, secondaryStreams, {
     namespacePolicy: 'consume-primary-namespaces',
-  });
+  }, primaryOriginsByLine);
   const lines = sourceLines(bundle.source);
   const originsByLine = new Map(bundle.originsByLine);
   sourceLines(remoteEditorSource).forEach((line) => {
