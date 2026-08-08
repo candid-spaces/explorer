@@ -29,6 +29,33 @@ export interface ComposeTransactionSourcesOptions {
   namespacePolicy?: TransactionSourceNamespacePolicy;
 }
 
+/**
+ * Carries transaction provenance onto unchanged declarations in an edited copy
+ * of a baseline. Entries are consumed in source order so duplicate declaration
+ * text retains deterministic occurrence-based identity.
+ */
+export function originsForEditedSource(
+  editedSource: string,
+  baselineSource: string,
+  baselineOrigins: ReadonlyMap<number, XyzDslDeclarationOrigin>,
+): Map<number, XyzDslDeclarationOrigin> {
+  const originsByDeclaration = new Map<string, XyzDslDeclarationOrigin[]>();
+  sourceLines(baselineSource).forEach((line, index) => {
+    const origin = baselineOrigins.get(index + 1);
+    if (!origin || !line.trim()) return;
+    const occurrences = originsByDeclaration.get(line) ?? [];
+    occurrences.push(origin);
+    originsByDeclaration.set(line, occurrences);
+  });
+
+  const remapped = new Map<number, XyzDslDeclarationOrigin>();
+  sourceLines(editedSource).forEach((line, index) => {
+    const origin = originsByDeclaration.get(line)?.shift();
+    if (origin) remapped.set(index + 1, origin);
+  });
+  return remapped;
+}
+
 function declarationSources(declarations: readonly SecondaryTransactionSourceDeclaration[] | string): string[] {
   if (typeof declarations === 'string') {
     return declarations
