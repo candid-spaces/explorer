@@ -90,15 +90,15 @@ function validWeight(weight: number | undefined): number {
 }
 
 /** Force-to-weight displacement in project units, bounded against pathological transaction values. */
-export function weightedTranslationDistance(fact: Pick<InteractionFact, 'cursorWeight' | 'targetWeight'>): number {
-  return Math.min(validWeight(fact.cursorWeight) / validWeight(fact.targetWeight), MAX_WEIGHTED_TRANSLATION);
+export function weightedTranslationDistance(cursorWeight: number | undefined, targetWeight: number | undefined): number {
+  return Math.min(validWeight(cursorWeight) / validWeight(targetWeight), MAX_WEIGHTED_TRANSLATION);
 }
 
-function weightedTranslateBox(box: XyzDslBoxSpec, fact: InteractionFact): XyzDslBoxSpec {
+function weightedTranslateBox(box: XyzDslBoxSpec, fact: InteractionFact, targetWeight: number | undefined): XyzDslBoxSpec {
   const direction = fact.normal.some(Boolean) ? fact.normal : fact.inferredDirection;
   const length = Math.hypot(...direction);
   const unitDirection = length > 0 ? direction.map((component) => component / length) : [1, 0, 0];
-  const distance = weightedTranslationDistance(fact);
+  const distance = weightedTranslationDistance(fact.cursorWeight, targetWeight);
   return {
     ...box,
     source: `${box.source} (weighted conditional translation)`,
@@ -150,7 +150,9 @@ function applyConditionalVariants(
       const spatial = variant.conditional.spatialOverride;
       if (spatial.mode === 'absolute-box') box = { ...spatial.box };
       if (spatial.mode === 'translation') box = translateBox(box, spatial.magnitude, fact);
-      if (spatial.mode === 'weighted-translation') box = weightedTranslateBox(box, fact);
+      if (spatial.mode === 'weighted-translation') {
+        box = weightedTranslateBox(box, fact, node.origin?.transactionAmount);
+      }
       material = mergeXyzDslMaterialSpecs(material, variant.properties.material);
       content = mergeXyzDslContentSpecs(content, variant.properties.content);
       if (variant.properties.geometry.declared) {
