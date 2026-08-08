@@ -27,6 +27,7 @@ export interface XyzDslDirectiveSpec {
 export type XyzDslConditionalSpatialOverride =
   | { mode: 'inherit' }
   | { mode: 'translation'; magnitude: [number, number, number] }
+  | { mode: 'weighted-translation' }
   | { mode: 'absolute-box'; box: XyzDslBoxSpec };
 
 export interface XyzDslConditionalSpec {
@@ -43,6 +44,8 @@ export interface XyzDslDeclarationOrigin {
   transactionId?: string;
   transactionTime?: number;
   sourceOrder?: number;
+  /** Transaction amount used as physical weight by weighted interaction directives. */
+  transactionAmount?: number;
 }
 
 export interface XyzDslPathSpec {

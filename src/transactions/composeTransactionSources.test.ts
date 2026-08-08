@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { composeSpatialEditorSourceBundle, composeSpatialEditorSources, composeTransactionSources } from './composeTransactionSources';
+import { composeSpatialEditorSourceBundle, composeSpatialEditorSources, composeTransactionSources, originsForEditedSource } from './composeTransactionSources';
+import type { XyzDslDeclarationOrigin } from '../xyzdsl/types';
 
 describe('composeTransactionSources', () => {
   const primary = '"Table/" : "color: white"\n"Table/+0+1/+0+1/+0+1" : ""';
@@ -65,6 +66,29 @@ describe('composeTransactionSources', () => {
 });
 
 describe('composeSpatialEditorSources', () => {
+  it('preserves transaction weights for unchanged baseline declarations after local edits', () => {
+    const baseline = '"Ball/+0+3/+0+3/+0+3" : "geometry: sphere"';
+    const origins = new Map<number, XyzDslDeclarationOrigin>([
+      [1, { sourceKind: 'baseline', transactionAmount: 2 }],
+    ]);
+    const edited = `${baseline}\n"Ball/+probe/+++" : ""`;
+    const remapped = originsForEditedSource(edited, baseline, origins);
+    const bundle = composeSpatialEditorSourceBundle(edited, [], '', remapped);
+
+    expect(bundle.originsByLine.get(1)?.transactionAmount).toBe(2);
+    expect(bundle.originsByLine.get(2)).toMatchObject({ sourceKind: 'baseline' });
+    expect(bundle.originsByLine.get(2)?.transactionAmount).toBeUndefined();
+  });
+
+  it('does not retain transaction weight on a modified baseline declaration', () => {
+    const baseline = '"Ball/+0+3/+0+3/+0+3" : "geometry: sphere"';
+    const origins = new Map<number, XyzDslDeclarationOrigin>([
+      [1, { sourceKind: 'baseline', transactionAmount: 2 }],
+    ]);
+
+    expect(originsForEditedSource(`${baseline};`, baseline, origins)).toEqual(new Map());
+  });
+
   it('preserves baseline blank lines and their original editor line numbers', () => {
     const document = '"First/+0+1/+0+1/+0+1" : ""\n\n"Third/+2+1/+0+1/+0+1" : ""';
     const bundle = composeSpatialEditorSourceBundle(document, [{

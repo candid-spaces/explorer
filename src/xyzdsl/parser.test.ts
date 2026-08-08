@@ -74,7 +74,8 @@ describe('parseXyzDslDocument', () => {
   it('parses scoped interaction directives and all conditional coordinate modes', () => {
     const result = parseXyzDslDocument(`"Rod/+probe" : "rotation: 90,90,0"
 "Machine/+probe/Lever/+4/+5/+9" : ""
-"Rod/+breach/+9+1/+0+5/+0+1" : "color: red"`);
+"Rod/+breach/+9+1/+0+5/+0+1" : "color: red"
+"Ball/+probe/+++" : ""`);
 
     expect(result.ok).toBe(true);
     expect(result.value?.[0].conditional).toMatchObject({
@@ -90,6 +91,11 @@ describe('parseXyzDslDocument', () => {
     expect(result.value?.[2].conditional?.spatialOverride).toMatchObject({
       mode: 'absolute-box',
       box: { x: 9, width: 1, y: 0, height: 5, z: 0, depth: 1 },
+    });
+    expect(result.value?.[3].conditional).toMatchObject({
+      targetNamespace: ['Ball'],
+      directives: [{ name: 'probe', scopeNamespace: ['Ball'] }],
+      spatialOverride: { mode: 'weighted-translation' },
     });
   });
 

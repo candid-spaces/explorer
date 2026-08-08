@@ -16,6 +16,7 @@ export interface InteractionFact {
   inferredDirection: [number, number, number];
   penetration?: number;
   separation?: number;
+  cursorWeight?: number;
 }
 
 export interface SpatialInteractionIndex {
@@ -149,6 +150,7 @@ export function evaluateInteractions(nodes: readonly SpatialNode[], tolerance = 
       streamId: cursor.origin?.streamId ?? cursor.origin?.publicKey ?? 'secondary',
       transactionId: cursor.origin?.transactionId,
       transactionTime: cursor.origin?.transactionTime,
+      cursorWeight: cursor.origin?.transactionAmount,
       inferredDirection: ([0, 1, 2].map((axis) => directionAwayFromCursor(target.bounds, cursor.bounds, axis)) as [number, number, number]),
     };
     if (boundsOverlap(target.bounds, cursor.bounds)) {

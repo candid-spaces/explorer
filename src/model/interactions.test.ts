@@ -12,6 +12,38 @@ function origins(secondaryLine: number): Map<number, XyzDslDeclarationOrigin> {
 }
 
 describe('secondary projection interactions', () => {
+  it('translates along the polar opposite contact direction using cursor and object transaction weights', () => {
+    const document = createSpatialDocument(`"Ball/+2+3/+0+3/+4+3" : "geometry: sphere;"
+"Ball/+probe/+++" : ""
+"Cursor/+5+1/+0+1/+4+1" : ""`, { originsByLine: new Map([
+      [1, { sourceKind: 'baseline', transactionAmount: 2 }],
+      [2, { sourceKind: 'baseline' }],
+      [3, { sourceKind: 'secondary', streamId: 'cursor', transactionAmount: 6 }],
+    ]) });
+    const ball = document.renderNodes.find((node) => node.namespacePath === 'Ball/');
+
+    expect(document.interactions?.[0]).toMatchObject({ normal: [-1, 0, 0], cursorWeight: 6 });
+    expect(ball?.box).toMatchObject({ x: -1, y: 0, z: 4, width: 3, height: 3, depth: 3 });
+  });
+
+  it("uses the translated target's weight for a conditional activated by another scope member", () => {
+    const document = createSpatialDocument(`"Machine/+0+10/+0+10/+0+10" : ""
+"Machine/Button/+0+1/+0+1/+0+1" : ""
+"Machine/Lever/+5+1/+0+1/+0+1" : ""
+"Machine/+probe/Lever/+++" : ""
+"Cursor/+1+1/+0+1/+0+1" : ""`, { originsByLine: new Map([
+      [1, { sourceKind: 'baseline', transactionAmount: 1 }],
+      [2, { sourceKind: 'baseline', transactionAmount: 2 }],
+      [3, { sourceKind: 'baseline', transactionAmount: 10 }],
+      [4, { sourceKind: 'baseline' }],
+      [5, { sourceKind: 'secondary', streamId: 'cursor', transactionAmount: 20 }],
+    ]) });
+    const lever = document.renderNodes.find((node) => node.namespacePath === 'Machine/Lever/');
+
+    expect(document.interactions?.[0]).toMatchObject({ targetNamespace: 'Machine/Button/', cursorWeight: 20 });
+    expect(lever?.box.x).toBe(3);
+  });
+
   it('detects probe before packing and applies inferred-direction translation without resizing', () => {
     const document = createSpatialDocument(`"Rod/+0+1/+0+5/+0+1" : "geometry: cylinder"
 "Rod/+probe/+4/+0/+0" : "rotation: 90,90,0"

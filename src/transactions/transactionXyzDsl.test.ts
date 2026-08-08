@@ -22,6 +22,17 @@ function transaction(memo: string, index = 0, to = `+${index}+1/+0+1/+0+1`, from
 }
 
 describe('transactionsToXyzDslSource', () => {
+  it('preserves accepted transaction amounts as declaration provenance', () => {
+    const result = transactionsToXyzDslSource([
+      { ...transaction('geometry: sphere', 0, 'Ball/+0+1/+0+1/+0+1'), amount: 7 },
+    ]);
+
+    expect(result.originsByLine.get(1)).toMatchObject({
+      sourceKind: 'baseline',
+      transactionAmount: 7,
+    });
+  });
+
   it('accepts coordinate-less conditional directives as spatial declarations', () => {
     const result = transactionsToXyzDslSource([
       transaction('rotation: 90,90,0', 1, 'Rod/+probe'),

@@ -82,6 +82,32 @@ function translateBox(box: XyzDslBoxSpec, magnitude: [number, number, number], f
   };
 }
 
+export const DEFAULT_INTERACTION_WEIGHT = 1;
+export const MAX_WEIGHTED_TRANSLATION = 100;
+
+function validWeight(weight: number | undefined): number {
+  return Number.isFinite(weight) && weight! > 0 ? weight! : DEFAULT_INTERACTION_WEIGHT;
+}
+
+/** Force-to-weight displacement in project units, bounded against pathological transaction values. */
+export function weightedTranslationDistance(cursorWeight: number | undefined, targetWeight: number | undefined): number {
+  return Math.min(validWeight(cursorWeight) / validWeight(targetWeight), MAX_WEIGHTED_TRANSLATION);
+}
+
+function weightedTranslateBox(box: XyzDslBoxSpec, fact: InteractionFact, targetWeight: number | undefined): XyzDslBoxSpec {
+  const direction = fact.normal.some(Boolean) ? fact.normal : fact.inferredDirection;
+  const length = Math.hypot(...direction);
+  const unitDirection = length > 0 ? direction.map((component) => component / length) : [1, 0, 0];
+  const distance = weightedTranslationDistance(fact.cursorWeight, targetWeight);
+  return {
+    ...box,
+    source: `${box.source} (weighted conditional translation)`,
+    x: box.x + unitDirection[0] * distance,
+    y: box.y + unitDirection[1] * distance,
+    z: box.z + unitDirection[2] * distance,
+  };
+}
+
 function variantsForNode(node: SpatialNode, variants: readonly ResolvedConditionalVariant[], facts: readonly InteractionFact[]) {
   return variants.flatMap((variant) => {
     if (variant.targetNamespacePath !== node.namespacePath) return [];
@@ -124,6 +150,9 @@ function applyConditionalVariants(
       const spatial = variant.conditional.spatialOverride;
       if (spatial.mode === 'absolute-box') box = { ...spatial.box };
       if (spatial.mode === 'translation') box = translateBox(box, spatial.magnitude, fact);
+      if (spatial.mode === 'weighted-translation') {
+        box = weightedTranslateBox(box, fact, node.origin?.transactionAmount);
+      }
       material = mergeXyzDslMaterialSpecs(material, variant.properties.material);
       content = mergeXyzDslContentSpecs(content, variant.properties.content);
       if (variant.properties.geometry.declared) {
